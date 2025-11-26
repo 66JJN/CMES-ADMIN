@@ -641,15 +641,6 @@
   color: #64748b;
 }
 
-.error-message {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  font-size: 18px;
-  color: #ef4444;
-}
-
 .main-layout {
   display: flex;
   height: calc(100vh - 100px);
