@@ -173,41 +173,7 @@ function Home() {
           </div>
         )}
 
-        {/* ปุ่มเปิด/ปิดฟังก์ชันแต่ละอัน */}
-        <div className="function-toggle-row">
-          <span>ฟังก์ชันส่งรูปภาพ:</span>
-          <button
-            className={`toggle-btn-minimal${enableImage ? " on" : " off"}`}
-            onClick={handleToggleImage}
-            disabled={!systemOn}
-          >
-            {enableImage ? "เปิด" : "ปิด"}
-          </button>
-          <span>ฟังก์ชันข้อความ:</span>
-          <button
-            className={`toggle-btn-minimal${enableText ? " on" : " off"}`}
-            onClick={handleToggleText}
-            disabled={!systemOn}
-          >
-            {enableText ? "เปิด" : "ปิด"}
-          </button>
-          <span>ฟังก์ชันส่งของขวัญ:</span>
-          <button
-            className={`toggle-btn-minimal${enableGift ? " on" : " off"}`}
-            onClick={handleToggleGift}
-            disabled={!systemOn}
-          >
-            {enableGift ? "เปิด" : "ปิด"}
-          </button>
-          <span>ฟังก์ชันอวยพรวันเกิด:</span>
-          <button
-            className={`toggle-btn-minimal${enableBirthday ? " on" : " off"}`}
-            onClick={handleToggleBirthday}
-            disabled={!systemOn}
-          >
-            {enableBirthday ? "เปิด" : "ปิด"}
-          </button>
-        </div>
+        <div className="main-content-row">
 
         <section className="setting-card-minimal">
           <h2>ตั้งค่าแพ็คเกจ</h2>
@@ -234,45 +200,71 @@ function Home() {
               วันเกิด
             </button>
           </div>
+
           <div className="input-row-minimal">
-            <input
-              type="number"
-              min="1"
-              max="59"
-              placeholder="นาที"
-              value={minute}
+            <input type="number" min="1" max="59" placeholder="นาที" value={minute}
               onChange={(e) => setMinute(e.target.value)}
               disabled={!systemOn}
               className="input-minimal"
             />
-            <input
-              type="number"
-              min="1"
-              max="59"
-              placeholder="วินาที"
-              value={second}
+            <input type="number" min="1" max="59" placeholder="วินาที" value={second}
               onChange={(e) => setSecond(e.target.value)}
               disabled={!systemOn}
               className="input-minimal"
             />
-            <input
-              type="number"
-              min="1"
-              placeholder="ราคา (บาท)"
-              value={price}
+            <input type="number" min="1" placeholder="ราคา (บาท)" value={price}
               onChange={(e) => setPrice(e.target.value)}
               disabled={!systemOn}
               className="input-minimal"
             />
           </div>
-          <button
-            className="save-btn-minimal"
-            onClick={handleSave}
-            disabled={!systemOn}
-          >
+
+          <button className="save-btn-minimal" onClick={handleSave} disabled={!systemOn}>
             บันทึกแพ็คเกจ
           </button>
         </section>
+
+        <section className="functions-panel">
+          <h3>ตั้งค่าฟังก์ชัน</h3>
+          <div className="function-toggle-group">
+            <div className="function-item">
+              <span>ฟังก์ชันส่งรูปภาพ:</span>
+              <button className={`toggle-btn-minimal${enableImage ? " on" : " off"}`}
+                onClick={handleToggleImage}
+                disabled={!systemOn}>
+                {enableImage ? "เปิด" : "ปิด"}
+              </button>
+            </div>
+
+            <div className="function-item">
+              <span>ฟังก์ชันข้อความ:</span>
+              <button className={`toggle-btn-minimal${enableText ? " on" : " off"}`}
+                onClick={handleToggleText}
+                disabled={!systemOn}>
+                {enableText ? "เปิด" : "ปิด"}
+              </button>
+            </div>
+
+            <div className="function-item">
+              <span>ฟังก์ชันส่งของขวัญ:</span>
+              <button className={`toggle-btn-minimal${enableGift ? " on" : " off"}`}
+                onClick={handleToggleGift}
+                disabled={!systemOn}>
+                {enableGift ? "เปิด" : "ปิด"}
+              </button>
+            </div>
+
+            <div className="function-item">
+              <span>ฟังก์ชันอวยพรวันเกิด:</span>
+              <button className={`toggle-btn-minimal${enableBirthday ? " on" : " off"}`}
+                onClick={handleToggleBirthday}
+                disabled={!systemOn}>
+                {enableBirthday ? "เปิด" : "ปิด"}
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
       </main>
     </div>
   );
