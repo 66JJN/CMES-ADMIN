@@ -42,7 +42,6 @@ function Register() {
         // Success notification
         setUsername("");
         setPassword("");
-        alert("✓ เข้าสู่ระบบสำเร็จ!");
         navigate("/home");
       } else {
         setErrorMessage(data.message || "Username หรือ Password ไม่ถูกต้อง");
