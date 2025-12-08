@@ -5,9 +5,7 @@ import "./home.css";
 const socket = io("http://localhost:4005");
 const API_BASE_URL = (() => {
   const envUrl = (process.env.REACT_APP_ADMIN_API_BASE || "").trim();
-  if (envUrl) {
-    return envUrl.replace(/\/$/, "");
-  }
+  if (envUrl) return envUrl.replace(/\/$/, "");
   if (typeof window !== "undefined") {
     const origin = window.location.origin.replace(/\/$/, "");
     if (!origin.includes("localhost")) {
@@ -22,9 +20,7 @@ const formatCurrency = (value) => Number(value || 0).toLocaleString("th-TH");
 const formatUpdatedAt = (value) => {
   if (!value) return "-";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "-";
-  }
+  if (Number.isNaN(date.getTime())) return "-";
   return date.toLocaleString("th-TH", {
     dateStyle: "short",
     timeStyle: "short",
@@ -41,17 +37,22 @@ function Home() {
   const [minute, setMinute] = useState("");
   const [second, setSecond] = useState("");
   const [price, setPrice] = useState("");
+
   const [topRanks, setTopRanks] = useState([]);
   const [totalRankers, setTotalRankers] = useState(0);
   const [rankLoading, setRankLoading] = useState(true);
   const [refreshingRanks, setRefreshingRanks] = useState(false);
   const [rankError, setRankError] = useState("");
+
   const [showAllRanks, setShowAllRanks] = useState(false);
   const [allRanks, setAllRanks] = useState([]);
   const [allRanksLoaded, setAllRanksLoaded] = useState(false);
   const [fetchingAllRanks, setFetchingAllRanks] = useState(false);
   const [allRankError, setAllRankError] = useState("");
 
+  /*
+   * Load system config from socket.io
+   */
   useEffect(() => {
     socket.on("status", (config) => {
       setSystemOn(config.systemOn);
@@ -64,36 +65,29 @@ function Home() {
     return () => socket.off("status");
   }, []);
 
+  /*
+   * Load ranking top 10
+   */
   const loadTopRanks = useCallback(async (silent = false) => {
-    if (silent) {
-      setRefreshingRanks(true);
-    } else {
-      setRankLoading(true);
-    }
+    if (silent) setRefreshingRanks(true);
+    else setRankLoading(true);
+
     try {
       setRankError("");
       const res = await fetch(`${API_BASE_URL}/api/rankings?limit=${RANK_LIMIT}`);
-      if (!res.ok) {
-        throw new Error("FAILED");
-      }
+      if (!res.ok) throw new Error("FAILED");
       const data = await res.json();
-      if (!data.success) {
-        throw new Error("FAILED");
-      }
+      if (!data.success) throw new Error("FAILED");
+
       setTopRanks(data.ranks || []);
       setTotalRankers(data.total ?? data.totalUsers ?? (data.ranks?.length || 0));
     } catch (error) {
-      console.error("[Admin] โหลดข้อมูลอันดับไม่สำเร็จ", error);
+      console.error("[Admin] loadTopRanks failed", error);
       setRankError("ไม่สามารถโหลดข้อมูลอันดับได้");
-      if (!silent) {
-        setTopRanks([]);
-      }
+      if (!silent) setTopRanks([]);
     } finally {
-      if (silent) {
-        setRefreshingRanks(false);
-      } else {
-        setRankLoading(false);
-      }
+      if (silent) setRefreshingRanks(false);
+      else setRankLoading(false);
     }
   }, []);
 
@@ -101,11 +95,11 @@ function Home() {
     loadTopRanks();
   }, [loadTopRanks]);
 
-  // เมื่อกดปุ่มเปิด/ปิดระบบ
+  /* Toggle System */
   const handleToggleSystem = () => {
     const newStatus = !systemOn;
     setSystemOn(newStatus);
-    // ถ้าปิดระบบ ให้ปิดทุกฟังก์ชันด้วย
+
     if (!newStatus) {
       setEnableImage(false);
       setEnableText(false);
@@ -119,7 +113,6 @@ function Home() {
         enableBirthday: false,
       });
     } else {
-      // ถ้าเปิดระบบใหม่ ให้เปิดทุกฟังก์ชัน
       setEnableImage(true);
       setEnableText(true);
       setEnableGift(true);
@@ -134,7 +127,7 @@ function Home() {
     }
   };
 
-  // เปิด/ปิดฟังก์ชันส่งรูป
+  /* Feature toggles */
   const handleToggleImage = () => {
     const newStatus = !enableImage;
     setEnableImage(newStatus);
@@ -147,7 +140,6 @@ function Home() {
     });
   };
 
-  // เปิด/ปิดฟังก์ชันข้อความ
   const handleToggleText = () => {
     const newStatus = !enableText;
     setEnableText(newStatus);
@@ -172,7 +164,6 @@ function Home() {
     });
   };
 
-  // เปิด/ปิดฟังก์ชันอวยพรวันเกิด
   const handleToggleBirthday = () => {
     const newStatus = !enableBirthday;
     setEnableBirthday(newStatus);
@@ -185,6 +176,9 @@ function Home() {
     });
   };
 
+  /*
+   * Save package settings
+   */
   const handleSave = () => {
     if (!minute && !second) {
       alert("กรุณากรอกเวลาอย่างน้อย 1 ช่อง");
@@ -194,8 +188,12 @@ function Home() {
       alert("กรุณากรอกราคา");
       return;
     }
+
     const totalSeconds = (parseInt(minute) || 0) * 60 + (parseInt(second) || 0);
-    const durationDisplay = `${minute ? minute + " นาที" : ""}${second ? (minute ? " " : "") + second + " วินาที" : ""}`;
+    const durationDisplay = `${minute ? minute + " นาที" : ""}${
+      second ? (minute ? " " : "") + second + " วินาที" : ""
+    }`;
+
     const packageData = {
       id: Date.now(),
       mode,
@@ -204,6 +202,7 @@ function Home() {
       time: totalSeconds,
       price: mode === "birthday" ? 0 : price,
     };
+
     socket.emit("addSetting", packageData);
     setMinute("");
     setSecond("");
@@ -211,27 +210,26 @@ function Home() {
     alert("บันทึกแพ็คเกจสำเร็จ");
   };
 
+  /*
+   * Ranking modal
+   */
   const handleOpenAllRanks = async () => {
     setShowAllRanks(true);
-    if (allRanksLoaded || fetchingAllRanks) {
-      return;
-    }
+    if (allRanksLoaded || fetchingAllRanks) return;
+
     setFetchingAllRanks(true);
     setAllRankError("");
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/rankings?limit=500`);
-      if (!res.ok) {
-        throw new Error("FAILED");
-      }
+      if (!res.ok) throw new Error("FAILED");
       const data = await res.json();
-      if (!data.success) {
-        throw new Error("FAILED");
-      }
+      if (!data.success) throw new Error("FAILED");
+
       setAllRanks(data.ranks || []);
       setAllRanksLoaded(true);
       setTotalRankers(data.total ?? totalRankers);
-    } catch (error) {
-      console.error("[Admin] โหลดอันดับทั้งหมดไม่สำเร็จ", error);
+    } catch (err) {
       setAllRankError("ไม่สามารถโหลดอันดับทั้งหมดได้");
     } finally {
       setFetchingAllRanks(false);
@@ -241,6 +239,9 @@ function Home() {
   const handleCloseAllRanks = () => setShowAllRanks(false);
   const modalRanks = allRanks.length ? allRanks : topRanks;
 
+  /* ------------------------------------------------------
+   * RENDER
+   * ------------------------------------------------------ */
   return (
     <div className="admin-home-minimal">
       <header className="admin-header-minimal">
@@ -258,28 +259,35 @@ function Home() {
       </header>
 
       <main className="admin-main-minimal">
-        <div className="admin-dashboard-grid">
-          <section className="admin-control-column">
-            <div className="system-status-row">
-              <span className="system-label">สถานะระบบ:</span>
-              <div
-                className={`switch-minimal ${systemOn ? "on" : "off"}`}
-                onClick={handleToggleSystem}
-                title={systemOn ? "ปิดระบบ" : "เปิดระบบ"}
-              >
-                <div className="switch-dot"></div>
-              </div>
-              <span className={`system-status-text ${systemOn ? "on" : "off"}`}>
-                {systemOn ? "เปิด" : "ปิด"}
-              </span>
-            </div>
-            {!systemOn && (
-              <div className="system-off-msg-minimal">
-                ระบบถูกปิด ฝั่งผู้ใช้จะไม่สามารถใช้งานได้
-              </div>
-            )}
 
-            <div className="function-toggle-row">
+        {/* System toggle */}
+        <div className="system-status-row">
+          <span className="system-label">สถานะระบบ:</span>
+          <div
+            className={`switch-minimal ${systemOn ? "on" : "off"}`}
+            onClick={handleToggleSystem}
+          >
+            <div className="switch-dot"></div>
+          </div>
+          <span className={`system-status-text ${systemOn ? "on" : "off"}`}>
+            {systemOn ? "เปิด" : "ปิด"}
+          </span>
+        </div>
+
+        {!systemOn && (
+          <div className="system-off-msg-minimal">
+            ระบบถูกปิด ฝั่งผู้ใช้จะไม่สามารถใช้งานได้
+          </div>
+        )}
+
+        {/* ⭐⭐ กล่อง 3 กล่อง (เรียงแนวนอน) ⭐⭐ */}
+        <div className="three-box-container">
+
+          {/* กล่องซ้าย - ฟังก์ชันต่าง ๆ */}
+          <section className="feature-card">
+            <h3>ฟังก์ชันต่างๆ</h3>
+
+            <div className="function-toggle-column">
               <div className="toggle-card">
                 <span>ฟังก์ชันส่งรูปภาพ</span>
                 <button
@@ -290,6 +298,7 @@ function Home() {
                   {enableImage ? "เปิด" : "ปิด"}
                 </button>
               </div>
+
               <div className="toggle-card">
                 <span>ฟังก์ชันข้อความ</span>
                 <button
@@ -300,6 +309,7 @@ function Home() {
                   {enableText ? "เปิด" : "ปิด"}
                 </button>
               </div>
+
               <div className="toggle-card">
                 <span>ฟังก์ชันส่งของขวัญ</span>
                 <button
@@ -310,6 +320,7 @@ function Home() {
                   {enableGift ? "เปิด" : "ปิด"}
                 </button>
               </div>
+
               <div className="toggle-card">
                 <span>ฟังก์ชันอวยพรวันเกิด</span>
                 <button
@@ -321,81 +332,85 @@ function Home() {
                 </button>
               </div>
             </div>
-
-            <section className="setting-card-minimal">
-              <h2>ตั้งค่าแพ็คเกจ</h2>
-              <div className="mode-select-row">
-                <button
-                  className={`mode-btn-minimal${mode === "image" ? " active" : ""}`}
-                  onClick={() => setMode("image")}
-                  disabled={!systemOn}
-                >
-                  รูปภาพ
-                </button>
-                <button
-                  className={`mode-btn-minimal${mode === "text" ? " active" : ""}`}
-                  onClick={() => setMode("text")}
-                  disabled={!systemOn}
-                >
-                  ข้อความ
-                </button>
-                <button
-                  className={`mode-btn-minimal${mode === "birthday" ? " active" : ""}`}
-                  onClick={() => setMode("birthday")}
-                  disabled={!systemOn}
-                >
-                  วันเกิด
-                </button>
-              </div>
-
-              <div className="input-row-minimal">
-                <input
-                  type="number"
-                  min="1"
-                  max="59"
-                  placeholder="นาที"
-                  value={minute}
-                  onChange={(e) => setMinute(e.target.value)}
-                  disabled={!systemOn}
-                  className="input-minimal"
-                />
-                <input
-                  type="number"
-                  min="1"
-                  max="59"
-                  placeholder="วินาที"
-                  value={second}
-                  onChange={(e) => setSecond(e.target.value)}
-                  disabled={!systemOn}
-                  className="input-minimal"
-                />
-                <input
-                  type="number"
-                  min="1"
-                  placeholder="ราคา (บาท)"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  disabled={!systemOn}
-                  className="input-minimal"
-                />
-              </div>
-
-              <button
-                className="save-btn-minimal"
-                onClick={handleSave}
-                disabled={!systemOn}
-              >
-                บันทึกแพ็คเกจ
-              </button>
-            </section>
           </section>
 
-          <aside className="admin-rank-panel">
+          {/* กล่องกลาง - ตั้งค่าแพ็กเกจ */}
+          <section className="package-settings-card">
+            <h2>ตั้งค่าแพ็คเกจ</h2>
+
+            <div className="mode-select-row">
+              <button
+                className={`mode-btn-minimal${mode === "image" ? " active" : ""}`}
+                onClick={() => setMode("image")}
+                disabled={!systemOn}
+              >
+                รูปภาพ
+              </button>
+              <button
+                className={`mode-btn-minimal${mode === "text" ? " active" : ""}`}
+                onClick={() => setMode("text")}
+                disabled={!systemOn}
+              >
+                ข้อความ
+              </button>
+              <button
+                className={`mode-btn-minimal${mode === "birthday" ? " active" : ""}`}
+                onClick={() => setMode("birthday")}
+                disabled={!systemOn}
+              >
+                วันเกิด
+              </button>
+            </div>
+
+            <div className="input-row-minimal">
+              <input
+                type="number"
+                min="1"
+                max="59"
+                placeholder="นาที"
+                value={minute}
+                onChange={(e) => setMinute(e.target.value)}
+                disabled={!systemOn}
+                className="input-minimal"
+              />
+              <input
+                type="number"
+                min="1"
+                max="59"
+                placeholder="วินาที"
+                value={second}
+                onChange={(e) => setSecond(e.target.value)}
+                disabled={!systemOn}
+                className="input-minimal"
+              />
+              <input
+                type="number"
+                min="1"
+                placeholder="ราคา (บาท)"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                disabled={!systemOn}
+                className="input-minimal"
+              />
+            </div>
+
+            <button
+              className="save-btn-minimal"
+              onClick={handleSave}
+              disabled={!systemOn}
+            >
+              บันทึกแพ็คเกจ
+            </button>
+          </section>
+
+          {/* กล่องขวา - VIP Supporters */}
+          <aside className="vip-card">
             <div className="rank-panel-heading">
               <div>
                 <p className="rank-panel-title">VIP Supporters</p>
                 <small>อันดับ 1-10 • รวม {totalRankers} คน</small>
               </div>
+
               <button
                 type="button"
                 className="rank-refresh-btn"
@@ -405,10 +420,11 @@ function Home() {
                 {refreshingRanks ? "รีเฟรช..." : "รีเฟรช"}
               </button>
             </div>
+
             <ul className="rank-list">
               {rankLoading ? (
-                Array.from({ length: 5 }).map((_, index) => (
-                  <li className="rank-list-item skeleton" key={`rank-skeleton-${index}`}>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <li className="rank-list-item skeleton" key={i}>
                     <div className="rank-index">--</div>
                     <div className="rank-user-info">
                       <div className="placeholder-bar"></div>
@@ -420,29 +436,43 @@ function Home() {
               ) : topRanks.length === 0 ? (
                 <li className="rank-empty">ยังไม่มีข้อมูลอันดับ</li>
               ) : (
-                topRanks.map((entry, index) => (
-                  <li
-                    className={`rank-list-item tier-${(entry.position || index + 1) <= 3 ? entry.position || index + 1 : "default"}`}
-                    key={`${entry.name}-${entry.position || index}`}
-                  >
-                    <div className="rank-index">#{entry.position || index + 1}</div>
-                    <div className="rank-user-info">
-                      <strong>{entry.name}</strong>
-                      <span>อัปเดต {formatUpdatedAt(entry.updatedAt)}</span>
-                    </div>
-                    <div className="rank-points">฿{formatCurrency(entry.points)}</div>
-                  </li>
-                ))
+                topRanks.map((entry, index) => {
+                  const pos = entry.position || index + 1;
+                  return (
+                    <li
+                      className={`rank-list-item tier-${
+                        pos <= 3 ? pos : "default"
+                      }`}
+                      key={`${entry.name}-${pos}`}
+                    >
+                      <div className="rank-index">#{pos}</div>
+                      <div className="rank-user-info">
+                        <strong>{entry.name}</strong>
+                        <span>อัปเดต {formatUpdatedAt(entry.updatedAt)}</span>
+                      </div>
+                      <div className="rank-points">
+                        ฿{formatCurrency(entry.points)}
+                      </div>
+                    </li>
+                  );
+                })
               )}
             </ul>
+
             {rankError && <div className="rank-error">{rankError}</div>}
-            <button type="button" className="view-more-ranks" onClick={handleOpenAllRanks}>
+
+            <button
+              type="button"
+              className="view-more-ranks"
+              onClick={handleOpenAllRanks}
+            >
               ดูอันดับทั้งหมด
             </button>
           </aside>
         </div>
       </main>
 
+      {/* Modal */}
       {showAllRanks && (
         <div className="rank-modal-overlay" onClick={handleCloseAllRanks}>
           <div className="rank-modal" onClick={(e) => e.stopPropagation()}>
@@ -451,10 +481,15 @@ function Home() {
                 <h3>ประวัติการใช้จ่ายทั้งหมด</h3>
                 <p>รวม {totalRankers} ผู้ใช้</p>
               </div>
-              <button type="button" className="close-rank-modal" onClick={handleCloseAllRanks}>
+              <button
+                type="button"
+                className="close-rank-modal"
+                onClick={handleCloseAllRanks}
+              >
                 ✕
               </button>
             </div>
+
             <div className="rank-modal-body">
               {fetchingAllRanks ? (
                 <p>กำลังโหลด...</p>
@@ -471,9 +506,13 @@ function Home() {
                         <span className="rank-index">#{position}</span>
                         <div className="rank-user-info">
                           <strong>{entry.name}</strong>
-                          <small>อัปเดต {formatUpdatedAt(entry.updatedAt)}</small>
+                          <small>
+                            อัปเดต {formatUpdatedAt(entry.updatedAt)}
+                          </small>
                         </div>
-                        <span className="rank-points">฿{formatCurrency(entry.points)}</span>
+                        <span className="rank-points">
+                          ฿{formatCurrency(entry.points)}
+                        </span>
                       </li>
                     );
                   })}
