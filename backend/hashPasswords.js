@@ -27,7 +27,6 @@ async function createAdminCredentials() {
   );
 
   await fs.promises.writeFile("users.json", JSON.stringify(hashedUsers, null, 2));
-  console.log("Passwords hashed and saved to users.json");
   return hashedUsers;
 }
 

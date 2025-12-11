@@ -131,7 +131,6 @@ async function loadUsers() {
     const data = await fs.promises.readFile("users.json", "utf8");
     return JSON.parse(data);
   } catch (error) {
-    console.log("users.json not found, creating default users...");
     // สร้างผู้ใช้เริ่มต้นถ้าไม่มีไฟล์
     const defaultUsers = [
       { username: "admin", password: await hashPassword("admin123") },
@@ -140,7 +139,6 @@ async function loadUsers() {
     ];
     
     await fs.promises.writeFile("users.json", JSON.stringify(defaultUsers, null, 2));
-    console.log("Default users created and saved to users.json");
     return defaultUsers;
   }
 }
@@ -156,8 +154,6 @@ app.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
     
-    console.log("=== Login attempt:", username);
-    
     if (!username || !password) {
       return res.status(400).json({ 
         success: false, 
@@ -169,7 +165,6 @@ app.post("/login", async (req, res) => {
     const user = await findUser(username);
     
     if (!user) {
-      console.log("User not found:", username);
       return res.status(401).json({ 
         success: false, 
         message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" 
@@ -180,7 +175,6 @@ app.post("/login", async (req, res) => {
     const isPasswordValid = await verifyPassword(password, user.password);
     
     if (isPasswordValid) {
-      console.log("Login successful for:", username);
       res.json({ 
         success: true, 
         message: "เข้าสู่ระบบสำเร็จ",
@@ -190,7 +184,6 @@ app.post("/login", async (req, res) => {
         }
       });
     } else {
-      console.log("Invalid password for:", username);
       res.status(401).json({ 
         success: false, 
         message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" 
@@ -594,10 +587,7 @@ app.listen(PORT, async () => {
   // โหลดและแสดงผู้ใช้ที่มีอยู่
   try {
     const users = await loadUsers();
-    console.log("Available users:");
-    users.forEach(user => {
-      console.log(`- ${user.username}`);
-    });
+    // Users loaded successfully
   } catch (error) {
     console.error("Error loading users:", error);
   }
