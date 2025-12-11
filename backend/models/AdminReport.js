@@ -1,0 +1,40 @@
+import mongoose from "mongoose";
+
+const adminReportSchema = new mongoose.Schema(
+  {
+    reportId: {
+      type: String,
+      unique: true,
+      required: true,
+    },
+    title: String,
+    description: String,
+    category: {
+      type: String,
+      enum: ["technical", "payment", "display", "other"],
+      default: "other",
+    },
+    priority: {
+      type: String,
+      enum: ["low", "medium", "high", "critical"],
+      default: "medium",
+    },
+    status: {
+      type: String,
+      enum: ["open", "in-progress", "resolved", "closed"],
+      default: "open",
+    },
+    senderName: String,
+    senderEmail: String,
+    senderPhone: String,
+    assignedTo: String,
+    resolvedAt: Date,
+    resolution: String,
+    attachments: [String],
+  },
+  { timestamps: true }
+);
+
+const AdminReport = mongoose.model("AdminReport", adminReportSchema);
+
+export default AdminReport;
