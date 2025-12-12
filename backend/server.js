@@ -5,12 +5,15 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from 'url';
 import mongoose from "mongoose";
+import dotenv from "dotenv";
+dotenv.config();
 import { verifyPassword, hashPassword } from './hashPasswords.js';
 import GiftSetting from './models/GiftSetting.js';
 import Ranking from './models/Ranking.js';
 import CheckHistory from './models/CheckHistory.js';
 import AdminReport from './models/AdminReport.js';
 import AdminUser from './models/AdminUser.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,7 +25,7 @@ app.use(express.json());
 // ========== MongoDB Connection ==========
 async function connectDB() {
   try {
-    const conn = await mongoose.connect('mongodb+srv://jj_db_user:Zxo0952186772zxix@cmes.v6sytw1.mongodb.net/?appName=CMES', {
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
     });
     console.log(`[MongoDB] Connected to ${conn.connection.host}`);
   } catch (error) {
