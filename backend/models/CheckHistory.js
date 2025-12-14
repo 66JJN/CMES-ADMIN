@@ -24,6 +24,14 @@ const checkHistorySchema = new mongoose.Schema(
       enum: ["verified", "pending", "rejected"],
       default: "verified",
     },
+    type: {
+      type: String,
+      default: "text", // "text" or "image"
+    },
+    filePath: {
+      type: String,
+      default: null,
+    },
     approvalDate: Date,
     approvedBy: String,
     notes: String,

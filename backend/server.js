@@ -49,7 +49,7 @@ async function addRankingPoint(sender, amount) {
       return;
     }
     const name = (sender || "Guest").trim() || "Guest";
-    
+
     let ranking = await Ranking.findOne({ name });
     if (ranking) {
       ranking.points = (ranking.points || 0) + points;
@@ -123,7 +123,7 @@ async function loadUsers() {
       { username: "cms1", password: await hashPassword("dfhy1785") },
       { username: "cms2", password: await hashPassword("sdgsd5996") },
     ];
-    
+
     await fs.promises.writeFile("users.json", JSON.stringify(defaultUsers, null, 2));
     return defaultUsers;
   }
@@ -144,30 +144,30 @@ async function findUser(username) {
 app.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-    
+
     if (!username || !password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" 
+      return res.status(400).json({
+        success: false,
+        message: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน"
       });
     }
-    
+
     // ค้นหาผู้ใช้จาก users.json
     const user = await findUser(username);
-    
+
     if (!user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" 
+      return res.status(401).json({
+        success: false,
+        message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"
       });
     }
-    
+
     // ตรวจสอบรหัสผ่านด้วย bcrypt
     const isPasswordValid = await verifyPassword(password, user.password);
-    
+
     if (isPasswordValid) {
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: "เข้าสู่ระบบสำเร็จ",
         user: {
           username: user.username,
@@ -175,16 +175,16 @@ app.post("/login", async (req, res) => {
         }
       });
     } else {
-      res.status(401).json({ 
-        success: false, 
-        message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" 
+      res.status(401).json({
+        success: false,
+        message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"
       });
     }
   } catch (error) {
     console.error('Error during login:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: "เกิดข้อผิดพลาดในระบบ" 
+    res.status(500).json({
+      success: false,
+      message: "เกิดข้อผิดพลาดในระบบ"
     });
   }
 });
@@ -226,7 +226,7 @@ app.post("/api/gifts/items", async (req, res) => {
     });
 
     const savedGift = await newGift.save();
-    
+
     const item = {
       id: savedGift._id.toString(),
       name: savedGift.giftName,
@@ -294,7 +294,7 @@ app.put("/api/gifts/items/:id", async (req, res) => {
 app.delete("/api/gifts/items/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const deletedGift = await GiftSetting.findByIdAndDelete(id);
 
     if (!deletedGift) {
@@ -364,10 +364,10 @@ app.get("/api/rankings/top", async (req, res) => {
       .sort({ points: -1 })
       .limit(3)
       .lean();
-    res.json({ 
-      success: true, 
-      ranks: top, 
-      totalUsers: await Ranking.countDocuments() 
+    res.json({
+      success: true,
+      ranks: top,
+      totalUsers: await Ranking.countDocuments()
     });
   } catch (error) {
     console.error("Error fetching rankings:", error);
@@ -418,7 +418,7 @@ app.post("/api/upload", upload.single("file"), (req, res) => {
     console.log("[Admin] Upload request received");
     console.log("[Admin] req.body:", req.body);
     console.log("[Admin] req.file:", req.file);
-    
+
     const {
       type,
       text,
@@ -431,7 +431,8 @@ app.post("/api/upload", upload.single("file"), (req, res) => {
       composed
     } = req.body;
 
-    if (!req.file) {
+    // ตรวจสอบไฟล์ (ถ้าประเภทไม่ใช่ text หรือ gift ต้องมีไฟล์)
+    if (!req.file && type !== "text" && type !== "gift") {
       console.error("[Admin] No file received in upload");
       return res.status(400).json({ success: false, error: "No file received" });
     }
@@ -470,14 +471,14 @@ app.get("/api/queue", (req, res) => {
   try {
     console.log("=== Queue request received");
     console.log("Current queue length:", imageQueue.length);
-    
+
     // เรียงตามเวลาที่รับมา เก่าไปใหม่ (FIFO - First In First Out)
     const sortedImages = imageQueue.sort((a, b) => {
       const dateA = new Date(a.receivedAt);
       const dateB = new Date(b.receivedAt);
       return dateA - dateB;
     });
-    
+
     console.log("Returning sorted images:", sortedImages);
     res.json(sortedImages);
   } catch (error) {
@@ -508,7 +509,10 @@ app.post("/api/approve/:id", async (req, res) => {
       amount: approvedImage.price || 0,
       status: 'verified',
       approvalDate: new Date(),
-      notes: approvedImage.giftOrder?.note || ''
+      approvalDate: new Date(),
+      notes: approvedImage.giftOrder?.note || '',
+      type: approvedImage.type || 'text',
+      filePath: approvedImage.filePath || null
     });
 
     // ลบออกจากคิว
@@ -543,7 +547,10 @@ app.post("/api/reject/:id", async (req, res) => {
       amount: rejectedImage.price || 0,
       status: 'rejected',
       approvalDate: new Date(),
-      notes: rejectedImage.giftOrder?.note || ''
+      approvalDate: new Date(),
+      notes: rejectedImage.giftOrder?.note || '',
+      type: rejectedImage.type || 'text',
+      filePath: rejectedImage.filePath || null
     });
 
     // ลบไฟล์รูปภาพ
@@ -568,7 +575,23 @@ app.post("/api/reject/:id", async (req, res) => {
 app.get("/api/check-history", async (req, res) => {
   try {
     const history = await CheckHistory.find({}).sort({ approvalDate: -1 });
-    res.json(history);
+
+    // Map data ให้ตรงกับที่ Frontend ต้องการ
+    const formattedHistory = history.map(item => ({
+      id: item._id,
+      giftId: item.giftId,
+      text: item.giftName, // Map giftName -> text
+      sender: item.senderName, // Map senderName -> sender
+      tableNumber: item.tableNumber,
+      price: item.amount,
+      status: item.status === 'verified' ? 'approved' : item.status, // Map verified -> approved
+      checkedAt: item.approvalDate,
+      createdAt: item.createdAt,
+      type: item.type || (item.filePath ? 'image' : 'text'), // Fallback logic
+      filePath: item.filePath
+    }));
+
+    res.json(formattedHistory);
   } catch (error) {
     console.error('Error fetching check history:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -603,11 +626,11 @@ app.delete("/api/delete/:id", (req, res) => {
   try {
     const { id } = req.params;
     const imageIndex = imageQueue.findIndex(img => img.id === id);
-    
+
     if (imageIndex === -1) {
       return res.status(404).json({ success: false, message: 'Image not found' });
     }
-    
+
     // ลบไฟล์รูปภาพ
     if (imageQueue[imageIndex].filePath) {
       const imagePath = path.join(__dirname, imageQueue[imageIndex].filePath);
@@ -615,10 +638,10 @@ app.delete("/api/delete/:id", (req, res) => {
         fs.unlinkSync(imagePath);
       }
     }
-    
+
     // ลบออกจากคิว
     imageQueue.splice(imageIndex, 1);
-    
+
     res.json({ success: true, message: 'Image deleted successfully' });
   } catch (error) {
     console.error('Error deleting image:', error);
@@ -636,32 +659,32 @@ app.post("/api/stat-slip", (req, res) => {
 app.get("/api/admin/report", async (req, res) => {
   try {
     console.log("=== Admin report request received");
-    
+
     const reportPath = path.join(__dirname, 'report.json');
-    
+
     if (!fs.existsSync(reportPath)) {
       console.log("report.json not found");
       return res.json([]);
     }
-    
+
     const data = await fs.promises.readFile(reportPath, 'utf8');
     const reportsFromFile = JSON.parse(data);
-    
+
     console.log("Returning reports:", reportsFromFile.length);
     res.json(reportsFromFile);
   } catch (error) {
     console.error('Error fetching reports:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
 
 // Health check endpoint
 app.get("/health", (req, res) => {
-  res.json({ 
-    status: "OK", 
+  res.json({
+    status: "OK",
     timestamp: new Date().toISOString(),
     queueLength: imageQueue.length
   });
@@ -674,7 +697,7 @@ app.listen(PORT, async () => {
   console.log(`Queue API: http://localhost:${PORT}/api/queue`);
   console.log(`Login API: http://localhost:${PORT}/login`);
   console.log(`Report API: http://localhost:${PORT}/api/admin/report`);
-  
+
   // โหลดและแสดงผู้ใช้ที่มีอยู่
   try {
     const users = await loadUsers();
@@ -688,14 +711,14 @@ app.listen(PORT, async () => {
 app.post("/api/report", async (req, res) => {
   try {
     console.log('=== Received report:', req.body);
-    
+
     const { category, detail } = req.body;
-    
+
     // ตรวจสอบข้อมูล
     if (!category || !detail || !detail.trim()) {
       return res.status(400).json({ success: false, message: "INVALID_DATA" });
     }
-    
+
     // สร้าง report object
     const report = await AdminReport.create({
       reportId: Date.now().toString(),
@@ -703,14 +726,14 @@ app.post("/api/report", async (req, res) => {
       description: detail.trim(),
       status: "open"
     });
-    
+
     console.log('Report saved successfully to database');
     return res.json({ success: true, report });
   } catch (error) {
     console.error('Error saving report:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    return res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -731,17 +754,17 @@ app.patch("/api/reports/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    
+
     const report = await AdminReport.findByIdAndUpdate(
       id,
       { status, updatedAt: new Date() },
       { new: true }
     );
-    
+
     if (!report) {
       return res.status(404).json({ success: false, message: "NOT_FOUND" });
     }
-    
+
     res.json({ success: true, report });
   } catch (error) {
     console.error('Error updating report:', error);

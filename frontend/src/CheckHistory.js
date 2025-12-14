@@ -35,8 +35,8 @@ function CheckHistory() {
     fetchHistory();
   };
 
-  const textHistory = history.filter((item) => item.type === "text");
-  const imageHistory = history.filter((item) => item.type === "image");
+  const textHistory = history.filter((item) => item.type === "text" || item.type === "gift");
+  const imageHistory = history.filter((item) => item.type === "image" || item.type === "birthday");
 
   const formatDate = (dateString) => {
     if (!dateString) return "-";
@@ -175,9 +175,8 @@ function CheckHistory() {
           }}
         >
           <button
-            className={`ch-btn ch-btn-edit${
-              editMode ? " active" : ""
-            }`}
+            className={`ch-btn ch-btn-edit${editMode ? " active" : ""
+              }`}
             onClick={() => setEditMode((v) => !v)}
           >
             {editMode ? "ปิดโหมดแก้ไข" : "แก้ไข"}
