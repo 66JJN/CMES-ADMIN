@@ -45,6 +45,15 @@ const checkHistorySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// TTL Index: ลบข้อมูลที่เก่ากว่า 2 วัน (172800 วินาที) โดยไม่ลบ Gift
+checkHistorySchema.index(
+  { createdAt: 1 },
+  {
+    expireAfterSeconds: 172800, // 2 days
+    partialFilterExpression: { type: { $ne: "gift" } }
+  }
+);
+
 const CheckHistory = mongoose.model("CheckHistory", checkHistorySchema);
 
 export default CheckHistory;

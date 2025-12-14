@@ -1,28 +1,29 @@
 import express from "express";
+import mongoose from "mongoose";
 import cors from "cors";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { fileURLToPath } from 'url';
-import mongoose from "mongoose";
+import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-dotenv.config();
-import { verifyPassword, hashPassword } from './hashPasswords.js';
-import GiftSetting from './models/GiftSetting.js';
-import Ranking from './models/Ranking.js';
-import CheckHistory from './models/CheckHistory.js';
-import AdminReport from './models/AdminReport.js';
-import AdminUser from './models/AdminUser.js';
+import cron from "node-cron"; // Import node-cron
 
+import AdminReport from "./models/AdminReport.js";
+import CheckHistory from "./models/CheckHistory.js";
+import GiftSetting from "./models/GiftSetting.js";
+import Ranking from './models/Ranking.js'; // Keep Ranking import
+import AdminUser from './models/AdminUser.js'; // Keep AdminUser import
+import { verifyPassword, hashPassword } from './hashPasswords.js'; // Keep password utilities import
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+const PORT = 5001;
 
-// ========== MongoDB Connection ==========
+// เชื่อมต่อ MongoDB
 async function connectDB() {
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
@@ -36,11 +37,80 @@ async function connectDB() {
 }
 connectDB();
 
-// สร้างโฟลเดอร์ uploads
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+app.use(cors());
+app.use(express.json());
+
+// สร้างโฟลเดอร์ถ้ายังไม่มี
+const giftUploadDir = path.join(__dirname, 'uploads/gifts');
+const userUploadDir = path.join(__dirname, 'uploads/user-uploads');
+
+if (!fs.existsSync(giftUploadDir)) fs.mkdirSync(giftUploadDir, { recursive: true });
+if (!fs.existsSync(userUploadDir)) fs.mkdirSync(userUploadDir, { recursive: true });
+
+// Serve static files
+app.use("/uploads/gifts", express.static(giftUploadDir));
+app.use("/uploads/user-uploads", express.static(userUploadDir));
+// Legacy support
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// --- Multer Configuration ---
+
+// 1. Gift Storage (ถาวร)
+const giftStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, giftUploadDir);
+  },
+  filename: (req, file, cb) => {
+    // Keep original extension
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, "gift-" + uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+// 2. User Upload Storage (ชั่วคราว, ลบอัตโนมัติ)
+const userStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, userUploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, "user-" + uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const uploadGift = multer({ storage: giftStorage });
+const uploadUser = multer({ storage: userStorage });
+
+// --- Cron Job: Cleanup User Uploads (Every midnight) ---
+// ลบไฟล์ใน uploads/user-uploads ที่เก่ากว่า 2 วัน
+cron.schedule('0 0 * * *', () => {
+  console.log('[Cleanup] Running daily cleanup for user uploads...');
+  const twoDaysAgo = Date.now() - (2 * 24 * 60 * 60 * 1000);
+
+  fs.readdir(userUploadDir, (err, files) => {
+    if (err) {
+      console.error('[Cleanup] Error reading directory:', err);
+      return;
+    }
+
+    files.forEach(file => {
+      const filePath = path.join(userUploadDir, file);
+      fs.stat(filePath, (err, stats) => {
+        if (err) {
+          console.error(`[Cleanup] Error stat file ${file}:`, err);
+          return;
+        }
+
+        if (stats.mtimeMs < twoDaysAgo) {
+          fs.unlink(filePath, (err) => {
+            if (err) console.error(`[Cleanup] Failed to delete ${file}:`, err);
+            else console.log(`[Cleanup] Deleted old file: ${file}`);
+          });
+        }
+      });
+    });
+  });
+});
 
 // ----- Ranking Storage (using Database) -----
 async function addRankingPoint(sender, amount) {
@@ -68,31 +138,14 @@ async function addRankingPoint(sender, amount) {
   }
 }
 
-// ตั้งค่าการเก็บไฟล์
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
-const upload = multer({ storage });
-
-// เสิร์ฟไฟล์รูปภาพ
-app.use('/uploads', express.static(uploadsDir));
-
-// เก็บข้อมูลรูปภาพ (ในการใช้งานจริงควรใช้ฐานข้อมูล)
 let imageQueue = [];
-
-// ----- Gift Settings -----
-const giftSettingsPath = path.join(__dirname, "gift-settings.json");
 let giftSettings = {
   tableCount: 10,
   items: []
 };
 
-// Load from JSON for backward compatibility (for existing gifts not yet in DB)
+// Load gift settings
+const giftSettingsPath = path.join(__dirname, "gift-settings.json");
 if (fs.existsSync(giftSettingsPath)) {
   try {
     const loaded = JSON.parse(fs.readFileSync(giftSettingsPath, "utf8"));
@@ -343,19 +396,20 @@ app.patch("/api/gifts/table-count", (req, res) => {
   }
   giftSettings.tableCount = parsed;
   saveGiftSettings();
-  res.json({ success: true, settings: giftSettings });
+  res.json({ success: true, tableCount: parsed });
 });
 
-app.post("/api/gifts/upload", upload.single("image"), (req, res) => {
+// API สำหรับอัปโหลดรูปภาพ Gift (ใช้ giftStorage)
+app.post("/api/gifts/upload", uploadGift.single("image"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: "ไม่พบไฟล์รูปภาพ" });
+      return res.status(400).json({ success: false, message: "No file uploaded" });
     }
-    const relativePath = `/uploads/${req.file.filename}`;
-    res.json({ success: true, url: relativePath });
+    const filePath = `/uploads/gifts/${req.file.filename}`;
+    res.json({ success: true, url: filePath });
   } catch (error) {
-    console.error("Gift image upload failed", error);
-    res.status(500).json({ success: false, message: "อัปโหลดรูปภาพไม่สำเร็จ" });
+    console.error("Error uploading gift:", error);
+    res.status(500).json({ success: false, message: "Upload failed" });
   }
 });
 
@@ -375,6 +429,7 @@ app.get("/api/rankings/top", async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to fetch rankings" });
   }
 });
+
 app.post("/api/gifts/order", (req, res) => {
   try {
     const { orderId, sender, tableNumber, note, items, totalPrice } = req.body;
@@ -408,17 +463,26 @@ app.post("/api/gifts/order", (req, res) => {
     addRankingPoint(sender, Number(totalPrice) || 0);
     res.json({ success: true, queueItem });
   } catch (error) {
+
     console.error("Gift order push failed", error);
     res.status(500).json({ success: false, message: "บันทึกคำสั่งซื้อไม่สำเร็จ" });
   }
 });
 
 // API สำหรับรับข้อมูลจาก User backend
-app.post("/api/upload", upload.single("file"), (req, res) => {
+app.post("/api/upload", uploadUser.single("file"), (req, res) => {
   try {
-    console.log("[Admin] Upload request received");
-    console.log("[Admin] req.body:", req.body);
-    console.log("[Admin] req.file:", req.file);
+    console.log("=== Upload request received ===");
+    if (req.file) {
+      console.log("File received:", req.file);
+      // Correct file path to serve from /uploads/user-uploads
+      // Note: req.file.filename will be like 'user-123.jpg'
+      // We serve it via /uploads/user-uploads/user-123.jpg
+      // BUT check how we store it in CheckHistory?
+      // Logic below creates `item.filePath`.
+    } else {
+      console.log("No file received (possibly text only or gift)");
+    }
 
     const {
       type,
@@ -450,7 +514,8 @@ app.post("/api/upload", upload.single("file"), (req, res) => {
       textColor: textColor || "white",
       socialType: socialType || null,
       socialName: socialName || null,
-      filePath: req.file ? "/uploads/" + req.file.filename : null,
+      // Fix: point to correct user-uploads path
+      filePath: req.file ? `/uploads/user-uploads/${req.file.filename}` : null,
       composed: composed === "1" || composed === "true",
       status: "pending",
       createdAt: new Date().toISOString(),
@@ -719,39 +784,20 @@ app.get("/health", (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, async () => {
-  console.log(`Admin backend server running on port ${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-  console.log(`Queue API: http://localhost:${PORT}/api/queue`);
-  console.log(`Login API: http://localhost:${PORT}/login`);
-  console.log(`Report API: http://localhost:${PORT}/api/admin/report`);
-
-  // โหลดและแสดงผู้ใช้ที่มีอยู่
-  try {
-    const users = await loadUsers();
-    // Users loaded successfully
-  } catch (error) {
-    console.error("Error loading users:", error);
-  }
-});
-
+// ----- Reports Storage (using Database) -----
 // ----- Reports Storage (using Database) -----
 app.post("/api/report", async (req, res) => {
   try {
-    console.log('=== Received report:', req.body);
-
-    const { category, detail } = req.body;
+    const { reportId, category, detail } = req.body;
 
     // ตรวจสอบข้อมูล
     if (!category || !detail || !detail.trim()) {
       return res.status(400).json({ success: false, message: "INVALID_DATA" });
     }
 
-    // สร้าง report object
     const report = await AdminReport.create({
-      reportId: Date.now().toString(),
-      category,
+      reportId: reportId || Date.now().toString(),
+      category: category || "other",
       description: detail.trim(),
       status: "open"
     });
@@ -788,6 +834,7 @@ app.get("/api/reports", async (req, res) => {
 });
 
 // PATCH: admin อัปเดตสถานะ
+// PATCH: admin อัปเดตสถานะ
 app.patch("/api/reports/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -818,6 +865,22 @@ app.patch("/api/reports/:id", async (req, res) => {
   } catch (error) {
     console.error('Error updating report:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+app.listen(PORT, async () => {
+  console.log(`Admin backend server running on port ${PORT} `);
+  console.log(`Health check: http://localhost:${PORT}/health`);
+  console.log(`Queue API: http://localhost:${PORT}/api/queue`);
+  console.log(`Login API: http://localhost:${PORT}/login`);
+  console.log(`Report API: http://localhost:${PORT}/api/admin/report`);
+
+  // โหลดและแสดงผู้ใช้ที่มีอยู่
+  try {
+    const users = await loadUsers();
+    // Users loaded successfully
+  } catch (error) {
+    console.error("Error loading users:", error);
   }
 });
 
