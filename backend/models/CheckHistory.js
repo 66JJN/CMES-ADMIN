@@ -2,44 +2,45 @@ import mongoose from "mongoose";
 
 const checkHistorySchema = new mongoose.Schema(
   {
-    giftId: {
-      type: String,
-      required: true,
-    },
-    giftName: String,
-    senderName: {
-      type: String,
-      required: true,
-    },
-    tableNumber: {
-      type: Number,
-      required: true,
-    },
-    amount: {
-      type: Number,
-      required: true,
-    },
-    status: {
-      type: String,
-      enum: ["verified", "pending", "rejected"],
-      default: "verified",
-    },
+    // Common fields
+    transactionId: { type: String, required: true }, // เดิม giftId
     type: {
       type: String,
-      default: "text", // "text" or "image"
+      // enum: ["text", "image", "gift", "birthday"], // Remove strict enum or ensure sender sends correct type
+      required: true
     },
-    filePath: {
+    sender: { type: String, default: "Unknown" },
+    price: { type: Number, default: 0 },
+    status: {
       type: String,
-      default: null,
+      enum: ["approved", "rejected", "pending", "verified"], // verified is legacy, approved is new standard
+      default: "pending",
     },
+
+    // Content fields
+    content: { type: String, default: "" }, // สำหรับ Text message หรือ Gift Name
+    mediaUrl: { type: String, default: null }, // สำหรับ Image path, เดิม filePath
+
+    // Metadata for specific types (Gift, etc.)
+    metadata: {
+      tableNumber: { type: Number, default: 0 },
+      giftItems: [Object], // รายการของขวัญ
+      note: String,
+      theme: String, // textColor or theme
+      social: {
+        type: { type: String, default: null },
+        name: { type: String, default: null }
+      }
+    },
+
+    // Audit fields
     approvalDate: Date,
     approvedBy: String,
-    notes: String,
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
+    rejectReason: String,
+    notes: String, // Internal notes
+
+    // Legacy mapping support (optional, can remove if migration script handles it. keeping for safety)
+    // giftId, giftName, senderName, amount, filePath - we can rely on new fields but server must map legacy data if exists.
   },
   { timestamps: true }
 );

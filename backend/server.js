@@ -26,8 +26,9 @@ app.use(express.json());
 async function connectDB() {
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      dbName: 'cmes-admin'
     });
-    console.log(`[MongoDB] Connected to ${conn.connection.host}`);
+    console.log(`[MongoDB] Connected to ${conn.connection.host} (DB: cmes-admin)`);
   } catch (error) {
     console.error('[MongoDB] Connection failed:', error.message);
     process.exit(1);
@@ -499,26 +500,40 @@ app.post("/api/approve/:id", async (req, res) => {
       return res.status(404).json({ success: false, message: 'Image not found' });
     }
 
-    // สร้างบันทึกประวัติในฐานข้อมูล
-    const approvedImage = imageQueue[imageIndex];
-    await CheckHistory.create({
-      giftId: approvedImage.id,
-      giftName: approvedImage.text || 'Unknown',
-      senderName: approvedImage.sender || 'Unknown',
-      tableNumber: approvedImage.giftOrder?.tableNumber || 0,
-      amount: approvedImage.price || 0,
-      status: 'verified',
+    const item = imageQueue[imageIndex]; // Restore missing definition
+
+    // ตรวจสอบข้อมูลก่อนบันทึก
+    const historyData = {
+      transactionId: item.id.toString(), // Ensure string
+      type: item.type || (item.filePath ? 'image' : 'text'),
+      sender: item.sender || 'Unknown',
+      price: Number(item.price) || 0,
+      status: 'approved',
+      content: item.text || '',
+      mediaUrl: item.filePath || null,
+      metadata: {
+        tableNumber: Number(item.giftOrder?.tableNumber) || 0,
+        giftItems: item.giftOrder?.items || [],
+        note: item.giftOrder?.note || '',
+        theme: item.textColor || 'white',
+        social: {
+          type: item.socialType || null,
+          name: item.socialName || null
+        }
+      },
       approvalDate: new Date(),
-      approvalDate: new Date(),
-      notes: approvedImage.giftOrder?.note || '',
-      type: approvedImage.type || 'text',
-      filePath: approvedImage.filePath || null
-    });
+      approvedBy: 'admin',
+      notes: ''
+    };
+
+    console.log("[Approve] Saving history:", JSON.stringify(historyData, null, 2));
+
+    await CheckHistory.create(historyData);
 
     // ลบออกจากคิว
     imageQueue.splice(imageIndex, 1);
 
-    res.json({ success: true, message: 'Image approved and removed from queue' });
+    res.json({ success: true, message: 'Item approved and removed from queue' });
   } catch (error) {
     console.error('Error approving image:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -538,24 +553,33 @@ app.post("/api/reject/:id", async (req, res) => {
     }
 
     // สร้างบันทึกประวัติในฐานข้อมูล
-    const rejectedImage = imageQueue[imageIndex];
+    const item = imageQueue[imageIndex];
     await CheckHistory.create({
-      giftId: rejectedImage.id,
-      giftName: rejectedImage.text || 'Unknown',
-      senderName: rejectedImage.sender || 'Unknown',
-      tableNumber: rejectedImage.giftOrder?.tableNumber || 0,
-      amount: rejectedImage.price || 0,
+      transactionId: item.id,
+      type: item.type || (item.filePath ? 'image' : 'text'),
+      sender: item.sender || 'Unknown',
+      price: item.price || 0,
       status: 'rejected',
+      content: item.text || '',
+      mediaUrl: item.filePath || null,
+      metadata: {
+        tableNumber: item.giftOrder?.tableNumber || 0,
+        giftItems: item.giftOrder?.items || [],
+        note: item.giftOrder?.note || '',
+        theme: item.textColor || 'white',
+        social: {
+          type: item.socialType || null,
+          name: item.socialName || null
+        }
+      },
       approvalDate: new Date(),
-      approvalDate: new Date(),
-      notes: rejectedImage.giftOrder?.note || '',
-      type: rejectedImage.type || 'text',
-      filePath: rejectedImage.filePath || null
+      approvedBy: 'admin',
+      notes: ''
     });
 
     // ลบไฟล์รูปภาพ
-    if (imageQueue[imageIndex].filePath) {
-      const imagePath = path.join(__dirname, imageQueue[imageIndex].filePath);
+    if (item.filePath) {
+      const imagePath = path.join(__dirname, item.filePath);
       if (fs.existsSync(imagePath)) {
         fs.unlinkSync(imagePath);
       }
@@ -564,7 +588,7 @@ app.post("/api/reject/:id", async (req, res) => {
     // ลบออกจากคิว
     imageQueue.splice(imageIndex, 1);
 
-    res.json({ success: true, message: 'Image rejected and removed from queue' });
+    res.json({ success: true, message: 'Item rejected and removed from queue' });
   } catch (error) {
     console.error('Error rejecting image:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -576,20 +600,25 @@ app.get("/api/check-history", async (req, res) => {
   try {
     const history = await CheckHistory.find({}).sort({ approvalDate: -1 });
 
-    // Map data ให้ตรงกับที่ Frontend ต้องการ
-    const formattedHistory = history.map(item => ({
-      id: item._id,
-      giftId: item.giftId,
-      text: item.giftName, // Map giftName -> text
-      sender: item.senderName, // Map senderName -> sender
-      tableNumber: item.tableNumber,
-      price: item.amount,
-      status: item.status === 'verified' ? 'approved' : item.status, // Map verified -> approved
-      checkedAt: item.approvalDate,
-      createdAt: item.createdAt,
-      type: item.type || (item.filePath ? 'image' : 'text'), // Fallback logic
-      filePath: item.filePath
-    }));
+    // Map data ให้ตรงกับที่ Frontend ต้องการ (รองรับทั้ง Schema เก่าและใหม่)
+    const formattedHistory = history.map(item => {
+      // Helper to clear legacy vs new
+      const isNew = !!item.transactionId;
+
+      return {
+        id: item._id,
+        giftId: isNew ? item.transactionId : item.giftId,
+        text: isNew ? item.content : item.giftName,
+        sender: isNew ? item.sender : item.senderName,
+        price: isNew ? item.price : item.amount,
+        status: (item.status === 'verified' || item.status === 'approved') ? 'approved' : item.status,
+        checkedAt: item.approvalDate,
+        createdAt: item.createdAt,
+        type: item.type || (item.filePath ? 'image' : 'text'),
+        filePath: isNew ? item.mediaUrl : item.filePath,
+        tableNumber: isNew ? (item.metadata?.tableNumber || 0) : item.tableNumber
+      };
+    });
 
     res.json(formattedHistory);
   } catch (error) {
@@ -742,7 +771,16 @@ app.post("/api/report", async (req, res) => {
 app.get("/api/reports", async (req, res) => {
   try {
     const reports = await AdminReport.find({}).sort({ createdAt: -1 });
-    res.json(reports);
+    const formatted = reports.map(r => ({
+      id: r._id, // Map _id to id
+      reportId: r.reportId,
+      detail: r.description,
+      category: r.category,
+      status: r.status,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt
+    }));
+    res.json(formatted);
   } catch (error) {
     console.error('Error fetching reports:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -765,7 +803,18 @@ app.patch("/api/reports/:id", async (req, res) => {
       return res.status(404).json({ success: false, message: "NOT_FOUND" });
     }
 
-    res.json({ success: true, report });
+    // Map _id to id for consistency
+    const formatted = {
+      id: report._id,
+      reportId: report.reportId,
+      detail: report.description,
+      category: report.category,
+      status: report.status,
+      createdAt: report.createdAt,
+      updatedAt: report.updatedAt
+    };
+
+    res.json({ success: true, report: formatted });
   } catch (error) {
     console.error('Error updating report:', error);
     res.status(500).json({ success: false, message: 'Server error' });

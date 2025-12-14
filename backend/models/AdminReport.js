@@ -21,7 +21,7 @@ const adminReportSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["open", "in-progress", "resolved", "closed"],
+      enum: ["open", "in-progress", "resolved", "closed", "reading", "new"], // Added reading and new to be safe
       default: "open",
     },
     senderName: String,
