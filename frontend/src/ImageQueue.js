@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "./ImageQueue.css";
+import igLogo from "./data-icon/ig-logo.png";
+import fbLogo from "./data-icon/facebook-logo.png";
+import lineLogo from "./data-icon/line-logo.png";
+import tiktokLogo from "./data-icon/x-logo.png";
 
 function ImageQueue() {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyItems, setHistoryItems] = useState([]);
+  const [categoryFilter, setCategoryFilter] = useState("all");
   
   // สำหรับ Preview และ Queue System
   const [currentPreview, setCurrentPreview] = useState(null);
@@ -15,6 +22,8 @@ function ImageQueue() {
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [pauseTimeLeft, setPauseTimeLeft] = useState(0);
+  const [displayPaused, setDisplayPaused] = useState(false);
+  const [savedTimeLeft, setSavedTimeLeft] = useState(0);
 
   useEffect(() => {
     fetchImages();
@@ -37,7 +46,7 @@ function ImageQueue() {
   // Timer effect สำหรับ countdown
   useEffect(() => {
     let interval = null;
-    if (isActive && currentPreview) {
+    if (isActive && currentPreview && !displayPaused) {
       interval = setInterval(() => {
         const startTimestamp = Number(localStorage.getItem("startTimestamp"));
         const duration = Number(localStorage.getItem("duration"));
@@ -46,6 +55,13 @@ function ImageQueue() {
         const left = duration - elapsed;
         setTimeLeft(left > 0 ? left : 0);
         if (left <= 0) {
+          // บันทึกรูปที่เล่นจบลง history
+          fetch(`http://localhost:5001/api/complete/${currentPreview.id}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(currentPreview)
+          }).catch(err => console.error("Error completing image:", err));
+
           setIsActive(false);
           setCurrentPreview(null);
           localStorage.removeItem("currentPreview");
@@ -62,7 +78,34 @@ function ImageQueue() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isActive, currentPreview, previewQueue.length]);
+  }, [isActive, currentPreview, previewQueue.length, displayPaused]);
+
+  // useEffect สำหรับจัดการ pause countdown ระหว่างรูป
+  useEffect(() => {
+    const processNext = () => {
+      if (previewQueue.length > 0) {
+        const nextImage = previewQueue[0];
+        setPreviewQueue(prev => prev.slice(1));
+        startPreview(nextImage);
+        setIsPaused(false);
+        setPauseTimeLeft(0);
+      }
+    };
+
+    let interval = null;
+    if (isPaused && pauseTimeLeft > 0) {
+      interval = setInterval(() => {
+        setPauseTimeLeft(prev => {
+          if (prev <= 1) {
+            processNext();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isPaused, pauseTimeLeft, previewQueue]);
 
   const fetchImages = async () => {
     try {
@@ -75,6 +118,59 @@ function ImageQueue() {
       console.error("Error fetching images:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHistory = async () => {
+    try {
+      const response = await fetch("http://localhost:5001/api/history");
+      if (response.ok) {
+        const data = await response.json();
+        setHistoryItems(data);
+      }
+    } catch (error) {
+      console.error("Error fetching history:", error);
+    }
+  };
+
+  const handlePauseDisplay = () => {
+    if (displayPaused) {
+      // Resume
+      setDisplayPaused(false);
+      const now = Date.now();
+      localStorage.setItem("startTimestamp", now - (savedTimeLeft * 1000));
+    } else {
+      // Pause
+      setDisplayPaused(true);
+      setSavedTimeLeft(timeLeft);
+    }
+  };
+
+  const handleRestoreToQueue = async (historyId) => {
+    try {
+      console.log("[Frontend] Restoring history ID:", historyId);
+      const response = await fetch(`http://localhost:5001/api/history/restore/${historyId}`, {
+        method: "POST",
+      });
+      if (response.ok) {
+        const result = await response.json();
+        console.log("[Frontend] Restore success:", result);
+        
+        // Refresh ทั้งสองอัน
+        await fetchHistory();
+        await fetchImages();
+        
+        // ปิด modal หลังจาก restore สำเร็จ
+        setShowHistory(false);
+        
+        alert("นำกลับเข้าคิวสำเร็จ");
+      } else {
+        console.error("[Frontend] Restore failed:", response.status);
+        alert("ไม่สามารถนำกลับเข้าคิวได้");
+      }
+    } catch (error) {
+      console.error("Error restoring to queue:", error);
+      alert("เกิดข้อผิดพลาด: " + error.message);
     }
   };
 
@@ -177,49 +273,30 @@ function ImageQueue() {
   }, [currentPreview, timeLeft, isActive, isPaused, pauseTimeLeft]);
 
   function renderSocialOnImage(socialType, socialName) {
-    switch (socialType) {
-      case "ig":
-        return (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <rect x="2" y="2" width="20" height="20" rx="5" fill="#E1306C"/>
-              <circle cx="12" cy="12" r="5" fill="#fff"/>
-              <circle cx="18" cy="6" r="1.5" fill="#fff"/>
-            </svg>
-            {socialName}
-          </span>
-        );
-      case "fb":
-        return (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F3">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-            </svg>
-            {socialName}
-          </span>
-        );
-      case "line":
-        return (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#06C755">
-              <rect x="2" y="2" width="20" height="20" rx="5"/>
-              <text x="12" y="16" textAnchor="middle" fontSize="10" fill="#fff" fontFamily="Arial">LINE</text>
-            </svg>
-            {socialName}
-          </span>
-        );
-      case "tiktok":
-        return (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#000">
-              <path d="M9.5 3a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1.5a5.5 5.5 0 0 0 5.5 5.5h1.5a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1.5A5.5 5.5 0 0 0 14.5 19.5V21a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1v-1.5A5.5 5.5 0 0 0 3 14.5V13a1 1 0 0 1 1-1h1.5A5.5 5.5 0 0 0 9.5 4.5V3z"/>
-            </svg>
-            {socialName}
-          </span>
-        );
-      default:
-        return null;
-    }
+    const logoMap = {
+      ig: igLogo,
+      fb: fbLogo,
+      line: lineLogo,
+      tiktok: tiktokLogo
+    };
+    
+    const logoSrc = logoMap[socialType];
+    if (!logoSrc) return null;
+    
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+        <img 
+          src={logoSrc} 
+          alt={socialType.toUpperCase()} 
+          style={{ width: "22px", height: "22px", objectFit: "contain" }} 
+        />
+        <span style={{ 
+          fontWeight: "700", 
+          fontSize: "20px",
+          textShadow: "0 2px 6px rgba(0,0,0,0.8)"
+        }}>{socialName}</span>
+      </span>
+    );
   }
 
   function renderGiftOrder(item) {
@@ -266,6 +343,11 @@ function ImageQueue() {
         <h1>ตรวจสอบรูปภาพ</h1>
         <div className="queue-stats">
           <span className="queue-count">{images.length}</span>
+          <button onClick={() => { fetchHistory(); setShowHistory(true); }} className="refresh-button" style={{ marginRight: "8px" }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 3v5h5M3.05 13a9 9 0 1 0 .5-4M3 8l.5-1"/>
+            </svg>
+          </button>
           <button onClick={fetchImages} className="refresh-button">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M23 4v6h-6M1 20v-6h6M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
@@ -273,6 +355,97 @@ function ImageQueue() {
           </button>
         </div>
       </header>
+
+      {/* Category Filter Buttons */}
+      <div style={{
+        display: "flex",
+        gap: "12px",
+        padding: "16px 32px",
+        backgroundColor: "white",
+        borderBottom: "1px solid #e5e7eb",
+        overflowX: "auto"
+      }}>
+        <button
+          onClick={() => setCategoryFilter("all")}
+          style={{
+            padding: "8px 20px",
+            borderRadius: "20px",
+            border: "none",
+            backgroundColor: categoryFilter === "all" ? "#8b5cf6" : "#e5e7eb",
+            color: categoryFilter === "all" ? "white" : "#64748b",
+            fontWeight: "700",
+            cursor: "pointer",
+            transition: "all 0.3s ease",
+            fontSize: "14px"
+          }}
+        >
+          ทั้งหมด ({images.length})
+        </button>
+        <button
+          onClick={() => setCategoryFilter("image")}
+          style={{
+            padding: "8px 20px",
+            borderRadius: "20px",
+            border: "none",
+            backgroundColor: categoryFilter === "image" ? "#6366f1" : "#e5e7eb",
+            color: categoryFilter === "image" ? "white" : "#64748b",
+            fontWeight: "700",
+            cursor: "pointer",
+            transition: "all 0.3s ease",
+            fontSize: "14px"
+          }}
+        >
+          🖼️ รูปภาพ ({images.filter(img => img.type === "image" || !img.type).length})
+        </button>
+        <button
+          onClick={() => setCategoryFilter("text")}
+          style={{
+            padding: "8px 20px",
+            borderRadius: "20px",
+            border: "none",
+            backgroundColor: categoryFilter === "text" ? "#8b5cf6" : "#e5e7eb",
+            color: categoryFilter === "text" ? "white" : "#64748b",
+            fontWeight: "700",
+            cursor: "pointer",
+            transition: "all 0.3s ease",
+            fontSize: "14px"
+          }}
+        >
+          💬 ข้อความ ({images.filter(img => img.type === "text").length})
+        </button>
+        <button
+          onClick={() => setCategoryFilter("birthday")}
+          style={{
+            padding: "8px 20px",
+            borderRadius: "20px",
+            border: "none",
+            backgroundColor: categoryFilter === "birthday" ? "#ec4899" : "#e5e7eb",
+            color: categoryFilter === "birthday" ? "white" : "#64748b",
+            fontWeight: "700",
+            cursor: "pointer",
+            transition: "all 0.3s ease",
+            fontSize: "14px"
+          }}
+        >
+          🎂 วันเกิด ({images.filter(img => img.type === "birthday").length})
+        </button>
+        <button
+          onClick={() => setCategoryFilter("gift")}
+          style={{
+            padding: "8px 20px",
+            borderRadius: "20px",
+            border: "none",
+            backgroundColor: categoryFilter === "gift" ? "#f59e0b" : "#e5e7eb",
+            color: categoryFilter === "gift" ? "white" : "#64748b",
+            fontWeight: "700",
+            cursor: "pointer",
+            transition: "all 0.3s ease",
+            fontSize: "14px"
+          }}
+        >
+          🎁 ของขวัญ ({images.filter(img => img.type === "gift").length})
+        </button>
+      </div>
 
       <main className="main-layout">
         {/* ฝั่งซ้าย - Queue (70%) */}
@@ -289,8 +462,17 @@ function ImageQueue() {
               </div>
             ) : (
               <div className="images-grid">
-                {images.map((image, index) => (
-                  <div key={image.id} className="image-card" onClick={() => handleImageClick(image)}>
+                {images
+                  .filter(image => categoryFilter === "all" || image.type === categoryFilter || (categoryFilter === "image" && !image.type))
+                  .map((image, index) => {
+                  const categoryColor = 
+                    image.type === "gift" ? "#f59e0b" : 
+                    image.type === "birthday" ? "#ec4899" :
+                    image.type === "text" ? "#8b5cf6" :
+                    "#6366f1";
+                  
+                  return (
+                  <div key={image.id} className="image-card" onClick={() => handleImageClick(image)} style={{ borderTopColor: categoryColor }}>
                     <div className="card-header">
                       <span className="queue-number">#{index + 1}</span>
                       <span className="sender">{image.sender}</span>
@@ -305,14 +487,39 @@ function ImageQueue() {
                             alt="Preview"
                             className="preview-image"
                           />
-                          {(!image.composed && image.socialType && image.socialName) && (
-                            <div className="preview-social-overlay">
-                              {renderSocialOnImage(image.socialType, image.socialName)}
-                            </div>
-                          )}
-                          {(!image.composed && image.text) && (
-                            <div className="preview-text-overlay" style={{ color: image.textColor }}>
-                              {image.text}
+                          {(!image.composed && image.composed !== "1" && ((image.socialType && image.socialName) || image.text)) && (
+                            <div className="preview-overlay-center">
+                              {image.socialType && image.socialName && (
+                                <div className="preview-social-overlay" style={{
+                                  marginBottom: "8px",
+                                  color: "#fff",
+                                  padding: "6px 16px",
+                                  borderRadius: "8px",
+                                  fontWeight: "700",
+                                  fontSize: "20px",
+                                  textShadow: "0 2px 8px rgba(0,0,0,0.8)",
+                                  maxWidth: "100%",
+                                  wordBreak: "break-all"
+                                }}>
+                                  {renderSocialOnImage(image.socialType, image.socialName)}
+                                </div>
+                              )}
+                              {image.text && (
+                                <div className="preview-text-overlay" style={{
+                                  color: image.textColor,
+                                  borderRadius: "8px",
+                                  padding: "6px 16px",
+                                  fontWeight: "400",
+                                  fontSize: "18px",
+                                  textShadow: image.textColor === "white"
+                                    ? "0 2px 8px rgba(0,0,0,0.8)"
+                                    : "0 2px 8px rgba(255,255,255,0.8)",
+                                  maxWidth: "100%",
+                                  wordBreak: "break-all"
+                                }}>
+                                  {image.text}
+                                </div>
+                              )}
                             </div>
                           )}
                         </>
@@ -337,11 +544,12 @@ function ImageQueue() {
                           {image.socialType && image.socialName && (
                             <div
                               style={{
-                                marginBottom: "16px",
+                                marginBottom: "8px",
                                 marginTop: "8px",
                                 color: "#fff",
-                                fontWeight: "bold",
-                                fontSize: "24px",
+                                fontWeight: "700",
+                                fontSize: "20px",
+                                textShadow: "0 2px 8px rgba(0,0,0,0.8)",
                                 maxWidth: "100%",
                                 wordBreak: "break-all",
                                 display: "inline-flex",
@@ -354,8 +562,8 @@ function ImageQueue() {
                           <div
                             style={{
                               color: image.textColor || "#fff",
-                              fontWeight: "bold",
-                              fontSize: "20px",
+                              fontWeight: "400",
+                              fontSize: "18px",
                               textShadow: image.textColor === "white"
                                 ? "0 2px 8px rgba(0,0,0,0.8)"
                                 : "0 2px 8px rgba(255,255,255,0.8)",
@@ -377,7 +585,8 @@ function ImageQueue() {
                       <div className="date">{formatDate(image.receivedAt)}</div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -390,7 +599,106 @@ function ImageQueue() {
             
             {currentPreview ? (
               <>
-                <div className="preview-image-container" style={{ position: "relative" }}>
+                <div className="preview-image-container" style={{ position: "relative", minHeight: "400px", maxHeight: "400px" }}>
+                  {/* Countdown Overlay for Next Queue */}
+                  {isPaused && previewQueue.length > 0 && (
+                    <div style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: "rgba(0, 0, 0, 0.85)",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 20,
+                      borderRadius: "12px"
+                    }}>
+                      <div style={{
+                        fontSize: "18px",
+                        color: "#a78bfa",
+                        fontWeight: "600",
+                        marginBottom: "20px",
+                        textTransform: "uppercase",
+                        letterSpacing: "2px"
+                      }}>
+                        คิวถัดไป
+                      </div>
+                      <div style={{
+                        fontSize: "120px",
+                        fontWeight: "700",
+                        color: "white",
+                        lineHeight: 1,
+                        marginBottom: "16px",
+                        textShadow: "0 0 40px rgba(139, 92, 246, 0.6)",
+                        animation: pauseTimeLeft <= 5 ? "pulse 1s ease-in-out infinite" : "none"
+                      }}>
+                        {pauseTimeLeft}
+                      </div>
+                      <div style={{
+                        fontSize: "16px",
+                        color: "#d1d5db",
+                        fontWeight: "500"
+                      }}>
+                        เริ่มแสดงในอีก {pauseTimeLeft} วินาที
+                      </div>
+                      {/* Progress Circle */}
+                      <div style={{
+                        marginTop: "30px",
+                        width: "120px",
+                        height: "8px",
+                        background: "rgba(255, 255, 255, 0.1)",
+                        borderRadius: "4px",
+                        overflow: "hidden"
+                      }}>
+                        <div style={{
+                          width: `${((15 - pauseTimeLeft) / 15) * 100}%`,
+                          height: "100%",
+                          background: "linear-gradient(90deg, #8b5cf6 0%, #6366f1 100%)",
+                          transition: "width 1s linear",
+                          borderRadius: "4px"
+                        }}></div>
+                      </div>
+                      {/* Next Queue Preview */}
+                      {previewQueue[0] && previewQueue[0].filePath && (
+                        <div style={{
+                          marginTop: "30px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                          padding: "12px 20px",
+                          background: "rgba(255, 255, 255, 0.05)",
+                          borderRadius: "12px",
+                          border: "1px solid rgba(255, 255, 255, 0.1)"
+                        }}>
+                          <img 
+                            src={`http://localhost:5001${previewQueue[0].filePath}`}
+                            alt="Next preview"
+                            style={{
+                              width: "60px",
+                              height: "60px",
+                              objectFit: "cover",
+                              borderRadius: "8px"
+                            }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                          <div style={{ textAlign: "left" }}>
+                            <div style={{ color: "white", fontWeight: "600", fontSize: "14px" }}>
+                              {previewQueue[0].sender}
+                            </div>
+                            <div style={{ color: "#9ca3af", fontSize: "12px", marginTop: "2px" }}>
+                              {previewQueue[0].time} นาที · ฿{previewQueue[0].price}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   {currentPreview.type === "gift" ? (
                     renderGiftOrder(currentPreview)
                   ) : currentPreview.filePath ? (
@@ -398,6 +706,7 @@ function ImageQueue() {
                       src={`http://localhost:5001${currentPreview.filePath}`} 
                       alt="Preview"
                       className="preview-image"
+                      style={{ width: "100%", height: "400px", objectFit: "contain" }}
                       onError={(e) => {
                         e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1zbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y5ZmFmYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0cHgiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5No Image</text></svg>';
                       }}
@@ -425,8 +734,11 @@ function ImageQueue() {
                             marginBottom: "16px",
                             marginTop: "8px",
                             color: "#fff",
-                            fontWeight: "bold",
-                            fontSize: "24px",
+                            padding: "6px 18px",
+                            borderRadius: "8px",
+                            fontWeight: "700",
+                            fontSize: "20px",
+                            textShadow: "0 2px 8px rgba(0,0,0,0.8)",
                             maxWidth: "100%",
                             wordBreak: "break-all",
                             display: "inline-flex",
@@ -439,8 +751,10 @@ function ImageQueue() {
                       <div
                         style={{
                           color: currentPreview.textColor || "#fff",
-                          fontWeight: "bold",
-                          fontSize: "20px",
+                          borderRadius: "8px",
+                          padding: "6px 16px",
+                          fontWeight: "400",
+                          fontSize: "18px",
                           textShadow: currentPreview.textColor === "white"
                             ? "0 2px 8px rgba(0,0,0,0.8)"
                             : "0 2px 8px rgba(255,255,255,0.8)",
@@ -467,6 +781,16 @@ function ImageQueue() {
                   {isPaused && (
                     <div className="pause-message">กำลังเปลี่ยนรูป...</div>
                   )}
+                  {displayPaused && (
+                    <div className="pause-message" style={{ color: "#ef4444" }}>หยุดชั่วคราว</div>
+                  )}
+                  <button 
+                    onClick={handlePauseDisplay}
+                    className="refresh-button"
+                    style={{ marginTop: "12px", width: "100%", padding: "10px" }}
+                  >
+                    {displayPaused ? "เริ่มต่อ" : "หยุดชั่วคราว"}
+                  </button>
                 </div>
 
                 <div className="info-section">
@@ -567,20 +891,57 @@ function ImageQueue() {
             <div className="modal-body">
               <div className="modal-image-container">
                 {selectedImage.filePath ? (
-                  <img 
-                    src={`http://localhost:5001${selectedImage.filePath}`} 
-                    alt="Full preview"
-                    className="modal-image"
-                    style={{
-                      width: "100%",
-                      height: "auto",
-                      maxHeight: "400px", // ปรับตามขนาด modal ที่ต้องการ
-                      objectFit: "contain",
-                      borderRadius: "18px",
-                      display: "block",
-                      margin: "0 auto"
-                    }}
-                  />
+                  <>
+                    <img 
+                      src={`http://localhost:5001${selectedImage.filePath}`} 
+                      alt="Full preview"
+                      className="modal-image"
+                      style={{
+                        width: "100%",
+                        height: "auto",
+                        maxHeight: "400px",
+                        objectFit: "contain",
+                        borderRadius: "18px",
+                        display: "block",
+                        margin: "0 auto"
+                      }}
+                    />
+                    {(!selectedImage.composed && selectedImage.composed !== "1" && ((selectedImage.socialType && selectedImage.socialName) || selectedImage.text)) && (
+                      <div className="preview-overlay-center">
+                        {selectedImage.socialType && selectedImage.socialName && (
+                          <div className="preview-social-overlay" style={{
+                            marginBottom: "8px",
+                            color: "#fff",
+                            padding: "6px 16px",
+                            borderRadius: "8px",
+                            fontWeight: "700",
+                            fontSize: "20px",
+                            textShadow: "0 2px 8px rgba(0,0,0,0.8)",
+                            maxWidth: "100%",
+                            wordBreak: "break-all"
+                          }}>
+                            {renderSocialOnImage(selectedImage.socialType, selectedImage.socialName)}
+                          </div>
+                        )}
+                        {selectedImage.text && (
+                          <div className="preview-text-overlay" style={{
+                            color: selectedImage.textColor,
+                            borderRadius: "8px",
+                            padding: "6px 16px",
+                            fontWeight: "400",
+                            fontSize: "18px",
+                            textShadow: selectedImage.textColor === "white"
+                              ? "0 2px 8px rgba(0,0,0,0.8)"
+                              : "0 2px 8px rgba(255,255,255,0.8)",
+                            maxWidth: "100%",
+                            wordBreak: "break-all"
+                          }}>
+                            {selectedImage.text}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div
                     style={{
@@ -603,8 +964,11 @@ function ImageQueue() {
                           marginBottom: "16px",
                           marginTop: "8px",
                           color: "#fff",
-                          fontWeight: "bold",
-                          fontSize: "24px",
+                          padding: "6px 18px",
+                          borderRadius: "8px",
+                          fontWeight: "700",
+                          fontSize: "20px",
+                          textShadow: "0 2px 8px rgba(0,0,0,0.8)",
                           maxWidth: "100%",
                           wordBreak: "break-all",
                           display: "inline-flex",
@@ -617,8 +981,10 @@ function ImageQueue() {
                     <div
                       style={{
                         color: selectedImage.textColor || "#fff",
-                        fontWeight: "bold",
-                        fontSize: "20px",
+                        borderRadius: "8px",
+                        padding: "6px 16px",
+                        fontWeight: "400",
+                        fontSize: "18px",
                         textShadow: selectedImage.textColor === "white"
                           ? "0 2px 8px rgba(0,0,0,0.8)"
                           : "0 2px 8px rgba(255,255,255,0.8)",
@@ -672,6 +1038,331 @@ function ImageQueue() {
                 </svg>
                 ปฏิเสธ
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History Modal - Redesigned */}
+      {showHistory && (
+        <div className="modal-overlay" onClick={() => setShowHistory(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: "1200px", maxHeight: "90vh" }}>
+            <div className="modal-header" style={{ 
+              background: "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)",
+              color: "white",
+              padding: "20px 24px",
+              borderRadius: "12px 12px 0 0"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: "24px", fontWeight: "700" }}>ประวัติคิว</h2>
+                  <p style={{ margin: "4px 0 0 0", fontSize: "14px", opacity: 0.9 }}>
+                    รายการทั้งหมด {historyItems.length} รายการ
+                  </p>
+                </div>
+              </div>
+              <button className="close-button" onClick={() => setShowHistory(false)} style={{
+                background: "rgba(255,255,255,0.2)",
+                border: "none",
+                color: "white",
+                width: "36px",
+                height: "36px",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "all 0.3s ease"
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div className="modal-body" style={{ 
+              padding: "24px",
+              maxHeight: "calc(90vh - 100px)",
+              overflowY: "auto"
+            }}>
+              {historyItems.length === 0 ? (
+                <div style={{ 
+                  textAlign: "center", 
+                  padding: "60px 20px",
+                  color: "#94a3b8"
+                }}>
+                  <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" style={{ margin: "0 auto 16px" }}>
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <p style={{ fontSize: "18px", fontWeight: "600", marginBottom: "8px" }}>ยังไม่มีประวัติ</p>
+                  <p style={{ fontSize: "14px" }}>เมื่อมีการอนุมัติหรือปฏิเสธรูปภาพจะแสดงที่นี่</p>
+                </div>
+              ) : (
+                <div style={{ 
+                  display: "grid", 
+                  gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                  gap: "20px"
+                }}>
+                  {historyItems.map((item) => {
+                    const isApproved = item.status === "approved" || item.status === "completed";
+                    const statusColor = isApproved ? "#10b981" : "#ef4444";
+                    const statusBg = isApproved ? "#d1fae5" : "#fee2e2";
+                    const statusIcon = isApproved ? "✓" : "✗";
+                    const statusText = item.status === "completed" ? "เล่นจบ" : (isApproved ? "อนุมัติ" : "ปฏิเสธ");
+                    
+                    return (
+                      <div 
+                        key={item._id} 
+                        style={{
+                          background: "white",
+                          borderRadius: "16px",
+                          overflow: "hidden",
+                          boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)",
+                          transition: "all 0.3s ease",
+                          border: "1px solid #e5e7eb",
+                          position: "relative"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "translateY(-4px)";
+                          e.currentTarget.style.boxShadow = "0 12px 24px -4px rgba(0,0,0,0.15)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)";
+                        }}
+                      >
+                        {/* Status Badge */}
+                        <div style={{
+                          position: "absolute",
+                          top: "12px",
+                          right: "12px",
+                          background: statusBg,
+                          color: statusColor,
+                          padding: "6px 12px",
+                          borderRadius: "20px",
+                          fontSize: "13px",
+                          fontWeight: "700",
+                          zIndex: 10,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+                        }}>
+                          <span style={{ fontSize: "14px" }}>{statusIcon}</span>
+                          {statusText}
+                        </div>
+
+                        {/* Image Section */}
+                        <div style={{
+                          width: "100%",
+                          height: "220px",
+                          background: "linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          overflow: "hidden"
+                        }}>
+                          {item.mediaUrl ? (
+                            <img 
+                              src={`http://localhost:5001${item.mediaUrl}`}
+                              alt="History preview"
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover"
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.parentElement.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;color:#94a3b8"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span style="font-size:13px">ไม่มีรูปภาพ</span></div>';
+                              }}
+                            />
+                          ) : (
+                            <div style={{ textAlign: "center", color: "#94a3b8" }}>
+                              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" style={{ margin: "0 auto 8px" }}>
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                              </svg>
+                              <p style={{ fontSize: "13px", margin: 0 }}>ข้อความอย่างเดียว</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Content Section */}
+                        <div style={{ padding: "16px" }}>
+                          {/* Sender & Date */}
+                          <div style={{ 
+                            display: "flex", 
+                            justifyContent: "space-between",
+                            alignItems: "start",
+                            marginBottom: "12px"
+                          }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ 
+                                fontSize: "16px", 
+                                fontWeight: "700", 
+                                color: "#1e293b",
+                                marginBottom: "4px"
+                              }}>
+                                {item.sender}
+                              </div>
+                              <div style={{ 
+                                fontSize: "12px", 
+                                color: "#64748b",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px"
+                              }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <circle cx="12" cy="12" r="10"/>
+                                  <polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                                {formatDate(item.approvalDate)}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Details Grid */}
+                          <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: "12px",
+                            marginBottom: "12px",
+                            padding: "12px",
+                            background: "#f8fafc",
+                            borderRadius: "8px"
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <div style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "8px",
+                                background: "#ddd6fe",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                              }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
+                                  <circle cx="12" cy="12" r="10"/>
+                                  <polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "11px", color: "#64748b" }}>เวลา</div>
+                                <div style={{ fontSize: "14px", fontWeight: "700", color: "#1e293b" }}>
+                                  {item.metadata?.duration || "N/A"} นาที
+                                </div>
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <div style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "8px",
+                                background: "#fef3c7",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                              }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                                  <line x1="12" y1="1" x2="12" y2="23"/>
+                                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                                </svg>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "11px", color: "#64748b" }}>ราคา</div>
+                                <div style={{ fontSize: "14px", fontWeight: "700", color: "#1e293b" }}>
+                                  ฿{item.price}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Content Text */}
+                          {item.content && (
+                            <div style={{
+                              padding: "10px 12px",
+                              background: "#f1f5f9",
+                              borderRadius: "8px",
+                              marginBottom: "12px",
+                              borderLeft: "3px solid #8b5cf6"
+                            }}>
+                              <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "4px" }}>
+                                ข้อความ
+                              </div>
+                              <div style={{ fontSize: "13px", color: "#334155", lineHeight: "1.5" }}>
+                                {item.content}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Social Badge */}
+                          {item.metadata?.social?.type && item.metadata?.social?.name && (
+                            <div style={{
+                              padding: "10px 12px",
+                              background: "#f0f9ff",
+                              borderRadius: "8px",
+                              marginBottom: "12px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              borderLeft: "3px solid #0ea5e9"
+                            }}>
+                              <div style={{ fontSize: "11px", color: "#0369a1", fontWeight: "600" }}>
+                                Social:
+                              </div>
+                              <div style={{ transform: "scale(0.85)", transformOrigin: "left" }}>
+                                {renderSocialOnImage(item.metadata.social.type, item.metadata.social.name)}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Restore Button */}
+                          <button
+                            onClick={() => handleRestoreToQueue(item._id)}
+                            style={{
+                              width: "100%",
+                              padding: "12px",
+                              background: "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "10px",
+                              fontSize: "14px",
+                              fontWeight: "700",
+                              cursor: "pointer",
+                              transition: "all 0.3s ease",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "8px"
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = "scale(1.02)";
+                              e.currentTarget.style.boxShadow = "0 8px 16px -4px rgba(139,92,246,0.4)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = "scale(1)";
+                              e.currentTarget.style.boxShadow = "none";
+                            }}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="23 4 23 10 17 10"/>
+                              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                            </svg>
+                            กลับเข้าคิว
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>

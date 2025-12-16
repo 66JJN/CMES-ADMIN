@@ -723,6 +723,46 @@ app.post("/api/reject/:id", async (req, res) => {
   }
 });
 
+// API สำหรับบันทึกรูปที่เล่นจบแล้วลง history (เมื่อหมดเวลา)
+app.post("/api/complete/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const item = req.body; // รับข้อมูลรูปที่เล่นจบจาก frontend
+
+    console.log("=== Completing image:", id);
+
+    // บันทึกลง CheckHistory
+    await CheckHistory.create({
+      transactionId: item.id || id,
+      type: item.type || (item.filePath ? 'image' : 'text'),
+      sender: item.sender || 'Unknown',
+      price: Number(item.price) || 0,
+      status: 'completed',
+      content: item.text || '',
+      mediaUrl: item.filePath || null,
+      metadata: {
+        duration: Number(item.time) || 0,
+        tableNumber: Number(item.giftOrder?.tableNumber) || 0,
+        giftItems: item.giftOrder?.items || [],
+        note: item.giftOrder?.note || '',
+        theme: item.textColor || 'white',
+        social: {
+          type: item.socialType || null,
+          name: item.socialName || null
+        }
+      },
+      approvalDate: new Date(),
+      approvedBy: 'system',
+      notes: 'Completed display'
+    });
+
+    res.json({ success: true, message: 'Item completed and saved to history' });
+  } catch (error) {
+    console.error('Error completing image:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // API สำหรับดึงประวัติการตรวจสอบ
 app.get("/api/check-history", async (req, res) => {
   try {
@@ -763,6 +803,68 @@ app.post("/api/delete-history", async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting history:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// API สำหรับดึงประวัติ (สำหรับ ImageQueue history modal)
+app.get("/api/history", async (req, res) => {
+  try {
+    const history = await CheckHistory.find({}).sort({ approvalDate: -1 }).limit(50);
+    res.json(history);
+  } catch (error) {
+    console.error('Error fetching history:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// API สำหรับนำรายการจากประวัติกลับเข้าคิว
+app.post("/api/history/restore/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log("=== Restoring from history:", id);
+    
+    const historyItem = await CheckHistory.findById(id);
+    
+    if (!historyItem) {
+      console.log("[Restore] History item not found");
+      return res.status(404).json({ success: false, message: 'History item not found' });
+    }
+
+    console.log("[Restore] Found history item:", {
+      sender: historyItem.sender,
+      type: historyItem.type,
+      content: historyItem.content
+    });
+
+    // สร้างรายการใหม่ใน queue
+    const queueItem = {
+      id: Date.now().toString(),
+      sender: historyItem.sender,
+      filePath: historyItem.mediaUrl,
+      text: historyItem.content,
+      textColor: historyItem.metadata?.theme || 'white',
+      socialType: historyItem.metadata?.social?.type || null,
+      socialName: historyItem.metadata?.social?.name || null,
+      time: historyItem.metadata?.duration || 1, // ใช้เวลาเดิม หรือ default 1 minute
+      price: historyItem.price,
+      receivedAt: new Date(),
+      createdAt: new Date(),
+      type: historyItem.type,
+      giftOrder: historyItem.metadata?.giftItems?.length > 0 ? {
+        tableNumber: historyItem.metadata.tableNumber,
+        items: historyItem.metadata.giftItems,
+        note: historyItem.metadata.note
+      } : null
+    };
+
+    imageQueue.push(queueItem);
+    console.log("[Restore] Added to queue. Total queue length:", imageQueue.length);
+    console.log("[Restore] Queue item:", JSON.stringify(queueItem, null, 2));
+
+    res.json({ success: true, message: 'Item restored to queue' });
+  } catch (error) {
+    console.error('Error restoring to queue:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
