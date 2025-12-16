@@ -113,25 +113,43 @@ cron.schedule('0 0 * * *', () => {
 });
 
 // ----- Ranking Storage (using Database) -----
-async function addRankingPoint(sender, amount) {
+async function addRankingPoint(userId, name, amount, email = null, avatar = null) {
   try {
+    console.log(`[Ranking] addRankingPoint called: userId=${userId}, name=${name}, amount=${amount}, email=${email}`);
+    
     const points = Number(amount);
     if (isNaN(points) || points <= 0) {
+      console.log("[Ranking] Skipping: invalid points");
       return;
     }
-    const name = (sender || "Guest").trim() || "Guest";
+    
+    // ต้องมี userId จึงจะบันทึก ranking
+    if (!userId || userId === "guest" || userId === "unknown") {
+      console.log("[Ranking] Skipping guest/unknown user");
+      return;
+    }
 
-    let ranking = await Ranking.findOne({ name });
+    const userName = (name || "Guest").trim() || "Guest";
+
+    let ranking = await Ranking.findOne({ userId });
     if (ranking) {
       ranking.points = (ranking.points || 0) + points;
+      ranking.name = userName; // อัปเดตชื่อถ้ามีการเปลี่ยน
+      if (email) ranking.email = email;
+      if (avatar) ranking.avatar = avatar;
       ranking.updatedAt = new Date();
       await ranking.save();
+      console.log(`[Ranking] Updated ${userName} (${userId}): +${points} points, total: ${ranking.points}`);
     } else {
       await Ranking.create({
-        name,
+        userId,
+        name: userName,
+        email,
+        avatar,
         points,
         updatedAt: new Date()
       });
+      console.log(`[Ranking] Created ${userName} (${userId}): ${points} points`);
     }
   } catch (error) {
     console.error("[Ranking] Error adding points:", error.message);
@@ -413,6 +431,30 @@ app.post("/api/gifts/upload", uploadGift.single("image"), async (req, res) => {
   }
 });
 
+// ===== Ranking APIs =====
+
+// ดึง ranking ทั้งหมดหรือตามจำนวนที่กำหนด
+app.get("/api/rankings", async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const rankings = await Ranking.find({})
+      .sort({ points: -1 })
+      .limit(limit)
+      .lean();
+    
+    res.json({
+      success: true,
+      ranks: rankings,
+      total: await Ranking.countDocuments(),
+      totalUsers: await Ranking.countDocuments()
+    });
+  } catch (error) {
+    console.error("Error fetching rankings:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch rankings" });
+  }
+});
+
+// ดึง top 3 สำหรับ backward compatibility
 app.get("/api/rankings/top", async (req, res) => {
   try {
     const top = await Ranking.find({})
@@ -432,7 +474,12 @@ app.get("/api/rankings/top", async (req, res) => {
 
 app.post("/api/gifts/order", (req, res) => {
   try {
-    const { orderId, sender, tableNumber, note, items, totalPrice } = req.body;
+    console.log("[Admin] Received gift order:", JSON.stringify(req.body, null, 2));
+    
+    const { orderId, sender, userId, email, avatar, tableNumber, note, items, totalPrice } = req.body;
+    
+    console.log("[Admin] Parsed data: userId=", userId, "sender=", sender, "price=", totalPrice);
+    
     if (!orderId || !tableNumber || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: "ข้อมูลคำสั่งซื้อไม่ครบ" });
     }
@@ -459,8 +506,18 @@ app.post("/api/gifts/order", (req, res) => {
       }
     };
 
+    console.log("[Admin] Created queue item:", queueItem.id);
     imageQueue.push(queueItem);
-    addRankingPoint(sender, Number(totalPrice) || 0);
+    console.log("[Admin] Queue length after push:", imageQueue.length);
+    
+    // บันทึก ranking เฉพาะ user ที่ login แล้ว
+    if (userId) {
+      console.log("[Admin] Calling addRankingPoint for userId:", userId);
+      addRankingPoint(userId, sender, Number(totalPrice) || 0, email, avatar);
+    } else {
+      console.log("[Admin] No userId provided, skipping ranking");
+    }
+    
     res.json({ success: true, queueItem });
   } catch (error) {
 
@@ -490,6 +547,9 @@ app.post("/api/upload", uploadUser.single("file"), (req, res) => {
       time,
       price,
       sender,
+      userId,
+      email,
+      avatar,
       textColor,
       socialType,
       socialName,
@@ -523,7 +583,10 @@ app.post("/api/upload", uploadUser.single("file"), (req, res) => {
     };
 
     imageQueue.push(item);
-    addRankingPoint(sender, Number(price) || 0);
+    // บันทึก ranking เฉพาะ user ที่ login แล้ว
+    if (userId) {
+      addRankingPoint(userId, sender, Number(price) || 0, email, avatar);
+    }
     console.log("[Admin] Upload item created and queued:", item.id, "type:", item.type);
     res.json({ success: true, uploadId: item.id });
   } catch (e) {
