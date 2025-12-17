@@ -888,15 +888,50 @@ app.get("/api/order-status/:orderId", async (req, res) => {
     console.log("[OrderStatus] Checking status for:", orderId);
 
     // 1. ค้นหาใน ImageQueue ตามสถานะต่างๆ
-    const queueItem = await ImageQueue.findOne({
-      $or: [
-        { _id: orderId },
-        { 'giftOrder.orderId': orderId }
-      ]
-    });
+    let query = { 'giftOrder.orderId': orderId };
+    
+    // ถ้า orderId เป็น valid ObjectId ให้ค้นหาด้วย _id ด้วย
+    if (orderId.match(/^[0-9a-fA-F]{24}$/)) {
+      query = {
+        $or: [
+          { _id: orderId },
+          { 'giftOrder.orderId': orderId }
+        ]
+      };
+    }
+    
+    console.log("[OrderStatus] Query:", JSON.stringify(query));
+    
+    const queueItem = await ImageQueue.findOne(query);
 
     if (!queueItem) {
-      // ไม่พบใน ImageQueue แสดงว่าอาจถูกลบหรือปฏิเสธ
+      // ไม่พบใน ImageQueue -> ค้นหาใน CheckHistory (rejected/completed)
+      console.log("[OrderStatus] Not found in ImageQueue, checking CheckHistory");
+      const historyItem = await CheckHistory.findOne({
+        transactionId: orderId
+      }).sort({ approvalDate: -1 });
+
+      if (historyItem) {
+        const statusText = historyItem.status === 'completed' ? 'แสดงเสร็จสิ้น' : 'รูปถูกปฏิเสธ';
+        
+        return res.json({
+          success: true,
+          status: historyItem.status,
+          statusText: statusText,
+          order: {
+            id: historyItem._id,
+            type: historyItem.type,
+            sender: historyItem.sender,
+            price: historyItem.price,
+            content: historyItem.content,
+            approvalDate: historyItem.approvalDate,
+            tableNumber: historyItem.metadata?.tableNumber || null,
+            giftItems: historyItem.metadata?.giftItems || null
+          }
+        });
+      }
+      
+      // ไม่พบทั้งใน ImageQueue และ CheckHistory
       return res.json({
         success: false,
         status: 'not_found',
@@ -1014,42 +1049,24 @@ app.get("/api/order-status/:orderId", async (req, res) => {
       });
     }
 
-    // ไม่พบใน ImageQueue -> ค้นหาใน CheckHistory (rejected/completed)
-    const historyItem = await CheckHistory.findOne({
-      transactionId: orderId
-    }).sort({ approvalDate: -1 });
-
-    if (historyItem) {
-      const statusText = historyItem.status === 'completed' ? 'แสดงเสร็จสิ้น' : 'รูปถูกปฏิเสธ';
-      
-      return res.json({
-        success: true,
-        status: historyItem.status,
-        statusText: statusText,
-        order: {
-          id: historyItem._id,
-          type: historyItem.type,
-          sender: historyItem.sender,
-          price: historyItem.price,
-          content: historyItem.content,
-          approvalDate: historyItem.approvalDate,
-          tableNumber: historyItem.metadata?.tableNumber || null,
-          giftItems: historyItem.metadata?.giftItems || null
-        }
-      });
-    }
-
-    // ไม่พบทั้งใน ImageQueue และ CheckHistory
+    // ถ้าถึงตรงนี้แสดงว่า queueItem ไม่ใช่ pending, approved, หรือ playing
+    // ซึ่งไม่ควรเกิดขึ้นเพราะ enum จำกัดไว้แล้ว
+    console.warn("[OrderStatus] Unexpected status:", queueItem.status);
     return res.json({
       success: false,
-      status: 'not_found',
-      statusText: 'ไม่พบคำสั่งซื้อ',
-      message: 'ไม่พบข้อมูลคำสั่งซื้อในระบบ'
+      status: 'unknown',
+      statusText: 'สถานะไม่ทราบ',
+      message: 'สถานะคำสั่งซื้อไม่ถูกต้อง'
     });
 
   } catch (error) {
-    console.error('Error checking order status:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('[OrderStatus] Error checking order status:', error);
+    console.error('[OrderStatus] Stack:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error', 
+      error: error.message 
+    });
   }
 });
 
