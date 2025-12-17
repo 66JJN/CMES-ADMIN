@@ -1,0 +1,153 @@
+import mongoose from 'mongoose';
+
+const imageQueueSchema = new mongoose.Schema({
+  // Queue Information
+  queueNumber: {
+    type: Number,
+    required: false
+  },
+  sender: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  
+  // Content Type & Media
+  type: {
+    type: String,
+    enum: ['image', 'text', 'gift', 'birthday'],
+    default: 'image'
+  },
+  filePath: {
+    type: String,
+    default: null
+  },
+  
+  // Text Content
+  text: {
+    type: String,
+    default: null
+  },
+  textColor: {
+    type: String,
+    default: 'white'
+  },
+  
+  // Social Media Info
+  socialType: {
+    type: String,
+    enum: ['ig', 'fb', 'line', 'tiktok', null],
+    default: null
+  },
+  socialName: {
+    type: String,
+    default: null
+  },
+  
+  // Duration & Payment
+  time: {
+    type: Number,
+    required: true,
+    min: 1
+  },
+  price: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  
+  // Status Management
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'playing'],
+    default: 'pending'
+  },
+  
+  // Composition Flag (true if image already has text/social overlay)
+  composed: {
+    type: Boolean,
+    default: false
+  },
+  
+  // Gift Order Details
+  giftOrder: {
+    orderId: String,
+    tableNumber: String,
+    items: [{
+      id: String,
+      name: String,
+      quantity: Number,
+      price: Number
+    }],
+    totalPrice: Number,
+    note: String
+  },
+  
+  // User Information
+  userId: {
+    type: String,
+    default: null
+  },
+  email: {
+    type: String,
+    default: null
+  },
+  avatar: {
+    type: String,
+    default: null
+  },
+  
+  // Timestamps
+  receivedAt: {
+    type: Date,
+    default: Date.now
+  },
+  approvedAt: {
+    type: Date,
+    default: null
+  },
+  playingAt: {
+    type: Date,
+    default: null
+  },
+  completedAt: {
+    type: Date,
+    default: null
+  },
+  
+  // Metadata
+  metadata: {
+    duration: Number,
+    social: {
+      type: String,
+      name: String
+    }
+  }
+}, {
+  timestamps: true // Adds createdAt and updatedAt automatically
+});
+
+// Indexes for better query performance
+imageQueueSchema.index({ status: 1, receivedAt: 1 });
+imageQueueSchema.index({ type: 1, status: 1 });
+imageQueueSchema.index({ userId: 1 });
+imageQueueSchema.index({ 'giftOrder.orderId': 1 });
+imageQueueSchema.index({ completedAt: 1 });
+
+// Virtual for legacy 'id' field compatibility
+imageQueueSchema.virtual('id').get(function() {
+  return this._id.toString();
+});
+
+// Ensure virtuals are included in JSON
+imageQueueSchema.set('toJSON', { 
+  virtuals: true,
+  transform: function(doc, ret) {
+    ret.id = ret._id.toString();
+    return ret;
+  }
+});
+
+const ImageQueue = mongoose.model('ImageQueue', imageQueueSchema);
+
+export default ImageQueue;

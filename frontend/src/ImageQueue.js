@@ -32,7 +32,7 @@ function ImageQueue() {
   }, []);
 
   // เมื่อเริ่มแสดงรูปใหม่ (ใน processNextInQueue หรือ handleApprove)
-  const startPreview = (image) => {
+  const startPreview = async (image) => {
     const now = Date.now();
     setCurrentPreview(image);
     setTimeLeft(image.time * 60);
@@ -41,6 +41,17 @@ function ImageQueue() {
     localStorage.setItem("startTimestamp", now);
     localStorage.setItem("duration", image.time * 60);
     localStorage.setItem("isActive", true);
+
+    // อัพเดทสถานะเป็น 'playing' ใน DB
+    try {
+      const imageId = image._id || image.id;
+      await fetch(`http://localhost:5001/api/playing/${imageId}`, {
+        method: "POST"
+      });
+      console.log("[Playing] Marked as playing:", imageId);
+    } catch (err) {
+      console.error("Error marking as playing:", err);
+    }
   };
 
   // Timer effect สำหรับ countdown
@@ -55,11 +66,10 @@ function ImageQueue() {
         const left = duration - elapsed;
         setTimeLeft(left > 0 ? left : 0);
         if (left <= 0) {
-          // บันทึกรูปที่เล่นจบลง history
-          fetch(`http://localhost:5001/api/complete/${currentPreview.id}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(currentPreview)
+          // บันทึกรูปที่เล่นจบ - อัพเดทสถานะเป็น completed
+          const imageId = currentPreview._id || currentPreview.id;
+          fetch(`http://localhost:5001/api/complete/${imageId}`, {
+            method: "POST"
           }).catch(err => console.error("Error completing image:", err));
 
           setIsActive(false);
@@ -181,6 +191,7 @@ function ImageQueue() {
 
   const handleApprove = async (id) => {
     try {
+      console.log('[Approve] Approving image with ID:', id);
       const response = await fetch(`http://localhost:5001/api/approve/${id}`, {
         method: "POST",
       });
@@ -193,23 +204,32 @@ function ImageQueue() {
         }
         setShowModal(false);
         fetchImages();
+      } else {
+        console.error('[Approve] Failed:', await response.text());
+        alert('ไม่สามารถอนุมัติได้');
       }
     } catch (error) {
       console.error("Error approving image:", error);
+      alert('เกิดข้อผิดพลาด: ' + error.message);
     }
   };
 
   const handleReject = async (id) => {
     try {
+      console.log('[Reject] Rejecting image with ID:', id);
       const response = await fetch(`http://localhost:5001/api/reject/${id}`, {
         method: "POST",
       });
       if (response.ok) {
         fetchImages();
         setShowModal(false);
+      } else {
+        console.error('[Reject] Failed:', await response.text());
+        alert('ไม่สามารถปฏิเสธได้');
       }
     } catch (error) {
       console.error("Error rejecting image:", error);
+      alert('เกิดข้อผิดพลาด: ' + error.message);
     }
   };
 
@@ -311,8 +331,8 @@ function ImageQueue() {
           <span className="gift-total">฿{item.price}</span>
         </div>
         <ul className="gift-items">
-          {(gift.items || []).map((giftItem) => (
-            <li key={`${item.id}-${giftItem.id}`}>{giftItem.name} x{giftItem.quantity}</li>
+          {(gift.items || []).map((giftItem, idx) => (
+            <li key={`${item._id || item.id}-${giftItem.id || idx}`}>{giftItem.name} x{giftItem.quantity}</li>
           ))}
         </ul>
         {gift.note && <p className="gift-note">"{gift.note}"</p>}
@@ -472,7 +492,7 @@ function ImageQueue() {
                     "#6366f1";
                   
                   return (
-                  <div key={image.id} className="image-card" onClick={() => handleImageClick(image)} style={{ borderTopColor: categoryColor }}>
+                  <div key={image._id || image.id} className="image-card" onClick={() => handleImageClick(image)} style={{ borderTopColor: categoryColor }}>
                     <div className="card-header">
                       <span className="queue-number">#{index + 1}</span>
                       <span className="sender">{image.sender}</span>
@@ -1021,7 +1041,7 @@ function ImageQueue() {
             <div className="modal-actions">
               <button 
                 className="approve-button"
-                onClick={() => handleApprove(selectedImage.id)}
+                onClick={() => handleApprove(selectedImage._id || selectedImage.id)}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M20 6L9 17l-5-5"/>
@@ -1030,7 +1050,7 @@ function ImageQueue() {
               </button>
               <button 
                 className="reject-button"
-                onClick={() => handleReject(selectedImage.id)}
+                onClick={() => handleReject(selectedImage._id || selectedImage.id)}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18"/>

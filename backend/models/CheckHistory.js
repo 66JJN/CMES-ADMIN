@@ -13,8 +13,8 @@ const checkHistorySchema = new mongoose.Schema(
     price: { type: Number, default: 0 },
     status: {
       type: String,
-      enum: ["approved", "rejected", "pending", "verified"], // verified is legacy, approved is new standard
-      default: "pending",
+      enum: ["rejected", "completed"], // เก็บเฉพาะสถานะสุดท้าย
+      required: true,
     },
 
     // Content fields

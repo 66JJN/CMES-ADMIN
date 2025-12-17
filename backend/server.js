@@ -13,6 +13,7 @@ import CheckHistory from "./models/CheckHistory.js";
 import GiftSetting from "./models/GiftSetting.js";
 import Ranking from './models/Ranking.js'; // Keep Ranking import
 import AdminUser from './models/AdminUser.js'; // Keep AdminUser import
+import ImageQueue from './models/ImageQueue.js'; // 🔥 Image Queue Model
 import { verifyPassword, hashPassword } from './hashPasswords.js'; // Keep password utilities import
 
 dotenv.config();
@@ -156,7 +157,7 @@ async function addRankingPoint(userId, name, amount, email = null, avatar = null
   }
 }
 
-let imageQueue = [];
+// 🔥 ImageQueue now uses MongoDB (see ImageQueue model)
 let giftSettings = {
   tableCount: 10,
   items: []
@@ -472,7 +473,7 @@ app.get("/api/rankings/top", async (req, res) => {
   }
 });
 
-app.post("/api/gifts/order", (req, res) => {
+app.post("/api/gifts/order", async (req, res) => {
   try {
     console.log("[Admin] Received gift order:", JSON.stringify(req.body, null, 2));
     
@@ -484,8 +485,7 @@ app.post("/api/gifts/order", (req, res) => {
       return res.status(400).json({ success: false, message: "ข้อมูลคำสั่งซื้อไม่ครบ" });
     }
 
-    const queueItem = {
-      id: orderId,
+    const queueData = {
       type: "gift",
       text: `ส่งของขวัญไปยังโต๊ะ ${tableNumber}`,
       time: 1,
@@ -497,18 +497,22 @@ app.post("/api/gifts/order", (req, res) => {
       filePath: null,
       composed: true,
       status: "pending",
-      createdAt: new Date().toISOString(),
-      receivedAt: new Date().toISOString(),
+      userId: userId || null,
+      email: email || null,
+      avatar: avatar || null,
+      receivedAt: new Date(),
       giftOrder: {
+        orderId,
         tableNumber,
         items,
+        totalPrice: Number(totalPrice) || 0,
         note: note || ""
       }
     };
 
-    console.log("[Admin] Created queue item:", queueItem.id);
-    imageQueue.push(queueItem);
-    console.log("[Admin] Queue length after push:", imageQueue.length);
+    console.log("[Admin] Creating queue item in MongoDB...");
+    const queueItem = await ImageQueue.create(queueData);
+    console.log("[Admin] Queue item created:", queueItem._id);
     
     // บันทึก ranking เฉพาะ user ที่ login แล้ว
     if (userId) {
@@ -527,7 +531,7 @@ app.post("/api/gifts/order", (req, res) => {
 });
 
 // API สำหรับรับข้อมูลจาก User backend
-app.post("/api/upload", uploadUser.single("file"), (req, res) => {
+app.post("/api/upload", uploadUser.single("file"), async (req, res) => {
   try {
     console.log("=== Upload request received ===");
     if (req.file) {
@@ -564,8 +568,7 @@ app.post("/api/upload", uploadUser.single("file"), (req, res) => {
 
     console.log("[Admin] Creating upload item with type:", type);
 
-    const item = {
-      id: Date.now().toString(),
+    const itemData = {
       type: type || "image",
       text: text || "",
       time: Number(time) || 0,
@@ -574,21 +577,23 @@ app.post("/api/upload", uploadUser.single("file"), (req, res) => {
       textColor: textColor || "white",
       socialType: socialType || null,
       socialName: socialName || null,
-      // Fix: point to correct user-uploads path
       filePath: req.file ? `/uploads/user-uploads/${req.file.filename}` : null,
       composed: composed === "1" || composed === "true",
       status: "pending",
-      createdAt: new Date().toISOString(),
-      receivedAt: new Date().toISOString()
+      userId: userId || null,
+      email: email || null,
+      avatar: avatar || null,
+      receivedAt: new Date()
     };
 
-    imageQueue.push(item);
+    const queueItem = await ImageQueue.create(itemData);
+    
     // บันทึก ranking เฉพาะ user ที่ login แล้ว
     if (userId) {
       addRankingPoint(userId, sender, Number(price) || 0, email, avatar);
     }
-    console.log("[Admin] Upload item created and queued:", item.id, "type:", item.type);
-    res.json({ success: true, uploadId: item.id });
+    console.log("[Admin] Upload item created and queued:", queueItem._id, "type:", queueItem.type);
+    res.json({ success: true, uploadId: queueItem._id.toString() });
   } catch (e) {
     console.error("[Admin] Error in upload:", e);
     res.status(500).json({ success: false, error: e.message });
@@ -596,22 +601,47 @@ app.post("/api/upload", uploadUser.single("file"), (req, res) => {
 });
 
 // API สำหรับดูคิวรูปภาพ - เรียงตามวันที่เวลา (เก่าไปใหม่)
-app.get("/api/queue", (req, res) => {
+app.get("/api/queue", async (req, res) => {
   try {
     console.log("=== Queue request received");
-    console.log("Current queue length:", imageQueue.length);
 
-    // เรียงตามเวลาที่รับมา เก่าไปใหม่ (FIFO - First In First Out)
-    const sortedImages = imageQueue.sort((a, b) => {
-      const dateA = new Date(a.receivedAt);
-      const dateB = new Date(b.receivedAt);
-      return dateA - dateB;
-    });
+    // ดึงเฉพาะรายการที่ status = 'pending' และเรียงตามเวลาที่รับมา (FIFO)
+    const queueItems = await ImageQueue.find({ status: 'pending' })
+      .sort({ receivedAt: 1 })
+      .lean();
 
-    console.log("Returning sorted images:", sortedImages);
-    res.json(sortedImages);
+    console.log("Current queue length:", queueItems.length);
+    console.log("Returning sorted images from MongoDB");
+    res.json(queueItems);
   } catch (error) {
     console.error('Error fetching queue:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// API สำหรับอัพเดทสถานะรูปที่กำลังแสดง
+app.post("/api/playing/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log("=== Marking as playing:", id);
+
+    // อัพเดท status เป็น 'playing' และบันทึก playingAt timestamp
+    const updated = await ImageQueue.findByIdAndUpdate(
+      id,
+      { 
+        status: 'playing',
+        playingAt: new Date()
+      },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    res.json({ success: true, message: 'Item marked as playing', data: updated });
+  } catch (error) {
+    console.error('Error marking as playing:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -622,46 +652,19 @@ app.post("/api/approve/:id", async (req, res) => {
     const { id } = req.params;
     console.log("=== Approving image:", id);
 
-    const imageIndex = imageQueue.findIndex(img => img.id === id);
+    const item = await ImageQueue.findById(id);
 
-    if (imageIndex === -1) {
+    if (!item) {
       return res.status(404).json({ success: false, message: 'Image not found' });
     }
 
-    const item = imageQueue[imageIndex]; // Restore missing definition
-
-    // ตรวจสอบข้อมูลก่อนบันทึก
-    const historyData = {
-      transactionId: item.id.toString(), // Ensure string
-      type: item.type || (item.filePath ? 'image' : 'text'),
-      sender: item.sender || 'Unknown',
-      price: Number(item.price) || 0,
+    // อัพเดทสถานะเป็น 'approved' เท่านั้น (ไม่บันทึก CheckHistory)
+    await ImageQueue.findByIdAndUpdate(id, {
       status: 'approved',
-      content: item.text || '',
-      mediaUrl: item.filePath || null,
-      metadata: {
-        tableNumber: Number(item.giftOrder?.tableNumber) || 0,
-        giftItems: item.giftOrder?.items || [],
-        note: item.giftOrder?.note || '',
-        theme: item.textColor || 'white',
-        social: {
-          type: item.socialType || null,
-          name: item.socialName || null
-        }
-      },
-      approvalDate: new Date(),
-      approvedBy: 'admin',
-      notes: ''
-    };
+      approvedAt: new Date()
+    });
 
-    console.log("[Approve] Saving history:", JSON.stringify(historyData, null, 2));
-
-    await CheckHistory.create(historyData);
-
-    // ลบออกจากคิว
-    imageQueue.splice(imageIndex, 1);
-
-    res.json({ success: true, message: 'Item approved and removed from queue' });
+    res.json({ success: true, message: 'Item approved' });
   } catch (error) {
     console.error('Error approving image:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -674,16 +677,15 @@ app.post("/api/reject/:id", async (req, res) => {
     const { id } = req.params;
     console.log("=== Rejecting image:", id);
 
-    const imageIndex = imageQueue.findIndex(img => img.id === id);
+    const item = await ImageQueue.findById(id);
 
-    if (imageIndex === -1) {
+    if (!item) {
       return res.status(404).json({ success: false, message: 'Image not found' });
     }
 
-    // สร้างบันทึกประวัติในฐานข้อมูล
-    const item = imageQueue[imageIndex];
+    // บันทึกลง CheckHistory ก่อนลบ
     await CheckHistory.create({
-      transactionId: item.id,
+      transactionId: item._id.toString(),
       type: item.type || (item.filePath ? 'image' : 'text'),
       sender: item.sender || 'Unknown',
       price: item.price || 0,
@@ -691,7 +693,8 @@ app.post("/api/reject/:id", async (req, res) => {
       content: item.text || '',
       mediaUrl: item.filePath || null,
       metadata: {
-        tableNumber: item.giftOrder?.tableNumber || 0,
+        duration: item.time,
+        tableNumber: Number(item.giftOrder?.tableNumber) || 0,
         giftItems: item.giftOrder?.items || [],
         note: item.giftOrder?.note || '',
         theme: item.textColor || 'white',
@@ -702,7 +705,7 @@ app.post("/api/reject/:id", async (req, res) => {
       },
       approvalDate: new Date(),
       approvedBy: 'admin',
-      notes: ''
+      notes: 'Rejected by admin'
     });
 
     // ลบไฟล์รูปภาพ
@@ -714,34 +717,39 @@ app.post("/api/reject/:id", async (req, res) => {
     }
 
     // ลบออกจากคิว
-    imageQueue.splice(imageIndex, 1);
+    await ImageQueue.findByIdAndDelete(id);
 
-    res.json({ success: true, message: 'Item rejected and removed from queue' });
+    res.json({ success: true, message: 'Item rejected and saved to history' });
   } catch (error) {
     console.error('Error rejecting image:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// API สำหรับบันทึกรูปที่เล่นจบแล้วลง history (เมื่อหมดเวลา)
+// API สำหรับบันทึกรูปที่เล่นจบแล้ว (เมื่อหมดเวลา)
 app.post("/api/complete/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const item = req.body; // รับข้อมูลรูปที่เล่นจบจาก frontend
-
     console.log("=== Completing image:", id);
+
+    // ดึงข้อมูลก่อนลบ
+    const item = await ImageQueue.findById(id);
+    
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
 
     // บันทึกลง CheckHistory
     await CheckHistory.create({
-      transactionId: item.id || id,
+      transactionId: item._id.toString(),
       type: item.type || (item.filePath ? 'image' : 'text'),
       sender: item.sender || 'Unknown',
-      price: Number(item.price) || 0,
+      price: item.price || 0,
       status: 'completed',
       content: item.text || '',
       mediaUrl: item.filePath || null,
       metadata: {
-        duration: Number(item.time) || 0,
+        duration: item.time,
         tableNumber: Number(item.giftOrder?.tableNumber) || 0,
         giftItems: item.giftOrder?.items || [],
         note: item.giftOrder?.note || '',
@@ -755,6 +763,9 @@ app.post("/api/complete/:id", async (req, res) => {
       approvedBy: 'system',
       notes: 'Completed display'
     });
+
+    // ลบออกจาก ImageQueue
+    await ImageQueue.findByIdAndDelete(id);
 
     res.json({ success: true, message: 'Item completed and saved to history' });
   } catch (error) {
@@ -838,33 +849,206 @@ app.post("/api/history/restore/:id", async (req, res) => {
     });
 
     // สร้างรายการใหม่ใน queue
-    const queueItem = {
-      id: Date.now().toString(),
+    const queueData = {
       sender: historyItem.sender,
       filePath: historyItem.mediaUrl,
       text: historyItem.content,
       textColor: historyItem.metadata?.theme || 'white',
       socialType: historyItem.metadata?.social?.type || null,
       socialName: historyItem.metadata?.social?.name || null,
-      time: historyItem.metadata?.duration || 1, // ใช้เวลาเดิม หรือ default 1 minute
+      time: historyItem.metadata?.duration || 1,
       price: historyItem.price,
       receivedAt: new Date(),
-      createdAt: new Date(),
+      status: 'pending',
       type: historyItem.type,
       giftOrder: historyItem.metadata?.giftItems?.length > 0 ? {
+        orderId: historyItem.transactionId,
         tableNumber: historyItem.metadata.tableNumber,
         items: historyItem.metadata.giftItems,
+        totalPrice: historyItem.price,
         note: historyItem.metadata.note
-      } : null
+      } : undefined
     };
 
-    imageQueue.push(queueItem);
-    console.log("[Restore] Added to queue. Total queue length:", imageQueue.length);
+    const queueItem = await ImageQueue.create(queueData);
+    console.log("[Restore] Added to queue. Item ID:", queueItem._id);
     console.log("[Restore] Queue item:", JSON.stringify(queueItem, null, 2));
 
     res.json({ success: true, message: 'Item restored to queue' });
   } catch (error) {
     console.error('Error restoring to queue:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// API สำหรับตรวจสอบสถานะออเดอร์ (สำหรับ User frontend)
+app.get("/api/order-status/:orderId", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    console.log("[OrderStatus] Checking status for:", orderId);
+
+    // 1. ค้นหาใน ImageQueue ตามสถานะต่างๆ
+    const queueItem = await ImageQueue.findOne({
+      $or: [
+        { _id: orderId },
+        { 'giftOrder.orderId': orderId }
+      ]
+    });
+
+    if (!queueItem) {
+      // ไม่พบใน ImageQueue แสดงว่าอาจถูกลบหรือปฏิเสธ
+      return res.json({
+        success: false,
+        status: 'not_found',
+        statusText: 'ไม่พบคำสั่งซื้อ',
+        message: 'ไม่พบข้อมูลคำสั่งซื้อในระบบ'
+      });
+    }
+
+    // 2. ตรวจสอบสถานะ
+    if (queueItem.status === 'pending') {
+      // สถานะรอตรวจสอบ - ไม่แสดงเวลาประมาณการ
+      const queuePosition = await ImageQueue.countDocuments({
+        status: 'pending',
+        receivedAt: { $lt: queueItem.receivedAt }
+      });
+
+      return res.json({
+        success: true,
+        status: 'pending',
+        statusText: 'รอตรวจสอบ',
+        order: {
+          id: queueItem._id,
+          type: queueItem.type,
+          sender: queueItem.sender,
+          price: queueItem.price,
+          queueNumber: queuePosition + 1,
+          queuePosition: queuePosition + 1,
+          totalQueue: await ImageQueue.countDocuments({ status: 'pending' }),
+          tableNumber: queueItem.giftOrder?.tableNumber || null,
+          giftItems: queueItem.giftOrder?.items || null,
+          waitingForApproval: true
+        }
+      });
+    }
+
+    if (queueItem.status === 'approved') {
+      // สถานะอนุมัติแล้ว รอแสดง - คำนวณเวลาจาก playing + approved queue
+      const statusText = 'อนุมัติแล้ว รอแสดง';
+
+      // หาภาพที่กำลังแสดงอยู่
+      const currentlyPlaying = await ImageQueue.findOne({ status: 'playing' });
+      
+      let totalMinutesBefore = 0;
+
+      // ถ้ามีรูปกำลังแสดง คำนวณเวลาที่เหลือ
+      if (currentlyPlaying && currentlyPlaying.playingAt) {
+        const playingDuration = currentlyPlaying.time; // นาที
+        const playingStartTime = new Date(currentlyPlaying.playingAt);
+        const elapsedMinutes = (Date.now() - playingStartTime.getTime()) / 60000;
+        const remainingMinutes = Math.max(0, playingDuration - elapsedMinutes);
+        totalMinutesBefore += remainingMinutes;
+      }
+
+      // หาคิว approved ที่อยู่ก่อนหน้า (เรียงตาม approvedAt)
+      const approvedBefore = await ImageQueue.find({
+        status: 'approved',
+        approvedAt: { $lt: queueItem.approvedAt }
+      }).sort({ approvedAt: 1 });
+
+      // รวมเวลาของคิว approved ที่อยู่ก่อนหน้า
+      totalMinutesBefore += approvedBefore.reduce((sum, item) => {
+        return sum + (item.time || 0);
+      }, 0);
+
+      // นับตำแหน่งคิว (approved + playing ที่เริ่มก่อน)
+      const approvedPosition = approvedBefore.length + (currentlyPlaying ? 1 : 0) + 1;
+      const totalApproved = await ImageQueue.countDocuments({ status: 'approved' });
+
+      const estimatedStartTime = new Date(Date.now() + totalMinutesBefore * 60000);
+      const currentDuration = queueItem.time || 0;
+      const estimatedEndTime = new Date(estimatedStartTime.getTime() + currentDuration * 60000);
+
+      return res.json({
+        success: true,
+        status: 'approved',
+        statusText: statusText,
+        order: {
+          id: queueItem._id,
+          type: queueItem.type,
+          sender: queueItem.sender,
+          price: queueItem.price,
+          queuePosition: approvedPosition,
+          totalQueue: totalApproved + (currentlyPlaying ? 1 : 0),
+          estimatedWaitMinutes: Math.round(totalMinutesBefore),
+          estimatedStartTime: estimatedStartTime.toISOString(),
+          estimatedEndTime: estimatedEndTime.toISOString(),
+          tableNumber: queueItem.giftOrder?.tableNumber || null,
+          giftItems: queueItem.giftOrder?.items || null
+        }
+      });
+    }
+
+    if (queueItem.status === 'playing') {
+      // สถานะกำลังแสดง
+      const playingDuration = queueItem.time; // นาที
+      const playingStartTime = new Date(queueItem.playingAt);
+      const elapsedMinutes = (Date.now() - playingStartTime.getTime()) / 60000;
+      const remainingMinutes = Math.max(0, playingDuration - elapsedMinutes);
+
+      return res.json({
+        success: true,
+        status: 'playing',
+        statusText: 'กำลังแสดง',
+        order: {
+          id: queueItem._id,
+          type: queueItem.type,
+          sender: queueItem.sender,
+          price: queueItem.price,
+          queuePosition: 1,
+          totalQueue: 1,
+          remainingMinutes: Math.round(remainingMinutes),
+          tableNumber: queueItem.giftOrder?.tableNumber || null,
+          giftItems: queueItem.giftOrder?.items || null
+        }
+      });
+    }
+
+    // ไม่พบใน ImageQueue -> ค้นหาใน CheckHistory (rejected/completed)
+    const historyItem = await CheckHistory.findOne({
+      transactionId: orderId
+    }).sort({ approvalDate: -1 });
+
+    if (historyItem) {
+      const statusText = historyItem.status === 'completed' ? 'แสดงเสร็จสิ้น' : 'รูปถูกปฏิเสธ';
+      
+      return res.json({
+        success: true,
+        status: historyItem.status,
+        statusText: statusText,
+        order: {
+          id: historyItem._id,
+          type: historyItem.type,
+          sender: historyItem.sender,
+          price: historyItem.price,
+          content: historyItem.content,
+          approvalDate: historyItem.approvalDate,
+          tableNumber: historyItem.metadata?.tableNumber || null,
+          giftItems: historyItem.metadata?.giftItems || null
+        }
+      });
+    }
+
+    // ไม่พบทั้งใน ImageQueue และ CheckHistory
+    return res.json({
+      success: false,
+      status: 'not_found',
+      statusText: 'ไม่พบคำสั่งซื้อ',
+      message: 'ไม่พบข้อมูลคำสั่งซื้อในระบบ'
+    });
+
+  } catch (error) {
+    console.error('Error checking order status:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -881,25 +1065,25 @@ app.post("/api/delete-all-history", async (req, res) => {
 });
 
 // API สำหรับลบรูปภาพที่ถูกปฏิเสธ
-app.delete("/api/delete/:id", (req, res) => {
+app.delete("/api/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const imageIndex = imageQueue.findIndex(img => img.id === id);
+    const item = await ImageQueue.findById(id);
 
-    if (imageIndex === -1) {
+    if (!item) {
       return res.status(404).json({ success: false, message: 'Image not found' });
     }
 
     // ลบไฟล์รูปภาพ
-    if (imageQueue[imageIndex].filePath) {
-      const imagePath = path.join(__dirname, imageQueue[imageIndex].filePath);
+    if (item.filePath) {
+      const imagePath = path.join(__dirname, item.filePath);
       if (fs.existsSync(imagePath)) {
         fs.unlinkSync(imagePath);
       }
     }
 
     // ลบออกจากคิว
-    imageQueue.splice(imageIndex, 1);
+    await ImageQueue.findByIdAndDelete(id);
 
     res.json({ success: true, message: 'Image deleted successfully' });
   } catch (error) {
