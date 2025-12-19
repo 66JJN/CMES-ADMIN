@@ -56,6 +56,16 @@ const imageQueueSchema = new mongoose.Schema({
     min: 0
   },
   
+  // Display Settings
+  width: {
+    type: Number,
+    default: null
+  },
+  height: {
+    type: Number,
+    default: null
+  },
+  
   // Status Management
   status: {
     type: String,

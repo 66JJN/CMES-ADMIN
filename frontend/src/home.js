@@ -255,6 +255,7 @@ function Home() {
           <a href="/check-history">ประวัติการตรวจสอบ</a>
           <a href="/lucky-wheel">วงล้อเสี่ยงดวง</a>
           <a href="/gift-setting">ตั้งค่าส่งของขวัญ</a>
+          <a href="http://localhost:5001/obs-image-overlay.html" target="_blank" rel="noreferrer">OBS Image Overlay</a>
         </nav>
       </header>
 

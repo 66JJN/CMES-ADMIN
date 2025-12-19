@@ -15,6 +15,10 @@ function ImageQueue() {
   const [historyItems, setHistoryItems] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState("all");
   
+  // Edit Size State
+  const [editWidth, setEditWidth] = useState("");
+  const [editHeight, setEditHeight] = useState("");
+  
   // สำหรับ Preview และ Queue System
   const [currentPreview, setCurrentPreview] = useState(null);
   const [previewQueue, setPreviewQueue] = useState([]);
@@ -223,6 +227,8 @@ function ImageQueue() {
 
   const handleImageClick = (image) => {
     setSelectedImage(image);
+    setEditWidth(image.width || "");
+    setEditHeight(image.height || "");
     setShowModal(true);
   };
 
@@ -231,9 +237,14 @@ function ImageQueue() {
       console.log('[Approve] Approving image with ID:', id);
       const response = await fetch(`http://localhost:5001/api/approve/${id}`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          width: editWidth,
+          height: editHeight
+        })
       });
       if (response.ok) {
-        const imageToApprove = selectedImage;
+        const imageToApprove = { ...selectedImage, width: editWidth, height: editHeight };
         if (!currentPreview) {
           startPreview(imageToApprove);
         } else {
@@ -1079,6 +1090,42 @@ function ImageQueue() {
                 <div className="detail-row">
                   <span className="label">ส่งเมื่อ:</span>
                   <span className="value">{formatDate(selectedImage.createdAt)}</span>
+                </div>
+                
+                <div className="detail-row" style={{ marginTop: "12px", borderTop: "1px solid #eee", paddingTop: "12px" }}>
+                  <span className="label" style={{ width: "100%" }}>ปรับขนาดแสดงผล (OBS):</span>
+                  <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: "12px", color: "#666" }}>กว้าง (px)</label>
+                      <input 
+                        type="number" 
+                        placeholder="Auto"
+                        value={editWidth}
+                        onChange={(e) => setEditWidth(e.target.value)}
+                        style={{ 
+                          width: "100%", 
+                          padding: "8px", 
+                          borderRadius: "6px", 
+                          border: "1px solid #ddd" 
+                        }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: "12px", color: "#666" }}>สูง (px)</label>
+                      <input 
+                        type="number" 
+                        placeholder="Auto"
+                        value={editHeight}
+                        onChange={(e) => setEditHeight(e.target.value)}
+                        style={{ 
+                          width: "100%", 
+                          padding: "8px", 
+                          borderRadius: "6px", 
+                          border: "1px solid #ddd" 
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

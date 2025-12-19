@@ -1,4 +1,6 @@
 import express from "express";
+import { createServer } from "http";
+import { Server as SocketIOServer } from "socket.io";
 import mongoose from "mongoose";
 import cors from "cors";
 import multer from "multer";
@@ -22,6 +24,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const server = createServer(app);
+const io = new SocketIOServer(server, {
+  cors: { origin: "*" }
+});
 const PORT = 5001;
 
 // เชื่อมต่อ MongoDB
@@ -40,6 +46,9 @@ connectDB();
 
 app.use(cors());
 app.use(express.json());
+
+// Serve static overlay assets
+app.use(express.static(path.join(__dirname, "public")));
 
 // สร้างโฟลเดอร์ถ้ายังไม่มี
 const giftUploadDir = path.join(__dirname, 'uploads/gifts');
@@ -142,7 +151,7 @@ async function addRankingPoint(userId, name, amount, email = null, avatar = null
       await ranking.save();
       console.log(`[Ranking] Updated ${userName} (${userId}): +${points} points, total: ${ranking.points}`);
     } else {
-      await Ranking.create({
+      ranking = await Ranking.create({
         userId,
         name: userName,
         email,
@@ -151,6 +160,26 @@ async function addRankingPoint(userId, name, amount, email = null, avatar = null
         updatedAt: new Date()
       });
       console.log(`[Ranking] Created ${userName} (${userId}): ${points} points`);
+    }
+
+    // Broadcast ranking update
+    const topRankings = await Ranking.find({}).sort({ points: -1 }).limit(10);
+    // Re-calculate ranks just in case (though pre-save handles it, bulk fetch is safer for display)
+    const formattedRankings = topRankings.map((r, index) => ({
+      ...r.toObject(),
+      rank: index + 1
+    }));
+    // Use global io instance if available, otherwise we need to pass it or export it
+    // Assuming 'io' is available in this scope (it is defined at top level but this function is outside?)
+    // Wait, 'io' is defined in server.js scope.
+    // But addRankingPoint is defined at the bottom. Let's check scope.
+    // 'io' is defined at line 28. 'addRankingPoint' is at line 126.
+    // However, 'io' is const. It should be available if addRankingPoint is in the same file.
+    // But wait, I need to make sure 'io' is accessible.
+    // Let's check if I can access 'io'.
+    // Actually, I'll just emit if io is defined.
+    if (typeof io !== 'undefined') {
+      io.emit("ranking-update", formattedRankings);
     }
   } catch (error) {
     console.error("[Ranking] Error adding points:", error.message);
@@ -619,7 +648,7 @@ app.get("/api/queue", async (req, res) => {
   }
 });
 
-// API สำหรับอัพเดทสถานะรูปที่กำลังแสดง
+// API สำหรับอัพเดทสถานะรูปที่กำลังแสดง + broadcast ไป OBS overlay
 app.post("/api/playing/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -639,6 +668,22 @@ app.post("/api/playing/:id", async (req, res) => {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
 
+    // ส่ง event ไป overlay ให้ OBS ทราบว่ามีรูปใหม่กำลังเล่น
+    io.emit("now-playing-image", {
+      id: updated._id?.toString(),
+      sender: updated.sender,
+      price: updated.price,
+      time: updated.time,
+      filePath: updated.filePath,
+      text: updated.text,
+      textColor: updated.textColor,
+      socialType: updated.socialType,
+      socialName: updated.socialName,
+      width: updated.width,
+      height: updated.height,
+      type: updated.type || (updated.filePath ? "image" : "text")
+    });
+
     res.json({ success: true, message: 'Item marked as playing', data: updated });
   } catch (error) {
     console.error('Error marking as playing:', error);
@@ -650,7 +695,8 @@ app.post("/api/playing/:id", async (req, res) => {
 app.post("/api/approve/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("=== Approving image:", id);
+    const { width, height } = req.body; // รับค่า width, height จาก body
+    console.log("=== Approving image:", id, "Size:", width, "x", height);
 
     const item = await ImageQueue.findById(id);
 
@@ -658,10 +704,12 @@ app.post("/api/approve/:id", async (req, res) => {
       return res.status(404).json({ success: false, message: 'Image not found' });
     }
 
-    // อัพเดทสถานะเป็น 'approved' เท่านั้น (ไม่บันทึก CheckHistory)
+    // อัพเดทสถานะเป็น 'approved' และบันทึกขนาด
     await ImageQueue.findByIdAndUpdate(id, {
       status: 'approved',
-      approvedAt: new Date()
+      approvedAt: new Date(),
+      width: width ? Number(width) : null,
+      height: height ? Number(height) : null
     });
 
     res.json({ success: true, message: 'Item approved' });
@@ -1150,6 +1198,11 @@ app.get("/health", (req, res) => {
   });
 });
 
+// OBS overlay (HTML) - served from /public
+app.get("/obs-image-overlay.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "obs-image-overlay.html"));
+});
+
 // ----- Reports Storage (using Database) -----
 // ----- Reports Storage (using Database) -----
 app.post("/api/report", async (req, res) => {
@@ -1234,12 +1287,13 @@ app.patch("/api/reports/:id", async (req, res) => {
   }
 });
 
-app.listen(PORT, async () => {
-  console.log(`Admin backend server running on port ${PORT} `);
+server.listen(PORT, async () => {
+  console.log(`Admin backend + Socket.io running on port ${PORT} `);
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`Queue API: http://localhost:${PORT}/api/queue`);
   console.log(`Login API: http://localhost:${PORT}/login`);
   console.log(`Report API: http://localhost:${PORT}/api/admin/report`);
+  console.log(`OBS overlay: http://localhost:${PORT}/obs-image-overlay.html`);
 
   // โหลดและแสดงผู้ใช้ที่มีอยู่
   try {

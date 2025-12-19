@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>OBS Now Playing Overlay</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    #container {
+      position: fixed;
+      bottom: 10%;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      /* min-width: 360px; Removed min-width */
+      max-width: 90vw;
+      padding: 0; /* Removed padding */
+      border-radius: 14px;
+      background: transparent; /* Removed background */
+      box-shadow: none; /* Removed shadow */
+      color: #fff;
+      opacity: 0;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      display: flex;
+      gap: 0; /* Removed gap */
+      align-items: center;
+      pointer-events: none;
+    }
+    #container.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    #thumb {
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 80vh;
+      border-radius: 10px;
+      object-fit: contain;
+      /* background: rgba(255, 255, 255, 0.06); Removed background */
+      display: block;
+    }
+    #meta {
+      display: none; /* Hide meta */
+    }
+    #sender {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    #price {
+      color: #4ade80;
+      font-weight: 700;
+    }
+    #time {
+      color: #cbd5e1;
+      font-size: 14px;
+    }
+    #text {
+      color: #e2e8f0;
+      font-size: 14px;
+    }
+    #size {
+      color: #a5b4fc;
+      font-size: 12px;
+    }
+
+    /* Preview box */
+    #preview-box {
+      display: none; /* Hide preview box as requested to remove controls/clutter */
+    }
+
+    /* Control panel removed */
+  </style>
+</head>
+<body>
+  <!-- Controls removed -->
+
+  <div id="container">
+    <img id="thumb" alt="preview" />
+    <div id="meta">
+      <div id="sender"></div>
+      <div id="price"></div>
+      <div id="time"></div>
+      <div id="text"></div>
+      <div id="size"></div>
+    </div>
+  </div>
+
+  <!-- Audio removed -->
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script>
+    // Adjust host/port if deployed elsewhere
+    const socket = io('http://localhost:5001', { transports: ['websocket', 'polling'] });
+
+    const box = document.getElementById('container');
+    const thumb = document.getElementById('thumb');
+    const senderEl = document.getElementById('sender');
+    const priceEl = document.getElementById('price');
+    const timeEl = document.getElementById('time');
+    const textEl = document.getElementById('text');
+    const sizeEl = document.getElementById('size');
+    // const ding = document.getElementById('ding'); // Removed
+    let hideTimer = null;
+
+    function show(payload = {}) {
+      console.log('Received payload:', payload);
+      const { sender, price, time, filePath, text, width, height, duration, seconds, remainingSeconds, timeLeft } = payload;
+      sizeEl.textContent = "";
+      if (filePath) {
+        // Assume backend serves /uploads statically (default to /uploads/user-uploads if path is just filename)
+        let resolved = filePath;
+        if (!resolved.startsWith('http')) {
+          if (!resolved.startsWith('/')) {
+            resolved = `/uploads/user-uploads/${resolved}`;
+          }
+          resolved = `http://localhost:5001${resolved}`;
+        }
+
+        thumb.src = resolved;
+        thumb.style.display = 'block';
+      } else {
+        thumb.style.display = 'none';
+      }
+
+      // Use backend-provided width/height if present; otherwise natural size (auto)
+      if (width && !isNaN(width)) {
+        const w = Math.max(50, Math.min(4000, Number(width)));
+        thumb.style.width = `${w}px`;
+      } else {
+        thumb.style.width = 'auto';
+      }
+
+      if (height && !isNaN(height)) {
+        const h = Math.max(50, Math.min(4000, Number(height)));
+        thumb.style.height = `${h}px`;
+      } else {
+        thumb.style.height = 'auto';
+      }
+
+      senderEl.textContent = sender || 'Anonymous';
+      priceEl.textContent = price != null ? `฿${price}` : '';
+      timeEl.textContent = time != null ? `${time} วินาที` : '';
+      textEl.textContent = text || '';
+
+      box.classList.add('show');
+      // ding.currentTime = 0;
+      // ding.play().catch(() => {});
+
+      // แสดงค้างตามเวลาที่ตั้ง (วินาที) ถ้าไม่ระบุใช้ 5 วิ
+      const timeCandidate = [time, duration, seconds, remainingSeconds, timeLeft].find(v => v != null && !isNaN(v));
+      console.log('Time candidate:', timeCandidate);
+      const displayMs = timeCandidate != null
+        ? Math.max(Number(timeCandidate) * 1000, 1000)
+        : 5000;
+      console.log('Display duration (ms):', displayMs);
+
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => box.classList.remove('show'), displayMs);
+    }
+
+    socket.on('connect', () => console.log('Overlay connected', socket.id));
+    socket.on('now-playing-image', show);
+  </script>
+</body>
+</html>
