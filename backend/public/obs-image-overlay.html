@@ -162,7 +162,13 @@
       console.log('Display duration (ms):', displayMs);
 
       clearTimeout(hideTimer);
-      hideTimer = setTimeout(() => box.classList.remove('show'), displayMs);
+      hideTimer = setTimeout(() => {
+        box.classList.remove('show');
+        console.log('Finished playing, emitting completion');
+        if (payload.id) {
+            socket.emit('complete-playing', payload.id);
+        }
+      }, displayMs);
     }
 
     socket.on('connect', () => console.log('Overlay connected', socket.id));

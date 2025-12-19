@@ -46,11 +46,44 @@ async function loadInitialConfig() {
   try {
     // โหลดประวัติจาก DB
     const history = await TimeHistory.find({}).sort({ createdAt: -1 });
+    console.log("[Realtime] Loaded history from DB:", JSON.stringify(history, null, 2));
+
+    // Auto-cleanup: Fix duplicate "1 นาที" ghost item reported by user
+    // User wants only "1 นาที 1 วินาที", so we remove "1 นาที" for text mode
+    const ghostItem = await TimeHistory.findOne({ mode: 'text', duration: '1 นาที' });
+    if (ghostItem) {
+      console.log("[Realtime] Found ghost item '1 นาที', Removing...", ghostItem.id);
+      await TimeHistory.findByIdAndDelete(ghostItem._id);
+      // Remove from history array in memory too
+      const index = history.findIndex(h => h.id === ghostItem.id);
+      if (index !== -1) history.splice(index, 1);
+    }
+
+    // Auto-repair: Fix missing 'time' field for existing records
+    for (const h of history) {
+      if (!h.time && h.duration) {
+        let seconds = 0;
+        // Try to parse "X นาที Y วินาที" or "X นาที"
+        const minMatch = h.duration.match(/(\d+)\s*นาที/);
+        const secMatch = h.duration.match(/(\d+)\s*วินาที/);
+
+        if (minMatch) seconds += parseInt(minMatch[1]) * 60;
+        if (secMatch) seconds += parseInt(secMatch[1]);
+
+        if (seconds > 0) {
+          console.log(`[Realtime] Repairing time for ${h.id}: ${h.duration} -> ${seconds}s`);
+          h.time = seconds;
+          await h.save();
+        }
+      }
+    }
+
     config.settings = history.map(h => ({
       id: h.id,
       mode: h.mode,
       date: h.date,
       duration: h.duration,
+      time: h.time, // Include time in seconds
       price: h.price
     }));
 
@@ -91,6 +124,7 @@ app.get("/api/check-history", async (req, res) => {
       mode: h.mode,
       date: h.date, // Note: Schema stores string date as requested
       duration: h.duration,
+      time: h.time,
       price: h.price
     }));
     res.json(formatted);
@@ -131,6 +165,7 @@ io.on("connection", (socket) => {
         mode: setting.mode,
         date: setting.date,
         duration: setting.duration,
+        time: setting.time, // Save seconds
         price: setting.price
       });
 

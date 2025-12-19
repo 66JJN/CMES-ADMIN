@@ -12,6 +12,7 @@ const timeHistorySchema = new mongoose.Schema({
     },
     date: String,     // e.g. "14/12/2025" or ISO string
     duration: String, // e.g. "1 ชั่วโมง"
+    time: Number,     // Duration in seconds
     price: Number,
     createdAt: {
         type: Date,

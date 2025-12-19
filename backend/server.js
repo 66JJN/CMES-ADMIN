@@ -644,8 +644,8 @@ app.get("/api/queue", async (req, res) => {
   try {
     console.log("=== Queue request received");
 
-    // ดึงเฉพาะรายการที่ status = 'pending' และเรียงตามเวลาที่รับมา (FIFO)
-    const queueItems = await ImageQueue.find({ status: 'pending' })
+    // ดึงรายการที่ยังไม่เสร็จ (pending + approved + playing)
+    const queueItems = await ImageQueue.find({ status: { $in: ['pending', 'approved', 'playing'] } })
       .sort({ receivedAt: 1 })
       .lean();
 
