@@ -974,15 +974,15 @@ app.get("/api/order-status/:orderId", async (req, res) => {
       // หาภาพที่กำลังแสดงอยู่
       const currentlyPlaying = await ImageQueue.findOne({ status: 'playing' });
       
-      let totalMinutesBefore = 0;
+      let totalSecondsBefore = 0;
 
       // ถ้ามีรูปกำลังแสดง คำนวณเวลาที่เหลือ
       if (currentlyPlaying && currentlyPlaying.playingAt) {
-        const playingDuration = currentlyPlaying.time; // นาที
+        const playingDuration = currentlyPlaying.time; // วินาที
         const playingStartTime = new Date(currentlyPlaying.playingAt);
-        const elapsedMinutes = (Date.now() - playingStartTime.getTime()) / 60000;
-        const remainingMinutes = Math.max(0, playingDuration - elapsedMinutes);
-        totalMinutesBefore += remainingMinutes;
+        const elapsedSeconds = (Date.now() - playingStartTime.getTime()) / 1000;
+        const remainingSeconds = Math.max(0, playingDuration - elapsedSeconds);
+        totalSecondsBefore += remainingSeconds;
       }
 
       // หาคิว approved ที่อยู่ก่อนหน้า (เรียงตาม approvedAt)
@@ -992,7 +992,7 @@ app.get("/api/order-status/:orderId", async (req, res) => {
       }).sort({ approvedAt: 1 });
 
       // รวมเวลาของคิว approved ที่อยู่ก่อนหน้า
-      totalMinutesBefore += approvedBefore.reduce((sum, item) => {
+      totalSecondsBefore += approvedBefore.reduce((sum, item) => {
         return sum + (item.time || 0);
       }, 0);
 
@@ -1000,9 +1000,9 @@ app.get("/api/order-status/:orderId", async (req, res) => {
       const approvedPosition = approvedBefore.length + (currentlyPlaying ? 1 : 0) + 1;
       const totalApproved = await ImageQueue.countDocuments({ status: 'approved' });
 
-      const estimatedStartTime = new Date(Date.now() + totalMinutesBefore * 60000);
+      const estimatedStartTime = new Date(Date.now() + totalSecondsBefore * 1000);
       const currentDuration = queueItem.time || 0;
-      const estimatedEndTime = new Date(estimatedStartTime.getTime() + currentDuration * 60000);
+      const estimatedEndTime = new Date(estimatedStartTime.getTime() + currentDuration * 1000);
 
       return res.json({
         success: true,
@@ -1015,7 +1015,7 @@ app.get("/api/order-status/:orderId", async (req, res) => {
           price: queueItem.price,
           queuePosition: approvedPosition,
           totalQueue: totalApproved + (currentlyPlaying ? 1 : 0),
-          estimatedWaitMinutes: Math.round(totalMinutesBefore),
+          estimatedWaitSeconds: Math.round(totalSecondsBefore),
           estimatedStartTime: estimatedStartTime.toISOString(),
           estimatedEndTime: estimatedEndTime.toISOString(),
           tableNumber: queueItem.giftOrder?.tableNumber || null,
@@ -1026,10 +1026,10 @@ app.get("/api/order-status/:orderId", async (req, res) => {
 
     if (queueItem.status === 'playing') {
       // สถานะกำลังแสดง
-      const playingDuration = queueItem.time; // นาที
+      const playingDuration = queueItem.time; // วินาที
       const playingStartTime = new Date(queueItem.playingAt);
-      const elapsedMinutes = (Date.now() - playingStartTime.getTime()) / 60000;
-      const remainingMinutes = Math.max(0, playingDuration - elapsedMinutes);
+      const elapsedSeconds = (Date.now() - playingStartTime.getTime()) / 1000;
+      const remainingSeconds = Math.max(0, playingDuration - elapsedSeconds);
 
       return res.json({
         success: true,
@@ -1042,7 +1042,7 @@ app.get("/api/order-status/:orderId", async (req, res) => {
           price: queueItem.price,
           queuePosition: 1,
           totalQueue: 1,
-          remainingMinutes: Math.round(remainingMinutes),
+          remainingSeconds: Math.round(remainingSeconds),
           tableNumber: queueItem.giftOrder?.tableNumber || null,
           giftItems: queueItem.giftOrder?.items || null
         }

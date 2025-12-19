@@ -44,7 +44,7 @@ const imageQueueSchema = new mongoose.Schema({
     default: null
   },
   
-  // Duration & Payment
+  // Duration & Payment (time in seconds)
   time: {
     type: Number,
     required: true,

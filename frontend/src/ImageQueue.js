@@ -25,6 +25,9 @@ function ImageQueue() {
   const [displayPaused, setDisplayPaused] = useState(false);
   const [savedTimeLeft, setSavedTimeLeft] = useState(0);
 
+  const totalDuration = currentPreview ? Math.max(currentPreview.time || 0, 1) : 1;
+  const progressRatio = Math.max(0, Math.min(1, (totalDuration - timeLeft) / totalDuration));
+
   useEffect(() => {
     fetchImages();
     const interval = setInterval(fetchImages, 5000);
@@ -35,11 +38,11 @@ function ImageQueue() {
   const startPreview = async (image) => {
     const now = Date.now();
     setCurrentPreview(image);
-    setTimeLeft(image.time * 60);
+    setTimeLeft(image.time);
     setIsActive(true);
     localStorage.setItem("currentPreview", JSON.stringify(image));
     localStorage.setItem("startTimestamp", now);
-    localStorage.setItem("duration", image.time * 60);
+    localStorage.setItem("duration", image.time);
     localStorage.setItem("isActive", true);
 
     // อัพเดทสถานะเป็น 'playing' ใน DB
@@ -153,6 +156,40 @@ function ImageQueue() {
       // Pause
       setDisplayPaused(true);
       setSavedTimeLeft(timeLeft);
+    }
+  };
+
+  const handleSkipCurrent = async () => {
+    if (!currentPreview) return;
+    const imageId = currentPreview._id || currentPreview.id;
+    try {
+      await fetch(`http://localhost:5001/api/complete/${imageId}`, { method: "POST" });
+    } catch (err) {
+      console.error("Error skipping current image:", err);
+    }
+
+    // reset current preview state
+    setIsActive(false);
+    setIsPaused(false);
+    setDisplayPaused(false);
+    setCurrentPreview(null);
+    setTimeLeft(0);
+    setSavedTimeLeft(0);
+    setPauseTimeLeft(0);
+    localStorage.removeItem("currentPreview");
+    localStorage.removeItem("startTimestamp");
+    localStorage.removeItem("duration");
+    localStorage.removeItem("isActive");
+    localStorage.removeItem("timeLeft");
+    localStorage.removeItem("isPaused");
+    localStorage.removeItem("pauseTimeLeft");
+
+    if (previewQueue.length > 0) {
+      const nextImage = previewQueue[0];
+      setPreviewQueue(prev => prev.slice(1));
+      startPreview(nextImage);
+    } else {
+      fetchImages();
     }
   };
 
@@ -599,7 +636,7 @@ function ImageQueue() {
                     
                     <div className="card-footer">
                       <div className="time-price">
-                        <span className="time">{image.time}นาที</span>
+                        <span className="time">{image.time}วินาที</span>
                         <span className="price">฿{image.price}</span>
                       </div>
                       <div className="date">{formatDate(image.receivedAt)}</div>
@@ -711,7 +748,7 @@ function ImageQueue() {
                               {previewQueue[0].sender}
                             </div>
                             <div style={{ color: "#9ca3af", fontSize: "12px", marginTop: "2px" }}>
-                              {previewQueue[0].time} นาที · ฿{previewQueue[0].price}
+                              {previewQueue[0].time} วินาที · ฿{previewQueue[0].price}
                             </div>
                           </div>
                         </div>
@@ -811,6 +848,14 @@ function ImageQueue() {
                   >
                     {displayPaused ? "เริ่มต่อ" : "หยุดชั่วคราว"}
                   </button>
+                  <button
+                    onClick={handleSkipCurrent}
+                    className="refresh-button"
+                    style={{ marginTop: "8px", width: "100%", padding: "10px", background: "#ef4444", color: "white" }}
+                    disabled={!currentPreview}
+                  >
+                    ยกเลิกการแสดง / ข้ามคิวนี้
+                  </button>
                 </div>
 
                 <div className="info-section">
@@ -821,7 +866,7 @@ function ImageQueue() {
                   
                   <div className="info-row">
                     <span className="info-label">เวลาการแสดง:</span>
-                    <span className="info-value">{currentPreview.time} นาที</span>
+                    <span className="info-value">{currentPreview.time} วินาที</span>
                   </div>
                   
                   <div className="info-row">
@@ -841,12 +886,12 @@ function ImageQueue() {
                       <div 
                         className="progress-fill"
                         style={{ 
-                          width: `${((currentPreview.time * 60 - timeLeft) / (currentPreview.time * 60)) * 100}%` 
+                          width: `${progressRatio * 100}%` 
                         }}
                       ></div>
                     </div>
                     <div className="progress-text">
-                      {Math.round(((currentPreview.time * 60 - timeLeft) / (currentPreview.time * 60)) * 100)}% เสร็จสิ้น
+                      {Math.round(progressRatio * 100)}% เสร็จสิ้น
                     </div>
                   </div>
                 )}
@@ -881,7 +926,7 @@ function ImageQueue() {
                         />
                       </div>
                       <div className="queue-item-info">
-                        <div className="queue-item-time">{queueImage.time}นาที</div>
+                        <div className="queue-item-time">{queueImage.time}วินาที</div>
                         <div className="queue-item-text">
                           {queueImage.text ? queueImage.text.slice(0, 15) + '...' : 'ไม่มีข้อความ'}
                         </div>
@@ -1025,7 +1070,7 @@ function ImageQueue() {
                 </div>
                 <div className="detail-row">
                   <span className="label">เวลาที่เลือก:</span>
-                  <span className="value">{selectedImage.time} นาที</span>
+                  <span className="value">{selectedImage.time} วินาที</span>
                 </div>
                 <div className="detail-row">
                   <span className="label">ราคา:</span>
@@ -1276,7 +1321,7 @@ function ImageQueue() {
                               <div>
                                 <div style={{ fontSize: "11px", color: "#64748b" }}>เวลา</div>
                                 <div style={{ fontSize: "14px", fontWeight: "700", color: "#1e293b" }}>
-                                  {item.metadata?.duration || "N/A"} นาที
+                                  {item.metadata?.duration ?? "N/A"} วินาที
                                 </div>
                               </div>
                             </div>
