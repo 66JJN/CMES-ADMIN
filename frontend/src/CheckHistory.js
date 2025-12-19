@@ -233,7 +233,11 @@ function CheckHistory() {
                       <b>รายละเอียด:</b> {item.text}
                     </div>
                     <div style={{ color: "#1e293b" }}>
-                      <b>สถานะ:</b> {item.status === "approved" ? "อนุมัติ" : "ปฏิเสธ"}
+                      <b>สถานะ:</b> {
+                        item.status === "approved" ? "อนุมัติ" :
+                          item.status === "completed" ? "แสดงเสร็จสิ้น" :
+                            "ปฏิเสธ"
+                      }
                     </div>
                     <button
                       className="ch-btn-detail"
@@ -291,7 +295,11 @@ function CheckHistory() {
                       <b>รายละเอียด:</b> {item.text}
                     </div>
                     <div style={{ color: "#1e293b" }}>
-                      <b>สถานะ:</b> {item.status === "approved" ? "อนุมัติ" : "ปฏิเสธ"}
+                      <b>สถานะ:</b> {
+                        item.status === "approved" ? "อนุมัติ" :
+                          item.status === "completed" ? "แสดงเสร็จสิ้น" :
+                            "ปฏิเสธ"
+                      }
                     </div>
                     {item.filePath && (
                       <div>
@@ -346,16 +354,26 @@ function CheckHistory() {
             <div style={{ marginBottom: 8 }}>
               <b>ID:</b> {selected.id}
             </div>
+            {/* --- Common Fields --- */}
             {selected.type && (
               <div style={{ marginBottom: 8 }}>
                 <b>ประเภท:</b> {selected.type}
               </div>
             )}
+
+            {/* --- Content Fields --- */}
             {selected.text && (
               <div style={{ marginBottom: 8 }}>
                 <b>ข้อความ:</b> {selected.text}
               </div>
             )}
+            {selected.note && (
+              <div style={{ marginBottom: 8 }}>
+                <b>โน้ตเพิ่มเติม:</b> {selected.note}
+              </div>
+            )}
+
+            {/* --- Media --- */}
             {selected.filePath && (
               <div style={{ marginBottom: 8 }}>
                 <b>รูปภาพ:</b>
@@ -371,31 +389,82 @@ function CheckHistory() {
                 />
               </div>
             )}
-            {selected.status && (
-              <div style={{ marginBottom: 8 }}>
-                <b>สถานะ:</b> {selected.status === "approved" ? "อนุมัติ" : "ปฏิเสธ"}
-              </div>
-            )}
+
+            {/* --- Status & User --- */}
+            <div style={{ marginBottom: 8 }}>
+              <b>สถานะ:</b> {
+                selected.status === "approved" ? "อนุมัติ" :
+                  selected.status === "completed" ? "แสดงเสร็จสิ้น" :
+                    "ปฏิเสธ"
+              }
+            </div>
+
             {selected.sender && (
               <div style={{ marginBottom: 8 }}>
                 <b>ผู้ส่ง:</b> {selected.sender}
               </div>
             )}
+
+            {/* --- Social Info --- */}
+            {selected.social && selected.social.type && (
+              <div style={{ marginBottom: 8 }}>
+                <b>Social:</b> {selected.social.type} ({selected.social.name})
+              </div>
+            )}
+
+            {/* --- Gift Specific --- */}
+            {selected.tableNumber > 0 && (
+              <div style={{ marginBottom: 8 }}>
+                <b>โต๊ะ:</b> {selected.tableNumber}
+              </div>
+            )}
+
+            {selected.giftItems && selected.giftItems.length > 0 && (
+              <div style={{ marginBottom: 8 }}>
+                <b>รายการของขวัญ:</b>
+                <ul style={{ margin: "4px 0 0 20px", padding: 0 }}>
+                  {selected.giftItems.map((g, i) => (
+                    <li key={i}>{g.name} x{g.quantity}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* --- Price --- */}
             {selected.price !== undefined && (
               <div style={{ marginBottom: 8 }}>
-                <b>ราคา:</b> {selected.price}
+                <b>ราคา:</b> {selected.price} บาท
               </div>
             )}
-            {selected.createdAt && (
-              <div style={{ marginBottom: 8 }}>
-                <b>เวลาสร้าง:</b> {formatDate(selected.createdAt)}
-              </div>
-            )}
-            {selected.checkedAt && (
-              <div style={{ marginBottom: 8 }}>
-                <b>เวลาตรวจสอบ:</b> {formatDate(selected.checkedAt)}
-              </div>
-            )}
+
+            {/* --- Timestamps --- */}
+            <div style={{ marginTop: 12, borderTop: "1px solid #e2e8f0", paddingTop: 8 }}>
+              {selected.createdAt && (
+                <div style={{ marginBottom: 4, fontSize: "0.9em" }}>
+                  <b>รับข้อมูล:</b> {formatDate(selected.createdAt)}
+                </div>
+              )}
+              {selected.checkedAt && (
+                <div style={{ marginBottom: 4, fontSize: "0.9em" }}>
+                  <b>ตรวจสอบ:</b> {formatDate(selected.checkedAt)}
+                </div>
+              )}
+              {selected.startedAt && (
+                <div style={{ marginBottom: 4, fontSize: "0.9em" }}>
+                  <b>เริ่มแสดง:</b> {formatDate(selected.startedAt)}
+                </div>
+              )}
+              {selected.endedAt && (
+                <div style={{ marginBottom: 4, fontSize: "0.9em" }}>
+                  <b>จบการแสดง:</b> {formatDate(selected.endedAt)}
+                </div>
+              )}
+              {selected.duration && (
+                <div style={{ marginBottom: 4, fontSize: "0.9em" }}>
+                  <b>ระยะเวลา:</b> {selected.duration} วินาที
+                </div>
+              )}
+            </div>
             <button
               className="ch-btn"
               style={{ background: "#64748b", marginTop: 16 }}

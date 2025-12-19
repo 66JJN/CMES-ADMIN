@@ -126,13 +126,13 @@ cron.schedule('0 0 * * *', () => {
 async function addRankingPoint(userId, name, amount, email = null, avatar = null) {
   try {
     console.log(`[Ranking] addRankingPoint called: userId=${userId}, name=${name}, amount=${amount}, email=${email}`);
-    
+
     const points = Number(amount);
     if (isNaN(points) || points <= 0) {
       console.log("[Ranking] Skipping: invalid points");
       return;
     }
-    
+
     // ต้องมี userId จึงจะบันทึก ranking
     if (!userId || userId === "guest" || userId === "unknown") {
       console.log("[Ranking] Skipping guest/unknown user");
@@ -312,6 +312,20 @@ app.get("/api/gifts/settings", async (req, res) => {
   }
 });
 
+// Helper to sync JSON with DB
+async function syncGiftSettingsFromDB() {
+  const gifts = await GiftSetting.find({});
+  giftSettings.items = gifts.map(g => ({
+    id: g._id.toString(),
+    name: g.giftName,
+    price: g.price,
+    description: g.description || "",
+    imageUrl: g.image || ""
+  }));
+  saveGiftSettings();
+  return giftSettings;
+}
+
 app.post("/api/gifts/items", async (req, res) => {
   try {
     const { name, price, description, imageUrl } = req.body;
@@ -337,9 +351,8 @@ app.post("/api/gifts/items", async (req, res) => {
       imageUrl: savedGift.image
     };
 
-    // Also save to JSON for legacy compatibility
-    giftSettings.items.unshift(item);
-    saveGiftSettings();
+    // Sync with DB to ensure consistency
+    await syncGiftSettingsFromDB();
 
     res.json({ success: true, item, settings: giftSettings });
   } catch (error) {
@@ -376,15 +389,8 @@ app.put("/api/gifts/items/:id", async (req, res) => {
       imageUrl: updatedGift.image
     };
 
-    // Also update JSON
-    const jsonItem = giftSettings.items.find(i => i.id === id);
-    if (jsonItem) {
-      if (name) jsonItem.name = name.trim();
-      if (price !== undefined) jsonItem.price = Number(price) || 0;
-      if (description !== undefined) jsonItem.description = description.trim();
-      if (imageUrl !== undefined) jsonItem.imageUrl = imageUrl;
-      saveGiftSettings();
-    }
+    // Sync with DB to ensure consistency
+    await syncGiftSettingsFromDB();
 
     res.json({ success: true, item, settings: giftSettings });
   } catch (error) {
@@ -392,6 +398,28 @@ app.put("/api/gifts/items/:id", async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to update gift" });
   }
 });
+
+// Helper function to delete image
+const deleteImageFile = (imagePath) => {
+  if (!imagePath) return;
+  try {
+    let relativePath = imagePath;
+    if (relativePath.startsWith("http")) {
+      const uploadsIndex = relativePath.indexOf("/uploads/");
+      if (uploadsIndex !== -1) relativePath = relativePath.substring(uploadsIndex);
+    }
+    if (relativePath.startsWith("/uploads/")) {
+      const normalizedPath = relativePath.replace(/^\/+/, "");
+      const absolutePath = path.join(__dirname, normalizedPath);
+      if (fs.existsSync(absolutePath)) {
+        fs.unlinkSync(absolutePath);
+        console.log("[File] Deleted:", absolutePath);
+      }
+    }
+  } catch (err) {
+    console.warn("Failed to remove file:", err);
+  }
+};
 
 app.delete("/api/gifts/items/:id", async (req, res) => {
   try {
@@ -405,29 +433,11 @@ app.delete("/api/gifts/items/:id", async (req, res) => {
 
     // Delete image file if exists
     if (deletedGift.image) {
-      let relativePath = deletedGift.image;
-      if (relativePath.startsWith("http")) {
-        const uploadsIndex = relativePath.indexOf("/uploads/");
-        if (uploadsIndex !== -1) {
-          relativePath = relativePath.substring(uploadsIndex);
-        }
-      }
-      if (relativePath.startsWith("/uploads/")) {
-        const normalizedPath = relativePath.replace(/^\/+/, "");
-        const absolutePath = path.join(__dirname, normalizedPath);
-        if (fs.existsSync(absolutePath)) {
-          try {
-            fs.unlinkSync(absolutePath);
-          } catch (err) {
-            console.warn("Failed to remove gift image", err);
-          }
-        }
-      }
+      deleteImageFile(deletedGift.image);
     }
 
-    // Also remove from JSON
-    giftSettings.items = giftSettings.items.filter((item) => item.id !== id);
-    saveGiftSettings();
+    // Sync with DB to ensure consistency
+    await syncGiftSettingsFromDB();
 
     res.json({ success: true, settings: giftSettings });
   } catch (error) {
@@ -471,7 +481,7 @@ app.get("/api/rankings", async (req, res) => {
       .sort({ points: -1 })
       .limit(limit)
       .lean();
-    
+
     res.json({
       success: true,
       ranks: rankings,
@@ -505,11 +515,11 @@ app.get("/api/rankings/top", async (req, res) => {
 app.post("/api/gifts/order", async (req, res) => {
   try {
     console.log("[Admin] Received gift order:", JSON.stringify(req.body, null, 2));
-    
+
     const { orderId, sender, userId, email, avatar, tableNumber, note, items, totalPrice } = req.body;
-    
+
     console.log("[Admin] Parsed data: userId=", userId, "sender=", sender, "price=", totalPrice);
-    
+
     if (!orderId || !tableNumber || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: "ข้อมูลคำสั่งซื้อไม่ครบ" });
     }
@@ -542,7 +552,7 @@ app.post("/api/gifts/order", async (req, res) => {
     console.log("[Admin] Creating queue item in MongoDB...");
     const queueItem = await ImageQueue.create(queueData);
     console.log("[Admin] Queue item created:", queueItem._id);
-    
+
     // บันทึก ranking เฉพาะ user ที่ login แล้ว
     if (userId) {
       console.log("[Admin] Calling addRankingPoint for userId:", userId);
@@ -550,7 +560,7 @@ app.post("/api/gifts/order", async (req, res) => {
     } else {
       console.log("[Admin] No userId provided, skipping ranking");
     }
-    
+
     res.json({ success: true, queueItem });
   } catch (error) {
 
@@ -616,7 +626,7 @@ app.post("/api/upload", uploadUser.single("file"), async (req, res) => {
     };
 
     const queueItem = await ImageQueue.create(itemData);
-    
+
     // บันทึก ranking เฉพาะ user ที่ login แล้ว
     if (userId) {
       addRankingPoint(userId, sender, Number(price) || 0, email, avatar);
@@ -654,10 +664,48 @@ app.post("/api/playing/:id", async (req, res) => {
     const { id } = req.params;
     console.log("=== Marking as playing:", id);
 
-    // อัพเดท status เป็น 'playing' และบันทึก playingAt timestamp
+    // Find any currently playing items and complete them first (Force complete)
+    const currentlyPlaying = await ImageQueue.find({ status: 'playing', _id: { $ne: id } });
+    for (const playingItem of currentlyPlaying) {
+      console.log(`[Auto-Complete] Force completing stuck item: ${playingItem._id}`);
+
+      // Save to CheckHistory
+      await CheckHistory.create({
+        transactionId: playingItem._id.toString(),
+        type: playingItem.type || (playingItem.filePath ? 'image' : 'text'),
+        sender: playingItem.sender || 'Unknown',
+        price: playingItem.price || 0,
+        status: 'completed',
+        content: playingItem.text || '',
+        mediaUrl: playingItem.filePath || null,
+        metadata: {
+          duration: playingItem.time,
+          tableNumber: Number(playingItem.giftOrder?.tableNumber) || 0,
+          giftItems: playingItem.giftOrder?.items || [],
+          note: playingItem.giftOrder?.note || '',
+          theme: playingItem.textColor || 'white',
+          social: {
+            type: playingItem.socialType || null,
+            name: playingItem.socialName || null
+          }
+        },
+        receivedAt: playingItem.receivedAt, // Keep original receive time
+        approvalDate: playingItem.approvedAt || new Date(),
+        startedAt: playingItem.playingAt,
+        endedAt: new Date(),
+        duration: playingItem.time,
+        approvedBy: 'system',
+        notes: 'Auto-completed by next item'
+      });
+
+      // Remove from Queue
+      await ImageQueue.findByIdAndDelete(playingItem._id);
+    }
+
+    // Update status to 'playing'
     const updated = await ImageQueue.findByIdAndUpdate(
       id,
-      { 
+      {
         status: 'playing',
         playingAt: new Date()
       },
@@ -751,7 +799,9 @@ app.post("/api/reject/:id", async (req, res) => {
           name: item.socialName || null
         }
       },
-      approvalDate: new Date(),
+      receivedAt: item.receivedAt, // Keep original receive time
+      approvalDate: new Date(), // Rejection is the check action
+      duration: item.time,
       approvedBy: 'admin',
       notes: 'Rejected by admin'
     });
@@ -782,7 +832,7 @@ app.post("/api/complete/:id", async (req, res) => {
 
     // ดึงข้อมูลก่อนลบ
     const item = await ImageQueue.findById(id);
-    
+
     if (!item) {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
@@ -807,7 +857,11 @@ app.post("/api/complete/:id", async (req, res) => {
           name: item.socialName || null
         }
       },
-      approvalDate: new Date(),
+      receivedAt: item.receivedAt, // Keep original receive time
+      approvalDate: item.approvedAt || new Date(), // Use original approval time
+      startedAt: item.playingAt,
+      endedAt: new Date(),
+      duration: item.time,
       approvedBy: 'system',
       notes: 'Completed display'
     });
@@ -840,10 +894,20 @@ app.get("/api/check-history", async (req, res) => {
         price: isNew ? item.price : item.amount,
         status: (item.status === 'verified' || item.status === 'approved') ? 'approved' : item.status,
         checkedAt: item.approvalDate,
-        createdAt: item.createdAt,
+        createdAt: item.receivedAt || item.createdAt, // Fix: Use receivedAt for "Receive Data" time, fallback to createdAt
         type: item.type || (item.filePath ? 'image' : 'text'),
         filePath: isNew ? item.mediaUrl : item.filePath,
-        tableNumber: isNew ? (item.metadata?.tableNumber || 0) : item.tableNumber
+        filePath: isNew ? item.mediaUrl : item.filePath,
+        tableNumber: isNew ? (item.metadata?.tableNumber || 0) : item.tableNumber,
+
+        // New fields
+        giftItems: isNew ? (item.metadata?.giftItems || []) : [],
+        note: isNew ? (item.metadata?.note || '') : '',
+        social: isNew ? (item.metadata?.social || {}) : {},
+        theme: isNew ? (item.metadata?.theme || '') : '',
+        startedAt: item.startedAt,
+        endedAt: item.endedAt,
+        duration: item.duration || (item.metadata?.duration)
       };
     });
 
@@ -858,7 +922,18 @@ app.get("/api/check-history", async (req, res) => {
 app.post("/api/delete-history", async (req, res) => {
   try {
     const { id } = req.body;
-    await CheckHistory.findByIdAndDelete(id);
+
+    // Find before delete to remove image
+    const deletedItem = await CheckHistory.findByIdAndDelete(id);
+
+    if (deletedItem) {
+      // ตรวจสอบทั้ง mediaUrl และ filePath (legacy)
+      const imagePath = deletedItem.mediaUrl || deletedItem.filePath;
+      if (imagePath) {
+        deleteImageFile(imagePath);
+      }
+    }
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting history:', error);
@@ -882,9 +957,9 @@ app.post("/api/history/restore/:id", async (req, res) => {
   try {
     const { id } = req.params;
     console.log("=== Restoring from history:", id);
-    
+
     const historyItem = await CheckHistory.findById(id);
-    
+
     if (!historyItem) {
       console.log("[Restore] History item not found");
       return res.status(404).json({ success: false, message: 'History item not found' });
@@ -937,7 +1012,7 @@ app.get("/api/order-status/:orderId", async (req, res) => {
 
     // 1. ค้นหาใน ImageQueue ตามสถานะต่างๆ
     let query = { 'giftOrder.orderId': orderId };
-    
+
     // ถ้า orderId เป็น valid ObjectId ให้ค้นหาด้วย _id ด้วย
     if (orderId.match(/^[0-9a-fA-F]{24}$/)) {
       query = {
@@ -947,9 +1022,9 @@ app.get("/api/order-status/:orderId", async (req, res) => {
         ]
       };
     }
-    
+
     console.log("[OrderStatus] Query:", JSON.stringify(query));
-    
+
     const queueItem = await ImageQueue.findOne(query);
 
     if (!queueItem) {
@@ -961,7 +1036,7 @@ app.get("/api/order-status/:orderId", async (req, res) => {
 
       if (historyItem) {
         const statusText = historyItem.status === 'completed' ? 'แสดงเสร็จสิ้น' : 'รูปถูกปฏิเสธ';
-        
+
         return res.json({
           success: true,
           status: historyItem.status,
@@ -978,7 +1053,7 @@ app.get("/api/order-status/:orderId", async (req, res) => {
           }
         });
       }
-      
+
       // ไม่พบทั้งใน ImageQueue และ CheckHistory
       return res.json({
         success: false,
@@ -1021,7 +1096,7 @@ app.get("/api/order-status/:orderId", async (req, res) => {
 
       // หาภาพที่กำลังแสดงอยู่
       const currentlyPlaying = await ImageQueue.findOne({ status: 'playing' });
-      
+
       let totalSecondsBefore = 0;
 
       // ถ้ามีรูปกำลังแสดง คำนวณเวลาที่เหลือ
@@ -1110,10 +1185,10 @@ app.get("/api/order-status/:orderId", async (req, res) => {
   } catch (error) {
     console.error('[OrderStatus] Error checking order status:', error);
     console.error('[OrderStatus] Stack:', error.stack);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error', 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
     });
   }
 });
@@ -1121,6 +1196,18 @@ app.get("/api/order-status/:orderId", async (req, res) => {
 // ลบทั้งหมด
 app.post("/api/delete-all-history", async (req, res) => {
   try {
+    // ดึงข้อมูลทั้งหมดเพื่อลบรูป
+    const allHistory = await CheckHistory.find({});
+
+    // วนลบรูปภาพทีละรายการ
+    for (const item of allHistory) {
+      const imagePath = item.mediaUrl || item.filePath;
+      if (imagePath) {
+        deleteImageFile(imagePath);
+      }
+    }
+
+    // ลบข้อมูลใน DB
     await CheckHistory.deleteMany({});
     res.json({ success: true });
   } catch (error) {

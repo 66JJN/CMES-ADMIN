@@ -34,7 +34,11 @@ const checkHistorySchema = new mongoose.Schema(
     },
 
     // Audit fields
+    receivedAt: Date, // เวลาที่ Order ถูกส่งเข้ามาใน Queue
     approvalDate: Date,
+    startedAt: Date, // เวลาเริ่มแสดง
+    endedAt: Date,   // เวลาจบการแสดง
+    duration: Number, // ระยะเวลา (วินาที)
     approvedBy: String,
     rejectReason: String,
     notes: String, // Internal notes
