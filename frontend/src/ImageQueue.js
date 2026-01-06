@@ -232,9 +232,64 @@ function ImageQueue() {
     setShowModal(true);
   };
 
+  /* 
+   * Queue Persistence & Sync
+   * Sync 'approved' items from backend to previewQueue on load/refresh
+   */
+  useEffect(() => {
+    if (loading) return;
+    
+    // Find items that are approved but not yet in local queue or playing
+    // Note: We avoid adding duplicates if they are already in previewQueue
+    const approvedItems = images.filter(img => img.status === "approved");
+    
+    if (approvedItems.length > 0) {
+      setPreviewQueue(prev => {
+        // Only add items that aren't already in the queue
+        const currentIds = new Set(prev.map(p => p._id || p.id));
+        const newItems = approvedItems.filter(item => !currentIds.has(item._id || item.id));
+        
+        if (newItems.length > 0) {
+          // Sort by approvedAt or receivedAt to maintain order
+          newItems.sort((a, b) => new Date(a.receivedAt) - new Date(b.receivedAt));
+          return [...prev, ...newItems];
+        }
+        return prev;
+      });
+    }
+  }, [images, loading]);
+
   const handleApprove = async (id) => {
     try {
       console.log('[Approve] Approving image with ID:', id);
+      
+      // 1. Optimistic Update: Immediately mark locally as approved (removes from left list)
+      setImages(prev => prev.map(img => {
+        if ((img._id === id) || (img.id === id)) {
+          return { ...img, status: 'approved', width: editWidth, height: editHeight };
+        }
+        return img;
+      }));
+      setShowModal(false);
+
+      // 2. Add to Queue Locally
+      const imageToApprove = { ...selectedImage, width: editWidth, height: editHeight, status: 'approved' };
+      if (!currentPreview && !isActive) {
+         // If nothing playing, wait for next loop or start immediately? 
+         // logic is handled by "processNext" effect or manual start ?
+         // Actually existing logic called startPreview immediately if empty.
+         // Let's keep that but careful with duplicates managed by useEffect above?
+         // Actually, if we update 'images' state above, the useEffect might catch it too.
+         // But explicit start is faster for specific interaction.
+         startPreview(imageToApprove);
+      } else {
+         setPreviewQueue(prev => {
+           if (prev.find(p => (p._id || p.id) === (imageToApprove._id || imageToApprove.id))) return prev;
+           return [...prev, imageToApprove];
+         });
+      }
+
+      // 3. Send Request
       const response = await fetch(`http://localhost:5001/api/approve/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -243,22 +298,19 @@ function ImageQueue() {
           height: editHeight
         })
       });
-      if (response.ok) {
-        const imageToApprove = { ...selectedImage, width: editWidth, height: editHeight };
-        if (!currentPreview) {
-          startPreview(imageToApprove);
-        } else {
-          setPreviewQueue(prev => [...prev, imageToApprove]);
-        }
-        setShowModal(false);
-        fetchImages();
-      } else {
-        console.error('[Approve] Failed:', await response.text());
-        alert('ไม่สามารถอนุมัติได้');
+      
+      if (!response.ok) {
+        throw new Error(await response.text());
+        // If fail, should revert? For now assume success or user refreshes.
       }
+      
+      // 4. Background Fetch to sync completely
+      fetchImages();
+
     } catch (error) {
       console.error("Error approving image:", error);
       alert('เกิดข้อผิดพลาด: ' + error.message);
+      fetchImages(); // Revert state on error
     }
   };
 
@@ -531,6 +583,7 @@ function ImageQueue() {
             ) : (
               <div className="images-grid">
                 {images
+                  .filter(image => image.status === 'pending') // Only show pending items
                   .filter(image => categoryFilter === "all" || image.type === categoryFilter || (categoryFilter === "image" && !image.type))
                   .map((image, index) => {
                   const categoryColor = 
