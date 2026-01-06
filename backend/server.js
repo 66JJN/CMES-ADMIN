@@ -752,13 +752,22 @@ app.post("/api/approve/:id", async (req, res) => {
       return res.status(404).json({ success: false, message: 'Image not found' });
     }
 
-    // อัพเดทสถานะเป็น 'approved' และบันทึกขนาด
-    await ImageQueue.findByIdAndUpdate(id, {
-      status: 'approved',
+    // RACE CONDITION FIX: Only update status if NOT already 'playing'
+    // This prevents overwriting 'playing' status when approve/playing calls race
+    const updateData = {
       approvedAt: new Date(),
       width: width ? Number(width) : null,
       height: height ? Number(height) : null
-    });
+    };
+
+    // Only set status to 'approved' if current status is 'pending'
+    if (item.status === 'pending') {
+      updateData.status = 'approved';
+    }
+    // If status is already 'playing', don't touch it
+    // If status is already 'approved', don't change it either
+
+    await ImageQueue.findByIdAndUpdate(id, updateData);
 
     res.json({ success: true, message: 'Item approved' });
   } catch (error) {
@@ -830,14 +839,17 @@ app.post("/api/complete/:id", async (req, res) => {
     const { id } = req.params;
     console.log("=== Completing image:", id);
 
-    // ดึงข้อมูลก่อนลบ
-    const item = await ImageQueue.findById(id);
+    // ATOMIC FIX: Delete FIRST. Only the request that successfully deletes gets the document.
+    // This prevents duplicate history entries from concurrent requests.
+    const item = await ImageQueue.findByIdAndDelete(id);
 
     if (!item) {
-      return res.status(404).json({ success: false, message: 'Item not found' });
+      // Item already deleted (processed by another request)
+      console.log(`[Complete] Item ${id} already processed. Skipping.`);
+      return res.json({ success: true, message: 'Already processed' });
     }
 
-    // บันทึกลง CheckHistory
+    // We are the one who deleted it. Now create history.
     await CheckHistory.create({
       transactionId: item._id.toString(),
       type: item.type || (item.filePath ? 'image' : 'text'),
@@ -857,17 +869,14 @@ app.post("/api/complete/:id", async (req, res) => {
           name: item.socialName || null
         }
       },
-      receivedAt: item.receivedAt, // Keep original receive time
-      approvalDate: item.approvedAt || new Date(), // Use original approval time
+      receivedAt: item.receivedAt,
+      approvalDate: item.approvedAt || new Date(),
       startedAt: item.playingAt,
       endedAt: new Date(),
       duration: item.time,
       approvedBy: 'system',
       notes: 'Completed display'
     });
-
-    // ลบออกจาก ImageQueue
-    await ImageQueue.findByIdAndDelete(id);
 
     res.json({ success: true, message: 'Item completed and saved to history' });
   } catch (error) {
