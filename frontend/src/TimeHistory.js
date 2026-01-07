@@ -29,6 +29,12 @@ function TimeHistory() {
       console.log("[TimeHistory] Received status event, refetching...");
       fetchHistory();
     });
+
+    // ฟัง event เมื่อมีการลบข้อมูลจาก realtime-server
+    socketRef.current.on("settingsUpdated", (data) => {
+      console.log("[TimeHistory] Settings updated event received:", data);
+      fetchHistory();
+    });
     
     return () => {
       clearInterval(interval);

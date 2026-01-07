@@ -100,6 +100,26 @@ async function loadInitialConfig() {
   }
 }
 
+// ฟังก์ชันโหลด TimeHistory ใหม่จาก DB
+async function reloadSettingsFromDB() {
+  try {
+    const history = await TimeHistory.find({}).sort({ createdAt: -1 });
+    config.settings = history.map(h => ({
+      id: h.id,
+      mode: h.mode,
+      date: h.date,
+      duration: h.duration,
+      time: h.time,
+      price: h.price
+    }));
+    console.log("[Realtime] Reloaded settings from DB. Count:", config.settings.length);
+    return config.settings;
+  } catch (error) {
+    console.error("[Realtime] Error reloading settings:", error);
+    return config.settings;
+  }
+}
+
 // Function to save Runtime Config (Switches) to JSON (User only complained about TimeHistory not in DB)
 function saveRuntimeConfig() {
   const { settings, ...runtimeConfig } = config;
@@ -147,6 +167,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("getConfig", () => {
+    console.log("[Realtime] Client requested config. Current settings count:", config.settings.length);
+    console.log("[Realtime] Current config.settings:", JSON.stringify(config.settings, null, 2));
     socket.emit("status", config);
   });
 
@@ -181,10 +203,18 @@ io.on("connection", (socket) => {
   // Remove History -> Remove from DB
   socket.on("removeSetting", async (id) => {
     try {
-      await TimeHistory.findOneAndDelete({ id });
+      const result = await TimeHistory.findOneAndDelete({ id });
+      console.log("[Realtime] Removed setting:", id, "Result:", result);
 
-      config.settings = config.settings.filter(item => item.id !== id);
+      // โหลด TimeHistory ใหม่จาก DB แล้วส่ง update ไป frontend
+      await reloadSettingsFromDB();
+      console.log("[Realtime] Updated config.settings:", JSON.stringify(config.settings, null, 2));
+      
+      // บ่งชี้ว่ามีการลบข้อมูล เพื่อให้ frontend รีโหลด
+      console.log("[Realtime] Broadcasting status to all clients...");
       io.emit("status", config);
+      console.log("[Realtime] Broadcasting settingsUpdated event...");
+      io.emit("settingsUpdated", { action: "delete", id });
     } catch (err) {
       console.error("Error removing setting from DB:", err);
     }
