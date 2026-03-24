@@ -1,0 +1,347 @@
+/* ========================================
+   THEME.CSS - ระบบดีไซน์แบบใช้ทั่วทั้งระบบ
+   ======================================== */
+
+/* ==========================================
+   ตัวแปรสี & โทเคนดีไซน์
+   ========================================== */
+:root {
+  /* สีหลัก - Primary Colors */
+  --primary-50: #f0f4ff;
+  --primary-100: #e0e9ff;
+  --primary-200: #c7d2fe;
+  --primary-300: #a5b4fc;
+  --primary-400: #818cf8;
+  --primary-500: #6366f1;
+  --primary-600: #4f46e5;
+  --primary-700: #4338ca;
+  --primary-800: #3730a3;
+  --primary-900: #312e81;
+
+  /* สีเน้น - Accent Colors */
+  --accent-50: #fdf2f8;
+  --accent-100: #fce7f3;
+  --accent-200: #fbcfe8;
+  --accent-300: #f8b4d6;
+  --accent-400: #f472b6;
+  --accent-500: #ec4899;
+  --accent-600: #db2777;
+  --accent-700: #be185d;
+
+  /* สีสำเร็จ - Success */
+  --success-50: #f0fdf4;
+  --success-100: #dcfce7;
+  --success-200: #bbf7d0;
+  --success-300: #86efac;
+  --success-500: #10b981;
+  --success-600: #059669;
+  --success-700: #047857;
+
+  /* สีเตือน - Warning */
+  --warning-50: #fffbeb;
+  --warning-100: #fef3c7;
+  --warning-200: #fde68a;
+  --warning-500: #f59e0b;
+  --warning-600: #d97706;
+  --warning-700: #b45309;
+
+  /* สีอันตราย - Danger */
+  --danger-50: #fef2f2;
+  --danger-100: #fee2e2;
+  --danger-200: #fecaca;
+  --danger-500: #ef4444;
+  --danger-600: #dc2626;
+  --danger-700: #b91c1c;
+
+  /* สีเทา - Neutral Gray */
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+
+  /* เงา - Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+
+  /* ไล่สี - Gradients */
+  --gradient-primary: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+  --gradient-accent: linear-gradient(135deg, var(--primary-600) 0%, var(--accent-600) 100%);
+  --gradient-soft: linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%);
+}
+
+/* ==========================================
+   รีเซ็ต & สไตล์พื้นฐาน
+   ========================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box; /* รวม padding และ border ในความกว้าง/สูง */
+}
+
+html {
+  scroll-behavior: smooth; /* การเลื่อนหน้าแบบนุ่มนวล */
+}
+
+body {
+  background: var(--gray-50); /* สีพื้นหลัง */
+  color: var(--gray-900); /* สีตัวอักษร */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    'Prompt', 'Kanit', sans-serif; /* ฟอนต์ภาษาไทย */
+  -webkit-font-smoothing: antialiased; /* ทำให้ตัวอักษรลื่น */
+  -moz-osx-font-smoothing: grayscale; /* ทำให้ตัวอักษรลื่นใน Firefox */
+}
+
+/* ==========================================
+   คลาสตัวช่วย - Utility Classes
+   ========================================== */
+
+/* สีพื้นหลัง - Backgrounds */
+.bg-primary {
+  background: var(--primary-600);
+  color: white;
+}
+
+.bg-secondary {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.bg-success {
+  background: var(--success-500);
+  color: white;
+}
+
+.bg-danger {
+  background: var(--danger-500);
+  color: white;
+}
+
+/* สีตัวอักษร - Text Colors */
+.text-primary {
+  color: var(--primary-600);
+}
+
+.text-secondary {
+  color: var(--gray-600);
+}
+
+.text-success {
+  color: var(--success-600);
+}
+
+.text-danger {
+  color: var(--danger-600);
+}
+
+/* ==========================================
+   ระยะห่าง - Spacing Utilities
+   ========================================== */
+.mt-1 { margin-top: 0.25rem; } /* margin-top ค่า 1 */ /* margin-top ค่า 1 */
+.mt-2 { margin-top: 0.5rem; } /* margin-top ค่า 2 */
+.mt-4 { margin-top: 1rem; } /* margin-top ค่า 4 */
+.mt-6 { margin-top: 1.5rem; } /* margin-top ค่า 6 */
+.mt-8 { margin-top: 2rem; } /* margin-top ค่า 8 */
+
+.mb-1 { margin-bottom: 0.25rem; } /* margin-bottom ค่า 1 */
+.mb-2 { margin-bottom: 0.5rem; } /* margin-bottom ค่า 2 */
+.mb-4 { margin-bottom: 1rem; } /* margin-bottom ค่า 4 */
+.mb-6 { margin-bottom: 1.5rem; } /* margin-bottom ค่า 6 */
+.mb-8 { margin-bottom: 2rem; } /* margin-bottom ค่า 8 */
+
+.p-4 { padding: 1rem; } /* padding ค่า 4 */
+.p-6 { padding: 1.5rem; } /* padding ค่า 6 */
+.p-8 { padding: 2rem; } /* padding ค่า 8 */ /* padding ค่า 8 */
+
+/* ==========================================
+   Flexbox Utilities
+   ========================================== */
+.flex { display: flex; } /* จัดวางแบบ Flexbox */
+.flex-center { display: flex; align-items: center; justify-content: center; } /* จัดกลางทั้งแนวตั้งและแนวนอน */
+.flex-between { display: flex; align-items: center; justify-content: space-between; } /* จัดให้ห่างระหว่างองค์ประกอบ */
+.flex-col { flex-direction: column; } /* จัดแนวตั้ง */
+.gap-2 { gap: 0.5rem; } /* ช่องว่าง ค่า 2 */
+.gap-4 { gap: 1rem; } /* ช่องว่าง ค่า 4 */
+.gap-6 { gap: 1.5rem; } /* ช่องว่าง ค่า 6 */ /* ช่องว่าง ค่า 6 */
+
+/* ==========================================
+   Grid Utilities
+   ========================================== */
+.grid { display: grid; } /* จัดวางแบบ Grid */
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); } /* ตาราง 2 คอลัมน์ */
+.grid-cols-3 { grid-template-columns: repeat(3, 1fr); } /* ตาราง 3 คอลัมน์ */ /* ตาราง 3 คอลัมน์ */
+
+/* ==========================================
+   ขอบ - Border Utilities
+   ========================================== */
+.border { border: 1px solid var(--gray-300); } /* ขอบทั่วไป */
+.border-primary { border: 2px solid var(--primary-500); } /* ขอบสีหลัก */
+.border-t { border-top: 1px solid var(--gray-200); } /* ขอบด้านบน */
+.border-b { border-bottom: 1px solid var(--gray-200); } /* ขอบด้านล่าง */
+
+.rounded { border-radius: 8px; } /* มุมมน */
+.rounded-lg { border-radius: 12px; } /* มุมมนใหญ่ */
+.rounded-full { border-radius: 999px; } /* มุมมนเต็มที่ (วงกลม) */ /* มุมมนเต็มที่ (วงกลม) */
+
+/* ==========================================
+   เงา - Shadow Utilities
+   ========================================== */
+.shadow { box-shadow: var(--shadow-md); } /* เงาขนาดปานกลาง */
+.shadow-lg { box-shadow: var(--shadow-lg); } /* เงาขนาดใหญ่ */
+.shadow-xl { box-shadow: var(--shadow-xl); } /* เงาขนาดใหญ่มาก */ /* เงาขนาดใหญ่มาก */
+
+/* ==========================================
+   การแสดงผล - Display Utilities
+   ========================================== */
+.hidden { display: none; } /* ซ่อน */
+.block { display: block; } /* แสดงแบบ block */
+.inline-block { display: inline-block; } /* แสดงแบบ inline-block */ /* แสดงแบบ inline-block */
+
+/* ==========================================
+   ความทึบ - Opacity
+   ========================================== */
+.opacity-50 { opacity: 0.5; } /* โปร่งแสง 50% */
+.opacity-75 { opacity: 0.75; } /* โปร่งแสง 75% */ /* โปร่งแสง 75% */
+
+/* ==========================================
+   สไตล์แถบเลื่อน - Scrollbar Styling
+   ========================================== */
+::-webkit-scrollbar {
+  width: 8px; /* ความกว้างแถบแนวตั้ง */
+  height: 8px; /* ความสูงแถบแนวนอน */
+}
+
+::-webkit-scrollbar-track {
+  background: var(--gray-100); /* สีพื้นหลังของแถบ */
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gray-300); /* สีของตัวจับเลื่อน */
+  border-radius: 4px; /* มุมมน */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400); /* เปลี่ยนสีเมื่อ hover */
+}
+
+/* ==========================================
+   แอนิเมชั่น - Animations
+   ========================================== */
+/* แอนิเมชั่นค่อยๆ ปรากฏ */
+@keyframes fadeIn {
+  from {
+    opacity: 0; /* เริ่มจากโปร่งใส */
+  }
+  to {
+    opacity: 1; /* ค่อยๆ ทึบแสง */
+  }
+}
+
+/* แอนิเมชั่นเลื่อนขึ้น */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px); /* เริ่มจากด้านล่าง */
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0); /* เลื่อนขึ้นมาที่ตำแหน่งปกติ */
+  }
+}
+
+/* แอนิเมชั่นเลื่อนลง */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px); /* เริ่มจากด้านบน */
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0); /* เลื่อนลงมาที่ตำแหน่งปกติ */
+  }
+}
+
+/* แอนิเมชั่นเลื่อนจากขวา */
+@keyframes slideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(20px); /* เริ่มจากขวา */
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0); /* เลื่อนมาซ้าย */
+  }
+}
+
+/* แอนิเมชั่นเลื่อนจากซ้าย */
+@keyframes slideRight {
+  from {
+    opacity: 0;
+    transform: translateX(-20px); /* เริ่มจากซ้าย */
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0); /* เลื่อนมาขวา */
+  }
+}
+
+/* แอนิเมชั่นกระพริบ */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1; /* ทึบแสงเต็มที่ */
+  }
+  50% {
+    opacity: 0.5; /* โปร่งแสงครึ่งทาง */
+  }
+}
+
+/* คลาสตัวช่วยสำหรับแอนิเมชั่น */
+.animate-fade-in {
+  animation: fadeIn 0.4s ease; /* ใช้แอนิเมชั่น fadeIn */
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease; /* ใช้แอนิเมชั่น slideUp */
+}
+
+/* ==========================================
+   Responsive Design - ดีไซน์แบบตอบสนอง
+   ========================================== */
+/* หน้าจอขนาดแท็บเล็ต (Tablet) */
+@media (max-width: 768px) {
+  .grid-cols-2 {
+    grid-template-columns: 1fr; /* เปลี่ยนจาก 2 คอลัมน์เป็น 1 คอลัมน์ */
+  }
+
+  .grid-cols-3 {
+    grid-template-columns: repeat(2, 1fr); /* เปลี่ยนจาก 3 คอลัมน์เป็น 2 คอลัมน์ */
+  }
+
+  .hidden-mobile {
+    display: none; /* ซ่อนในมือถือ */
+  }
+}
+
+/* หน้าจอขนาดมือถือ (Mobile) */
+@media (max-width: 480px) {
+  .grid-cols-3 {
+    grid-template-columns: 1fr; /* เปลี่ยนเป็น 1 คอลัมน์สำหรับมือถือ */
+  }
+
+  .text-mobile-sm {
+    font-size: 0.9rem; /* ขนาดตัวอักษรเล็กสำหรับมือถือ */
+  }
+
+  .p-mobile-4 {
+    padding: 1rem; /* padding สำหรับมือถือ */
+  }
+}
