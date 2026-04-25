@@ -335,7 +335,7 @@ function Home() {
       if (rankingType === "monthly" && selectedMonth) params.set("month", selectedMonth);
       if (rankingType === "alltime" && selectedYear) params.set("year", selectedYear);
 
-      const res = await fetch(`${API_BASE_URL}/api/rankings/summary?${params}`);
+      const res = await authFetch(`${API_BASE_URL}/api/rankings/summary?${params}`);
       if (!res.ok) return;
       const data = await res.json();
       if (data.success) {

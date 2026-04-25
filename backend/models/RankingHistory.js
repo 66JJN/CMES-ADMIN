@@ -7,6 +7,11 @@ import mongoose from "mongoose";
  */
 const rankingHistorySchema = new mongoose.Schema(
     {
+        shopId: {
+            type: String,
+            required: true,
+            index: true,
+        },
         userId: {
             type: String,
             required: true,
