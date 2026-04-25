@@ -825,9 +825,6 @@ function Home() {
               height: 40,
               borderRadius: "50%",
               background: shopProfile.logo ? "transparent" : "linear-gradient(135deg, #667eea, #764ba2)",
-              backgroundImage: shopProfile.logo ? `url(${shopProfile.logo})` : "none",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
               border: "2px solid rgba(255,255,255,0.3)",
               color: "#fff",
               fontWeight: 700,
@@ -840,11 +837,20 @@ function Home() {
               boxShadow: "0 2px 8px rgba(102,126,234,0.4)",
               transition: "transform 0.2s, box-shadow 0.2s",
               overflow: "hidden",
+              padding: 0,
             }}
             onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.1)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(102,126,234,0.6)"; }}
             onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(102,126,234,0.4)"; }}
           >
-            {!shopProfile.logo && shopProfile.name.slice(0, 2).toUpperCase()}
+            {shopProfile.logo ? (
+              <img 
+                src={shopProfile.logo.startsWith('http') ? shopProfile.logo : `${API_BASE_URL}${shopProfile.logo.startsWith('/') ? '' : '/'}${shopProfile.logo}`}
+                alt="Shop Logo"
+                style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+              />
+            ) : (
+              (shopProfile.name || adminUsername || "JJ").slice(0, 2).toUpperCase()
+            )}
           </button>
         </div>
       </header>
@@ -2344,7 +2350,7 @@ function Home() {
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "6px" }}>
                     {/* bar-chart icon */}
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
+                      <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /><line x1="2" y1="20" x2="22" y2="20" />
                     </svg>
                     <h2 style={{ margin: 0, fontSize: "22px", fontWeight: "800", color: "#fff", letterSpacing: "0.3px" }}>สถิติรายรับและกิจกรรม</h2>
                   </div>
@@ -2373,7 +2379,7 @@ function Home() {
                   <div key={label} style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", gap: "6px" }}>
                     <label style={{ color: "rgba(255,255,255,0.75)", fontSize: "11px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1.2px", display: "flex", alignItems: "center", gap: "5px" }}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                       </svg>
                       {label}
                     </label>
@@ -2429,10 +2435,10 @@ function Home() {
                 const sparkW = 200, sparkH = 50;
                 const sparkPoints = trendData.length >= 2
                   ? trendData.map((d, i) => {
-                      const x = (i / (trendData.length - 1)) * sparkW;
-                      const y = sparkH - (((d.amount || 0) / maxTrend) * (sparkH - 6)) - 2;
-                      return `${x},${y}`;
-                    }).join(" ")
+                    const x = (i / (trendData.length - 1)) * sparkW;
+                    const y = sparkH - (((d.amount || 0) / maxTrend) * (sparkH - 6)) - 2;
+                    return `${x},${y}`;
+                  }).join(" ")
                   : null;
 
                 /* Activity breakdown from real data */
@@ -2468,7 +2474,7 @@ function Home() {
                           <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "12px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1.2px", marginBottom: "6px" }}>รายรับรวม</div>
                           <div style={{ color: "#fff", fontSize: "36px", fontWeight: "800", lineHeight: 1, marginBottom: "8px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>฿{formatCurrency(totalIncome)}</div>
                           <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "rgba(16,185,129,0.25)", padding: "3px 10px", borderRadius: "20px" }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
                             <span style={{ color: "#34d399", fontSize: "12px", fontWeight: "700" }}>
                               {incomeStats.growthPct != null ? `+${incomeStats.growthPct}%` : "+12.4%"}
                             </span>
@@ -2479,11 +2485,11 @@ function Home() {
                         <svg width={sparkW} height={sparkH} viewBox={`0 0 ${sparkW} ${sparkH}`} style={{ flexShrink: 0, opacity: 0.85 }}>
                           <defs>
                             <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#c4b5fd" stopOpacity="0.5"/>
-                              <stop offset="100%" stopColor="#c4b5fd" stopOpacity="0"/>
+                              <stop offset="0%" stopColor="#c4b5fd" stopOpacity="0.5" />
+                              <stop offset="100%" stopColor="#c4b5fd" stopOpacity="0" />
                             </linearGradient>
                           </defs>
-                          <polyline points={sparkPoints} fill="none" stroke="#e9d5ff" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
+                          <polyline points={sparkPoints} fill="none" stroke="#e9d5ff" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
                         </svg>
                       </div>
 
@@ -2491,7 +2497,7 @@ function Home() {
                       <div style={{ background: "#f8fafc", borderRadius: "18px", padding: "20px 22px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
                           <div style={{ width: "38px", height: "38px", borderRadius: "12px", background: "linear-gradient(135deg, #ddd6fe, #c4b5fd)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
                           </div>
                           <span style={{ color: "#64748b", fontSize: "12px", fontWeight: "600" }}>ยอดเปย์เฉลี่ย/คน</span>
                         </div>
@@ -2538,14 +2544,14 @@ function Home() {
                               <svg viewBox={`0 0 ${cW} ${cH}`} style={{ width: "100%", height: "100px" }}>
                                 <defs>
                                   <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#6d28d9" stopOpacity="0.25"/>
-                                    <stop offset="100%" stopColor="#6d28d9" stopOpacity="0"/>
+                                    <stop offset="0%" stopColor="#6d28d9" stopOpacity="0.25" />
+                                    <stop offset="100%" stopColor="#6d28d9" stopOpacity="0" />
                                   </linearGradient>
                                 </defs>
-                                <polygon points={areaStr} fill="url(#areaGrad)"/>
-                                <polyline points={lineStr} fill="none" stroke="#6d28d9" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
+                                <polygon points={areaStr} fill="url(#areaGrad)" />
+                                <polyline points={lineStr} fill="none" stroke="#6d28d9" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
                                 {pts.map(([x, y], i) => (
-                                  <circle key={i} cx={x} cy={y} r="3.5" fill="#fff" stroke="#6d28d9" strokeWidth="2"/>
+                                  <circle key={i} cx={x} cy={y} r="3.5" fill="#fff" stroke="#6d28d9" strokeWidth="2" />
                                 ))}
                               </svg>
                               <div style={{ marginTop: "6px", color: "#94a3b8", fontSize: "11px", textAlign: "center" }}>
@@ -2555,7 +2561,7 @@ function Home() {
                           );
                         })() : (
                           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100px", color: "#94a3b8", fontSize: "13px", gap: "6px" }}>
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /><line x1="2" y1="20" x2="22" y2="20" /></svg>
                             ยังไม่มีข้อมูลในช่วงนี้
                           </div>
                         )}
@@ -2581,7 +2587,7 @@ function Home() {
                               />
                             ))}
                             {/* Center total indicator */}
-                            <circle cx={DONUT_CX} cy={DONUT_CY} r="30" fill="#f8fafc"/>
+                            <circle cx={DONUT_CX} cy={DONUT_CY} r="30" fill="#f8fafc" />
                           </svg>
                           <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 }}>
                             {activities.length > 0 ? activities.map((a, i) => (
@@ -2615,7 +2621,7 @@ function Home() {
                           </div>
                         ) : (
                           topUsers.slice(0, 5).map((u, idx) => {
-                            const medals = ["🥇","🥈","🥉"];
+                            const medals = ["🥇", "🥈", "🥉"];
                             const medal = medals[idx] || null;
                             const maxAmt = topUsers[0]?.totalAmount || 1;
                             const amt = u.totalAmount || 0;
@@ -2627,7 +2633,7 @@ function Home() {
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                                    <span style={{ fontSize: "13px", fontWeight: "700", color: "#1e293b" }}>{medal ? `${medal} ` : `#${idx+1} `}{u.name || "ผู้ใช้"}</span>
+                                    <span style={{ fontSize: "13px", fontWeight: "700", color: "#1e293b" }}>{medal ? `${medal} ` : `#${idx + 1} `}{u.name || "ผู้ใช้"}</span>
                                     <span style={{ fontSize: "13px", fontWeight: "800", color: "#6d28d9" }}>฿{formatCurrency(amt)}</span>
                                   </div>
                                   <div style={{ height: "4px", background: "#e0e7ff", borderRadius: "99px", overflow: "hidden" }}>
@@ -2652,7 +2658,7 @@ function Home() {
                           {peakHours.length > 0 ? peakHours.slice(0, 3).map((ph, idx) => {
                             const maxCount = peakHours[0]?.count || 1;
                             const pct = Math.round((ph.count / maxCount) * 100);
-                            const intensityColors = ["#6d28d9","#7c3aed","#8b5cf6"];
+                            const intensityColors = ["#6d28d9", "#7c3aed", "#8b5cf6"];
                             return (
                               <div key={idx} style={{ background: "linear-gradient(135deg, #f5f3ff, #ede9fe)", borderRadius: "12px", padding: "10px 14px", border: `1px solid rgba(109,40,217,${0.15 - idx * 0.04})` }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
