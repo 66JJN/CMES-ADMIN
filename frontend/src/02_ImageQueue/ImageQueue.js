@@ -1531,6 +1531,26 @@ function ImageQueue() {
                               }} title={`สี Social: ${image.socialColor}`}></span>
                             )}
                           </div>
+                          {/* 🤖 AI Moderation Badge */}
+                          {image.aiModeration && image.aiModeration.checked && (
+                            <span style={{
+                              fontSize: "11px",
+                              padding: "3px 10px",
+                              borderRadius: "6px",
+                              fontWeight: "700",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              ...(image.aiModeration.safe
+                                ? { background: "#d1fae5", color: "#065f46" }
+                                : { background: "#fee2e2", color: "#991b1b", animation: "pulse 2s infinite" }
+                              )
+                            }}
+                            title={image.aiModeration.reasons?.join(', ') || 'AI ตรวจสอบแล้ว'}
+                            >
+                              {image.aiModeration.safe ? "🤖 AI ✓" : `⚠️ AI พบปัญหา`}
+                            </span>
+                          )}
                           <div className="price" style={{ fontWeight: "700", color: "#10b981", fontSize: "14px" }}>
                             {image.price === 0 ? 'ฟรี' : `฿${image.price}`}
                           </div>

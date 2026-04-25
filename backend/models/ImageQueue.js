@@ -93,6 +93,16 @@ const imageQueueSchema = new mongoose.Schema({
     default: 'pending'
   },
 
+  // AI Content Moderation
+  aiModeration: {
+    checked: { type: Boolean, default: false },       // AI ตรวจสอบแล้วหรือยัง
+    safe: { type: Boolean, default: null },            // ผลตรวจ: ปลอดภัยหรือไม่
+    autoApproved: { type: Boolean, default: false },   // ถูก auto-approve โดย AI หรือไม่
+    reasons: [{ type: String }],                       // เหตุผลที่ไม่ผ่าน
+    scores: { type: mongoose.Schema.Types.Mixed },     // คะแนนดิบจาก AI
+    checkedAt: { type: Date, default: null }           // เวลาที่ตรวจสอบ
+  },
+
   // Composition Flag (true if image already has text/social overlay)
   composed: {
     type: Boolean,

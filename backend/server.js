@@ -24,6 +24,7 @@ import ShopSetting from './models/ShopSetting.js'; // 🔥 Shop-specific setting
 import { verifyPassword, hashPassword } from './hashPasswords.js'; // Keep password utilities import
 import { requireShopId, requireAdminAuth } from './middleware/authMiddleware.js'; // Multi-tenant middleware
 import { startCleanupJob } from "./cron-cleanup.js";
+import { moderateImage, isAIModerationEnabled } from './contentModeration.js'; // 🤖 AI Content Moderation
 dotenv.config();
 
 // ===== Helper Functions สำหรับ Thai Timezone (UTC+7) =====
@@ -1603,6 +1604,43 @@ app.post("/api/upload", requireShopId, uploadUser, async (req, res) => {
       receivedAt: new Date()
     };
 
+    // ===== 🤖 AI Content Moderation =====
+    // ตรวจสอบรูปภาพด้วย AI ก่อนเข้าคิว (เฉพาะ type: image ที่มีรูปภาพ)
+    const imageUrlToCheck = itemData.filePath;
+    if (imageUrlToCheck && (type === 'image' || !type) && isAIModerationEnabled()) {
+      try {
+        const moderationResult = await moderateImage(imageUrlToCheck);
+        
+        // บันทึกผล AI ลงในข้อมูล
+        itemData.aiModeration = {
+          checked: moderationResult.aiChecked,
+          safe: moderationResult.safe,
+          autoApproved: moderationResult.safe && moderationResult.aiChecked,
+          reasons: moderationResult.reasons,
+          scores: moderationResult.scores,
+          checkedAt: new Date()
+        };
+
+        // ถ้า AI บอกว่าปลอดภัย → auto-approve เลย!
+        if (moderationResult.safe && moderationResult.aiChecked) {
+          itemData.status = 'approved';
+          itemData.approvedAt = new Date();
+          console.log(`[AI Moderation] ✅ Auto-approved: รูปภาพปลอดภัย`);
+        } else if (moderationResult.aiChecked) {
+          // AI ตรวจแล้วแต่ไม่ผ่าน → ค้างเป็น pending ให้ Admin ตรวจสอบ
+          itemData.status = 'pending';
+          console.log(`[AI Moderation] ⚠ Flagged: ${moderationResult.reasons.join(', ')}`);
+        }
+        // ถ้า aiChecked === false (API error) → ใช้ status เดิม (pending)
+      } catch (aiError) {
+        console.error('[AI Moderation] Error:', aiError.message);
+        // ถ้า AI error → ค้าง pending ให้ Admin ตรวจสอบเอง
+      }
+    } else if (type === 'text' || type === 'gift' || type === 'birthday') {
+      // ข้อความ, ของขวัญ, วันเกิด → ไม่ต้องตรวจรูป, ค้าง pending ตามปกติ
+      console.log(`[AI Moderation] ⏭ ข้ามการตรวจสอบ AI (type: ${type})`);
+    }
+
     const queueItem = await ImageQueue.create(itemData);
 
     // 🔥 Emit ไปยัง Room เฉพาะของ shop นี้
@@ -1616,8 +1654,14 @@ app.post("/api/upload", requireShopId, uploadUser, async (req, res) => {
     } else {
       console.log(`[Ranking] Skipped: userId=${userId}, type=${type}, price=${price}`);
     }
-    console.log("[Admin] Upload item created and queued:", queueItem._id, "type:", queueItem.type);
-    res.json({ success: true, uploadId: queueItem._id.toString() });
+    console.log("[Admin] Upload item created and queued:", queueItem._id, "type:", queueItem.type, "status:", queueItem.status);
+    
+    // ส่งข้อมูลกลับ พร้อมบอก Frontend ว่า AI ตรวจสอบอะไร
+    res.json({
+      success: true,
+      uploadId: queueItem._id.toString(),
+      aiModeration: queueItem.aiModeration || null
+    });
   } catch (e) {
     console.error("[Admin] Error in upload:", e);
     res.status(500).json({ success: false, error: e.message });
