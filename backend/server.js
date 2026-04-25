@@ -1070,6 +1070,15 @@ app.put("/api/rankings/update-avatar", requireShopId, async (req, res) => {
       if (username) ranking.name = username;
 
       await ranking.save();
+      
+      // อัปเดตใน RankingHistory ด้วย (เพื่อให้ข้อมูลรายปีแสดงรูปใหม่เสมอ ไม่ต้องรอให้มีการใช้จ่ายเพิ่ม)
+      const historyUpdate = {};
+      if (avatar !== undefined) historyUpdate.avatar = avatar;
+      if (username) historyUpdate.name = username;
+      
+      if (Object.keys(historyUpdate).length > 0) {
+        await RankingHistory.updateMany(query, { $set: historyUpdate });
+      }
       console.log(`[Ranking][${shopId}] Avatar updated for user ${ranking.name} (${ranking.userId})`);
 
       return res.json({
