@@ -1888,7 +1888,7 @@ app.post("/api/reject/:id", requireAdminAuth, async (req, res) => {
     // บันทึกลง CheckHistory ก่อนลบ (🔥 พร้อม shopId)
     await CheckHistory.create({
       shopId: item.shopId, // 🔥 เพิ่ม shopId
-      transactionId: item._id.toString(),
+      transactionId: (item.type === 'gift' && item.giftOrder?.orderId) ? item.giftOrder.orderId : item._id.toString(),
       type: item.type || (item.filePath ? 'image' : 'text'),
       sender: item.sender || 'Unknown',
       price: item.price || 0,
@@ -2280,7 +2280,7 @@ app.get("/api/order-status/:orderId", requireShopId, async (req, res) => {
       }).sort({ approvalDate: -1 });
 
       if (historyItem) {
-        const statusText = historyItem.status === 'completed' ? 'แสดงเสร็จสิ้น' : 'รูปถูกปฏิเสธ';
+        const statusText = historyItem.status === 'completed' ? 'แสดงเสร็จสิ้น' : 'ถูกปฏิเสธ';
 
         return res.json({
           success: true,
