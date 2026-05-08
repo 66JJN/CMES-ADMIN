@@ -70,9 +70,12 @@
 <p align="center">
   <img src="docs/screenshots/dashboard.png" width="700" alt="Dashboard" />
 </p>
+
 <p align="center">
   <img src="docs/screenshots/image-queue.png" width="700" alt="Image Queue" />
-  &nbsp;&nbsp;
+</p>
+
+<p align="center">
   <img src="docs/screenshots/gift-setting.png" width="700" alt="Gift Setting" />
 </p>
 
