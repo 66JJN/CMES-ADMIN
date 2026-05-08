@@ -1,0 +1,411 @@
+# SKILL.md — CMES-ADMIN Repository
+
+> **CMES** (Content Management & Entertainment System) — ระบบ Digital Signage สำหรับร้านเหล้า/ผับ/บาร์
+> Repo นี้คือ **Admin Dashboard**: จัดการคิวรูปภาพ, ตั้งค่าระบบ, ดูรายงาน, ranking, ของขวัญ, OBS overlay
+
+---
+
+## 1. Project Overview
+
+| Item | Detail |
+|------|--------|
+| **App Type** | Admin Dashboard (Desktop-first, responsive) |
+| **Architecture** | Monorepo — `frontend/` (React) + `backend/` (Express) |
+| **Multi-tenant** | ใช้ `shopId` แยกร้าน — ส่งผ่าน `x-shop-id` + `x-admin-id` header |
+| **Production** | Frontend: Vercel, Backend: Render |
+| **Database** | MongoDB Atlas (database: `cmes-admin`) |
+| **File Storage** | Cloudinary |
+| **Realtime** | Socket.IO (server อยู่ใน backend นี้) |
+
+---
+
+## 2. Tech Stack
+
+### Frontend (`frontend/`)
+| Tech | Version | Purpose |
+|------|---------|---------|
+| React | 19.x | UI Framework (CRA) |
+| React Router DOM | 7.x | Client-side routing |
+| Axios | 1.x | HTTP client |
+| Socket.IO Client | 4.x | Realtime communication |
+| OBS WebSocket JS | 5.x | ควบคุม OBS Studio |
+| FontAwesome | 6.x | Icons |
+| Tailwind CSS | 4.x | DevDependency (บาง component) |
+
+### Backend (`backend/`)
+| Tech | Version | Purpose |
+|------|---------|---------|
+| Express | 4.x | Web framework |
+| Mongoose | 9.x | MongoDB ODM |
+| Socket.IO | 4.x | ★ Realtime server หลักของทั้งระบบ |
+| bcrypt | 6.x | Password hashing |
+| Multer + Cloudinary | — | File upload → cloud storage |
+| node-cron | 4.x | Scheduled cleanup jobs |
+| Sightengine | 1.x | AI content moderation |
+| ES Modules | `"type": "module"` | ใช้ `import/export` |
+
+---
+
+## 3. Folder Structure
+
+```
+CMES-ADMIN/
+├── frontend/
+│   ├── src/
+│   │   ├── 01_Home/          # Dashboard หลัก (home.js + home.css)
+│   │   ├── 02_ImageQueue/    # จัดการคิวรูปภาพ
+│   │   ├── 03_CheckHistory/  # ประวัติการตรวจสอบ
+│   │   ├── 04_Gift/          # ตั้งค่าของขวัญ
+│   │   ├── 05_Report/        # ดูรายงานปัญหา
+│   │   ├── 06_LuckyWheel/    # วงล้อสุ่มรางวัล
+│   │   ├── 07_Register/      # Admin login
+│   │   ├── 08_TimeHistory/   # ประวัติเวลา
+│   │   ├── 09_EditProfile/   # แก้ไขโปรไฟล์ร้าน
+│   │   ├── 10_OBSControl/    # ควบคุม OBS
+│   │   ├── config/
+│   │   │   ├── apiConfig.js  # API_BASE_URL, REALTIME_URL, USER_API_URL, USER_FRONTEND_URL
+│   │   │   └── authFetch.js  # ★ adminFetch() — shared fetch utility
+│   │   ├── contexts/
+│   │   │   └── ShopContext.js # ★ Multi-tenant Context (shopId + Socket.IO)
+│   │   ├── theme.css         # ★ Design system (CSS variables + utilities)
+│   │   ├── App.js            # Router + ShopProvider wrapper
+│   │   ├── App.css
+│   │   ├── Stat-slip.js      # สถิติสลิป
+│   │   └── index.js
+│   └── package.json
+│
+├── backend/
+│   ├── server.js             # ★ Main entry — Express + Socket.IO + ทุก API route (3700+ lines)
+│   ├── middleware/
+│   │   └── authMiddleware.js # requireShopId, requireAdminAuth
+│   ├── models/
+│   │   ├── AdminUser.js      # Admin user (shopId + username unique compound)
+│   │   ├── AdminReport.js    # Reports
+│   │   ├── CheckHistory.js   # ประวัติตรวจสอบ
+│   │   ├── GiftSetting.js    # ตั้งค่าของขวัญ
+│   │   ├── ImageQueue.js     # คิวรูปภาพ
+│   │   ├── Ranking.js        # คะแนนสะสม
+│   │   ├── RankingHistory.js # ประวัติ ranking ทุกรายการ
+│   │   ├── Setting.js        # System settings
+│   │   ├── ShopSetting.js    # ตั้งค่าร้าน (ชื่อ, โลโก้, QR)
+│   │   └── TimeHistory.js    # ประวัติเวลา
+│   ├── contentModeration.js  # AI content moderation (Sightengine)
+│   ├── cron-cleanup.js       # Scheduled cleanup (ลบรูปเก่า > 2 วัน)
+│   ├── hashPasswords.js      # Password hashing utilities
+│   └── package.json
+│
+└── SKILL.md                  # ← ไฟล์นี้
+```
+
+---
+
+## 4. Design System & Styling
+
+### 4.1 Theme System (`theme.css`)
+Admin ใช้ **Light mode** เป็นหลัก (ต่างจาก User ที่เป็น Dark mode)
+
+```css
+:root {
+  /* Primary — Indigo */
+  --primary-500: #6366f1;
+  --primary-600: #4f46e5;
+  --primary-700: #4338ca;
+
+  /* Accent — Pink */
+  --accent-500: #ec4899;
+  --accent-600: #db2777;
+
+  /* Status Colors */
+  --success-500: #10b981;
+  --warning-500: #f59e0b;
+  --danger-500: #ef4444;
+
+  /* Neutral */
+  --gray-50: #f9fafb;   /* Background */
+  --gray-900: #111827;  /* Text */
+
+  /* Shadows */
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+  --gradient-accent: linear-gradient(135deg, var(--primary-600), var(--accent-600));
+}
+```
+
+### 4.2 Utility Classes (from `theme.css`)
+```css
+/* Background */   .bg-primary, .bg-success, .bg-danger
+/* Text */         .text-primary, .text-secondary, .text-success, .text-danger
+/* Spacing */      .mt-1..mt-8, .mb-1..mb-8, .p-4..p-8
+/* Flexbox */      .flex, .flex-center, .flex-between, .flex-col, .gap-2..gap-6
+/* Grid */         .grid, .grid-cols-2, .grid-cols-3
+/* Border */       .border, .border-primary, .rounded, .rounded-lg, .rounded-full
+/* Shadow */       .shadow, .shadow-lg, .shadow-xl
+/* Animation */    .animate-fade-in, .animate-slide-up
+```
+
+### 4.3 CSS Rules
+- ใช้ **CSS variables** จาก `theme.css` — อ้างอิง `var(--primary-600)` แทน hardcode
+- **Font**: System font stack + `'Prompt', 'Kanit'` สำหรับภาษาไทย
+- แต่ละ page มี CSS file แยก (`home.css`, etc.)
+- Responsive breakpoints: `768px` (tablet), `480px` (mobile)
+
+---
+
+## 5. Multi-tenant Architecture
+
+### 5.1 ShopContext (`contexts/ShopContext.js`)
+```javascript
+// ★ ทุก component เข้าถึง shopId และ socket ผ่าน Context นี้
+import { ShopContext } from "../contexts/ShopContext";
+
+const { shopId, setShopId, socket, isSocketConnected, logout, systemConfig } = useContext(ShopContext);
+```
+
+**ShopContext provides:**
+| Value | Type | Description |
+|-------|------|-------------|
+| `shopId` | string | ID ร้านปัจจุบัน |
+| `setShopId` | function | เปลี่ยนร้าน (trigger socket reconnect) |
+| `socket` | Socket.IO | Socket instance (auto-connect เมื่อมี shopId) |
+| `isSocketConnected` | boolean | สถานะ connection |
+| `logout` | function | Clear ทุกอย่าง + disconnect socket |
+| `systemConfig` | object | Config switches จาก server |
+
+### 5.2 Admin Auth Flow
+1. Admin login → ได้ `shopId` + `adminId` + `adminUsername`
+2. เก็บใน `localStorage`: `shopId`, `adminId`, `adminUsername`
+3. ShopContext สร้าง Socket.IO connection → join room `shopId`
+4. ทุก API call ส่ง `x-shop-id` + `x-admin-id` headers
+
+### 5.3 authFetch (`config/authFetch.js`)
+```javascript
+// ★ ใช้แทน fetch() ตรง — auto-inject shopId + adminId + handle 401
+const adminFetch = async (url, options = {}) => {
+  const shopId = localStorage.getItem("shopId") || "";
+  const adminId = localStorage.getItem("adminId") || "";
+  const isFormData = options.body instanceof FormData;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      "x-shop-id": shopId,
+      "x-admin-id": adminId,
+      ...(options.headers || {}),
+    },
+  });
+
+  if (response.status === 401) handleAdminUnauthorized();
+  return response;
+};
+```
+
+---
+
+## 6. Backend Patterns
+
+### 6.1 Middleware
+```javascript
+// ★ requireShopId — ต้องมี shopId (public endpoints)
+// Source: x-shop-id header || query.shopId || body.shopId
+export const requireShopId = (req, res, next) => { req.shopId = shopId; next(); };
+
+// ★ requireAdminAuth — ต้องมี shopId + adminId (admin-only endpoints)
+export const requireAdminAuth = (req, res, next) => { req.shopId = ...; req.adminId = ...; next(); };
+```
+
+### 6.2 Mongoose Models — Multi-tenant
+```javascript
+// ทุก model มี shopId field + compound indexes
+const adminUserSchema = new mongoose.Schema({
+  shopId: { type: String, required: true, index: true },
+  username: { type: String, required: true, trim: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ["super_admin", "admin", "moderator"], default: "admin" },
+  // ...
+}, { timestamps: true });
+
+// Compound unique: username ไม่ซ้ำภายใน shop เดียวกัน
+adminUserSchema.index({ shopId: 1, username: 1 }, { unique: true });
+```
+
+### 6.3 Socket.IO — Room-based Multi-tenant
+```javascript
+// Client joins room by shopId
+io.on("connection", (socket) => {
+  const shopId = socket.handshake.query.shopId;
+  if (shopId) socket.join(shopId);
+});
+
+// Emit to specific shop only
+io.to(shopId).emit("ranking-update", data);
+io.to(shopId).emit("new-image", imageData);
+io.to(shopId).emit("status", systemConfig);
+```
+
+### 6.4 Thai Timezone Helpers
+```javascript
+// ★ ใช้แทน toISOString() เพื่อให้วันที่ตรงเวลาไทย
+function getThaiDateStr(date = new Date()) {
+  return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }); // YYYY-MM-DD
+}
+function getThaiMonthStr(date = new Date()) { return getThaiDateStr(date).slice(0, 7); }
+function getThaiYearStr(date = new Date()) { return getThaiDateStr(date).slice(0, 4); }
+```
+
+### 6.5 Ranking System
+- **3 periods**: daily (reset ทุกวัน), monthly (reset ทุกเดือน), all-time (สะสมตลอด)
+- **RankingHistory**: เก็บทุก transaction
+- **Ranking**: สรุปยอดรวมต่อ user (upsert pattern)
+- Emit `ranking-update` ทุกครั้งที่มีการเปลี่ยนแปลง
+
+### 6.6 Cloudinary Storage (4 types)
+| Storage | Folder | Purpose |
+|---------|--------|---------|
+| `giftStorage` | `cmes-admin/gifts` | รูปของขวัญ (ถาวร) |
+| `userStorage` | `cmes-admin/user-uploads` | รูปที่ user อัปโหลด |
+| `logoStorage` | `cmes-admin/shop-logos` | โลโก้ร้าน |
+| `paymentQrStorage` | `cmes-admin/payment-qr` | QR Code ชำระเงิน |
+
+### 6.7 Cron Jobs
+- `cron-cleanup.js` — ลบรูปภาพ + ข้อความที่เก่าเกิน 2 วัน (ทุกคืน)
+- Content moderation via Sightengine API
+
+---
+
+## 7. API Base URLs (`config/apiConfig.js`)
+```javascript
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://cmes-admin.onrender.com';
+const REALTIME_URL = API_BASE_URL;  // Socket.IO อยู่ server เดียวกัน
+const USER_API_URL = process.env.REACT_APP_USER_API_URL || 'https://cmes-user-5b5h.onrender.com';
+const USER_FRONTEND_URL = process.env.REACT_APP_USER_FRONTEND_URL || 'https://cmes-user-frontend.vercel.app';
+```
+
+---
+
+## 8. Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **Image Queue** | จัดการคิวรูปภาพที่ลูกค้าส่งมา → แสดงบน OBS overlay |
+| **System Switches** | เปิด/ปิด features: Image, Text, Gift, Birthday |
+| **Gift Management** | CRUD สินค้าของขวัญ (ชื่อ, ราคา, รูป) |
+| **Ranking Dashboard** | ดูคะแนนผู้สนับสนุน (daily/monthly/all-time) |
+| **Report Management** | ดู/อัปเดตสถานะรายงานปัญหา |
+| **Check History** | ประวัติการตรวจสอบสลิป |
+| **Lucky Wheel** | วงล้อสุ่มรางวัล |
+| **OBS Control** | ควบคุม OBS Studio ผ่าน WebSocket |
+| **Shop Profile** | แก้ไขชื่อร้าน, โลโก้, QR Code ชำระเงิน |
+| **Content Moderation** | AI ตรวจรูปไม่เหมาะสม (Sightengine) |
+
+---
+
+## 9. Environment Variables
+
+### Frontend (`frontend/.env`)
+```env
+REACT_APP_API_URL=https://cmes-admin.onrender.com
+REACT_APP_USER_API_URL=https://cmes-user-5b5h.onrender.com
+REACT_APP_USER_FRONTEND_URL=https://cmes-user-frontend.vercel.app
+```
+
+### Backend (`backend/.env`)
+```env
+PORT=5001
+MONGODB_URI=mongodb+srv://...
+CLOUDINARY_CLOUD_NAME=xxx
+CLOUDINARY_API_KEY=xxx
+CLOUDINARY_API_SECRET=xxx
+DEFAULT_ADMIN_PASSWORD=xxx
+ADMIN_FRONTEND_URL=https://cmesadminfrontend.vercel.app
+USER_FRONTEND_URL=https://cmesuserfrontend.vercel.app
+SIGHTENGINE_API_USER=xxx
+SIGHTENGINE_API_SECRET=xxx
+```
+
+---
+
+## 10. Development Commands
+
+```bash
+# Frontend (port 3000)
+cd frontend && npm start
+
+# Backend (port 5001)
+cd backend && npm run dev    # nodemon
+cd backend && npm start      # production
+```
+
+---
+
+## 11. Important Rules for AI
+
+### DO ✅
+- **ใช้ `adminFetch()`** จาก `config/authFetch.js` สำหรับ API calls
+- **ใช้ `ShopContext`** สำหรับ shopId, socket, systemConfig
+- **ใช้ CSS variables** จาก `theme.css` — `var(--primary-600)` ไม่ hardcode
+- **Multi-tenant ทุก query**: filter ด้วย `{ shopId }` เสมอ
+- **Socket.IO emit** ไปยัง room: `io.to(shopId).emit(...)` ไม่ใช่ `io.emit(...)`
+- **ES Modules** (`import/export`) ทั้ง frontend และ backend
+- **Compound indexes** สำหรับ unique constraint: `{ shopId: 1, field: 1 }`
+- **Thai timezone** ใช้ `getThaiDateStr()` ไม่ใช่ `new Date().toISOString()`
+- **Cloudinary** สำหรับ file upload
+
+### DON'T ❌
+- **อย่า `io.emit()`** โดยไม่ระบุ room — จะ leak data ข้าม shop
+- **อย่า query โดยไม่มี shopId** — ข้อมูลจะปนกันข้าม shop
+- **อย่าใช้ `require()`** — ใช้ `import` เสมอ
+- **อย่าลบ comments ภาษาไทย** ที่มีอยู่เดิม
+- **อย่าเพิ่ม dependencies** โดยไม่จำเป็น
+- **อย่าเปลี่ยน font stack** — ใช้ system font + Prompt/Kanit
+- **อย่าสร้าง Context ใหม่** โดยไม่จำเป็น — ใช้ ShopContext ที่มีอยู่
+- **อย่าเก็บ password** แบบ plaintext — ใช้ `hashPassword()` จาก `hashPasswords.js`
+
+---
+
+## 12. Common Bugs & Solutions
+
+| Bug | สาเหตุ | วิธีแก้ |
+|-----|--------|---------|
+| Render crash (exit status 1) | ไม่มี env variable ที่จำเป็น | เช็ค `.env` ใน Render dashboard — ต้องมี `MONGODB_URI`, `CLOUDINARY_*` |
+| CORS error | origin ไม่อยู่ใน whitelist | เพิ่ม URL ใน `allowedOrigins` ใน `server.js` |
+| Socket ไม่ connect | shopId ไม่ถูกส่งตอน handshake | เช็ค `ShopContext` → `handshake.query.shopId` ต้องมีค่า |
+| ข้อมูลปนข้าม shop | query ไม่ filter ด้วย shopId | **ทุก query ต้องมี `{ shopId }`** — ใช้ middleware `requireShopId` |
+| Socket emit ข้าม shop | ใช้ `io.emit()` แทน `io.to()` | **ต้องใช้ `io.to(shopId).emit(...)`** เสมอ |
+| Ranking วันที่ผิด | ใช้ `new Date().toISOString()` (UTC) | ใช้ `getThaiDateStr()` สำหรับเวลาไทย (UTC+7) |
+| Report ไม่ save ลง admin DB | User backend ส่ง request ไม่ถึง | เช็ค `ADMIN_API_BASE` env ใน User backend |
+| รูปไม่แสดงบน production | ใช้ local path แทน Cloudinary URL | ใช้ `req.file.path` (Cloudinary URL) |
+| Login ไม่ได้ | password hash ไม่ตรง | ใช้ `verifyPassword()` จาก `hashPasswords.js` |
+
+---
+
+## 13. Content Moderation (SightEngine)
+
+| Setting | Value |
+|---------|-------|
+| **Provider** | SightEngine API |
+| **Models ที่ใช้** | `nudity`, `weapon`, `alcohol` |
+| **Free Tier** | 2,000 รูป/เดือน |
+| **Config** | `contentModeration.js` |
+
+### Flow
+```
+User อัปโหลดรูป
+  → ตรวจด้วย SightEngine (ถ้าเปิดใช้งาน)
+  → ถ้าผ่าน → upload ขึ้น Cloudinary → เข้าคิว ImageQueue
+  → ถ้าไม่ผ่าน → reject + แจ้ง user
+```
+
+### Toggle
+```javascript
+import { moderateImage, isAIModerationEnabled } from './contentModeration.js';
+
+// เช็คว่าเปิดใช้งานหรือไม่
+if (isAIModerationEnabled()) {
+  const result = await moderateImage(imageUrl);
+  if (!result.safe) return res.status(400).json({ message: result.reason });
+}
+```

@@ -1,5 +1,7 @@
 # CMES-ADMIN - Customer Management & E-Commerce System (Admin Portal)
 
+![React](https://img.shields.io/badge/React-19-blue?logo=react) ![Node.js](https://img.shields.io/badge/Node.js-Express-green?logo=node.js) ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?logo=mongodb) ![Socket.IO](https://img.shields.io/badge/Realtime-Socket.IO-white?logo=socket.io) ![Deploy](https://img.shields.io/badge/Frontend-Vercel-black?logo=vercel) ![Deploy](https://img.shields.io/badge/Backend-Render-purple?logo=render) ![Cloudinary](https://img.shields.io/badge/Storage-Cloudinary-blue?logo=cloudinary) ![AI](https://img.shields.io/badge/Moderation-SightEngine-red)
+
 A comprehensive admin dashboard and management system for the CMES platform, built with React, Node.js, Express, and MongoDB with real-time features.
 
 ## 🎯 Key Features
