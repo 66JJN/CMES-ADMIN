@@ -358,5 +358,10 @@ ISC License — feel free to use and modify.
 ---
 
 <p align="center">
-  Made with ❤️ by <a href="https://github.com/66JJN">SUPHAKON SAEPAN</a>
+  Originally built with ❤️ by 
+  <a href="https://github.com/66JJN">SUPHAKON</a> 
+  &amp; <a href="https://github.com/Boriwat-wtm">BORIWAT</a>
+  <br />
+  This repo is a rebuilt &amp; extended version by 
+  <a href="https://github.com/66JJN">SUPHAKON</a>
 </p>
