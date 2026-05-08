@@ -347,7 +347,7 @@ npx vercel --prod
 
 | Repo | Description |
 |------|-------------|
-| [CMES-USER](https://github.com/your-username/CMES-USER) | User App — อัปโหลดรูป, ชำระเงิน, ส่งของขวัญ |
+| [CMES-USER](https://github.com/66JJN/CMES-USER) | User App — อัปโหลดรูป, ชำระเงิน, ส่งของขวัญ |
 
 ---
 
