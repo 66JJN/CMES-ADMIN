@@ -876,10 +876,72 @@ app.get("/api/rankings", requireAdminAuth, async (req, res) => {
     let sortField = { points: -1 };
 
     if (type === "daily") {
-      query = { shopId, dailyDate: req.query.date || today };
+      const requestedDate = req.query.date || today;
+      // 🔥 ถ้าเป็นวันที่ในอดีต → ใช้ RankingHistory aggregate (เพราะ Ranking collection เก็บแค่วันปัจจุบัน)
+      if (requestedDate !== today) {
+        const pipeline = [
+          { $match: { shopId, date: requestedDate } },
+          {
+            $group: {
+              _id: "$userId",
+              name: { $last: "$name" },
+              email: { $last: "$email" },
+              avatar: { $last: "$avatar" },
+              userId: { $first: "$userId" },
+              points: { $sum: "$amount" },
+              updatedAt: { $max: "$createdAt" }
+            }
+          },
+          { $sort: { points: -1 } },
+          { $limit: limit }
+        ];
+        const results = await RankingHistory.aggregate(pipeline);
+        const ranksWithPosition = results.map((r, idx) => ({ ...r, position: idx + 1 }));
+        const totalCount = await RankingHistory.distinct("userId", { shopId, date: requestedDate });
+        return res.json({
+          success: true,
+          ranks: ranksWithPosition,
+          total: totalCount.length,
+          totalUsers: totalCount.length,
+          type
+        });
+      }
+      // วันปัจจุบัน → ใช้ Ranking collection ปกติ
+      query = { shopId, dailyDate: today };
       sortField = { dailyPoints: -1 };
     } else if (type === "monthly") {
-      query = { shopId, monthlyPeriod: req.query.month || currentMonth };
+      const requestedMonth = req.query.month || currentMonth;
+      // 🔥 ถ้าเป็นเดือนในอดีต → ใช้ RankingHistory aggregate (เพราะ Ranking collection เก็บแค่เดือนปัจจุบัน)
+      if (requestedMonth !== currentMonth) {
+        const pipeline = [
+          { $match: { shopId, month: requestedMonth } },
+          {
+            $group: {
+              _id: "$userId",
+              name: { $last: "$name" },
+              email: { $last: "$email" },
+              avatar: { $last: "$avatar" },
+              userId: { $first: "$userId" },
+              points: { $sum: "$amount" },
+              updatedAt: { $max: "$createdAt" }
+            }
+          },
+          { $sort: { points: -1 } },
+          { $limit: limit }
+        ];
+        const results = await RankingHistory.aggregate(pipeline);
+        const ranksWithPosition = results.map((r, idx) => ({ ...r, position: idx + 1 }));
+        const totalCount = await RankingHistory.distinct("userId", { shopId, month: requestedMonth });
+        return res.json({
+          success: true,
+          ranks: ranksWithPosition,
+          total: totalCount.length,
+          totalUsers: totalCount.length,
+          type
+        });
+      }
+      // เดือนปัจจุบัน → ใช้ Ranking collection ปกติ
+      query = { shopId, monthlyPeriod: currentMonth };
       sortField = { monthlyPoints: -1 };
     } else if (type === "alltime" && req.query.year) {
       // กรณีมี filter ปี → ใช้ RankingHistory aggregate
@@ -911,7 +973,7 @@ app.get("/api/rankings", requireAdminAuth, async (req, res) => {
       });
     }
 
-    // ดึงข้อมูลจาก Ranking collection
+    // ดึงข้อมูลจาก Ranking collection (สำหรับ current period หรือ alltime ไม่มี filter ปี)
     const rankings = await Ranking.find(query)
       .sort(sortField)
       .limit(limit)

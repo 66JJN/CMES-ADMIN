@@ -738,7 +738,16 @@ function Home() {
     setAllRankError("");
 
     try {
-      const res = await authFetch(`${API_BASE_URL}/api/rankings?limit=500&type=${rankingType}`);
+      // 🔥 ส่ง date/month/year params ตาม filter ที่เลือก (เหมือน loadTopRanks)
+      const params = new URLSearchParams({
+        limit: "500",
+        type: rankingType
+      });
+      if (rankingType === "daily" && selectedDate) params.set("date", selectedDate);
+      if (rankingType === "monthly" && selectedMonth) params.set("month", selectedMonth);
+      if (rankingType === "alltime" && selectedYear) params.set("year", selectedYear);
+
+      const res = await authFetch(`${API_BASE_URL}/api/rankings?${params}`);
       if (!res.ok) throw new Error("FAILED");
       const data = await res.json();
       if (!data.success) throw new Error("FAILED");
