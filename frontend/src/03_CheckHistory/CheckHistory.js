@@ -1,420 +1,375 @@
 /**
  * คอมโพเนนต์สำหรับแสดงประวัติการตรวจสอบทั้งหมด
  * รวมถึงข้อความ รูปภาพ ของขวัญ และวันเกิด
+ * ★ Redesigned: unified timeline view, search, filter, pagination, summary
  */
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { API_BASE_URL, REALTIME_URL } from "../config/apiConfig";
+import { API_BASE_URL } from "../config/apiConfig";
 import adminFetch from "../config/authFetch";
 import { ShopContext } from "../contexts/ShopContext";
 import "./CheckHistory.css";
 
+// ── Constants ──
+const TYPE_LABELS = { all: "ทั้งหมด", image: "รูปภาพ", text: "ข้อความ", gift: "ของขวัญ", birthday: "วันเกิด" };
+const TYPE_ICONS = { image: "🖼️", text: "💬", gift: "🎁", birthday: "🎂" };
+const ITEMS_PER_PAGE = 50;
+
 function CheckHistory() {
   const { shopId } = useContext(ShopContext);
-  const adminId = localStorage.getItem('adminId') || '';
-  // state สำหรับเก็บประวัติทั้งหมด
+
+  // ── State ──
   const [history, setHistory] = useState([]);
-  // state สำหรับเก็บรายการที่เลือกดูรายละเอียด
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  // state สำหรับควบคุมการแสดง/ซ่อน modal รายละเอียด
   const [showModal, setShowModal] = useState(false);
-  // state สำหรับเปิด/ปิดโหมดแก้ไข (แสดงปุ่มลบ)
   const [editMode, setEditMode] = useState(false);
 
-  // โหลดประวัติเมื่อคอมโพเนนต์ถูก mount และเมื่อ shopId พร้อม
-  useEffect(() => {
-    if (shopId) {
-      fetchHistory();
+  // ── Filters ──
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  // ── Pagination ──
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+
+  // ── Summary ──
+  const [summary, setSummary] = useState({ total: 0, totalRevenue: 0, byType: {}, completed: 0, rejected: 0 });
+
+  // ── Fetch ──
+  const fetchHistory = useCallback(async () => {
+    if (!shopId) return;
+    setLoading(true);
+    try {
+      let url = `${API_BASE_URL}/api/check-history?page=${page}&limit=${ITEMS_PER_PAGE}`;
+      if (typeFilter !== "all") url += `&type=${typeFilter}`;
+      if (searchQuery.trim()) url += `&search=${encodeURIComponent(searchQuery.trim())}`;
+      if (startDate) url += `&startDate=${startDate}`;
+      if (endDate) url += `&endDate=${endDate}`;
+
+      const res = await adminFetch(url);
+      const json = await res.json();
+
+      if (json.success) {
+        setHistory(json.data || []);
+        setPagination(json.pagination || { total: 0, totalPages: 1 });
+        setSummary(json.summary || { total: 0, totalRevenue: 0, byType: {}, completed: 0, rejected: 0 });
+      } else {
+        // Fallback: old API format (array directly)
+        if (Array.isArray(json)) {
+          setHistory(json);
+        }
+      }
+    } catch (err) {
+      console.error("[CheckHistory] Fetch error:", err);
+    } finally {
+      setLoading(false);
     }
-  }, [shopId]);
+  }, [shopId, page, typeFilter, searchQuery, startDate, endDate]);
 
-  /**
-   * ฟังก์ชันสำหรับดึงข้อมูลประวัติการตรวจสอบจาก API
-   */
-  const fetchHistory = () => {
-    adminFetch(`${API_BASE_URL}/api/check-history`)
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("[CheckHistory] Fetched data:", data);
-        // Debug: ตรวจสอบว่ารูปภาพมี filePath หรือไม่
-        const imagesWithPath = data.filter(item => item.type === 'image');
-        console.log("[CheckHistory] Images with filePath:", imagesWithPath.map(i => ({
-          id: i.id,
-          filePath: i.filePath,
-          fullUrl: i.filePath ? `${API_BASE_URL}${i.filePath}` : 'NO PATH'
-        })));
-        setHistory(data);
-      })
-      .catch((err) => {
-        console.error("[CheckHistory] Error fetching history:", err);
-      });
-  };
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
 
-  /**
-   * ฟังก์ชันสำหรับลบรายการประวัติทีละรายการ
-   * @param {number} id - ID ของรายการที่ต้องการลบ
-   */
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [typeFilter, searchQuery, startDate, endDate]);
+
+  // ── Delete handlers ──
   const handleDelete = async (id) => {
     if (!window.confirm("ยืนยันการลบรายการนี้?")) return;
     await adminFetch(`${API_BASE_URL}/api/delete-history`, {
       method: "POST",
       body: JSON.stringify({ id }),
     });
-    // โหลดข้อมูลใหม่หหลังจากลบ
     fetchHistory();
   };
 
-  /**
-   * ฟังก์ชันสำหรับลบประวัติทั้งหมด
-   */
   const handleDeleteAll = async () => {
     if (!window.confirm("ยืนยันการลบประวัติทั้งหมด?")) return;
     await adminFetch(`${API_BASE_URL}/api/delete-all-history`, {
       method: "POST"
     });
-    // โหลดข้อมูลใหม่หลังจากลบ
     fetchHistory();
   };
 
-  // แยกประวัติตามประเภท
-  const textHistory = history.filter((item) => item.type === "text");
-  const imageHistory = history.filter((item) => item.type === "image");
-  const giftHistory = history.filter((item) => item.type === "gift");
-  const birthdayHistory = history.filter((item) => item.type === "birthday");
-
-  /**
-   * ฟังก์ชันสำหรับแปลง filePath ให้เป็น URL เต็มรูปแบบ
-   * @param {string} filePath - path ของไฟล์รูปภาพ
-   * @returns {string|null} - URL เต็มรูปแบบหรือ null
-   */
+  // ── Helpers ──
   const getImageUrl = (filePath) => {
     if (!filePath) return null;
-    // ถ้า filePath เป็น URL เต็มรูปแบบอยู่แล้ว (Cloudinary, etc.) ให้ใช้ตรง ๆ
-    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
-      return filePath;
-    }
-    // ถ้าไม่ใช่ ให้เติม base URL เข้าไป
-    const normalizedPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
-    return `${API_BASE_URL}${normalizedPath}`;
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) return filePath;
+    return `${API_BASE_URL}${filePath.startsWith('/') ? filePath : `/${filePath}`}`;
   };
 
-  /**
-   * ฟังก์ชันสำหรับแปลงวันที่เป็นรูปแบบภาษาไทย
-   * @param {string} dateString - วันที่ในรูปแบบ ISO string
-   * @returns {string} - วันที่ในรูปแบบที่จัดรูปแบบแล้ว
-   */
   const formatDate = (dateString) => {
-    if (!dateString) return "-";
+    if (!dateString) return "—";
     return new Date(dateString).toLocaleString("th-TH", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
     });
   };
 
-  /**
-   * ฟังก์ชันสำหรับ render การ์ดแสดงประวัติตามประเภท
-   * @param {string} title - ชื่อประเภทประวัติ
-   * @param {string} color - สีของหัวข้อ
-   * @param {array} items - รายการประวัติ
-   * @param {string} emptyMessage - ข้อความเมื่อไม่มีข้อมูล
-   */
-  const renderHistoryCard = (title, color, items, emptyMessage) => (
-    <div className="ch-card">
-      <div className="ch-card-header">
-        รายละเอียดการตรวจสอบ <span style={{ color: color }}>{title}</span>
-      </div>
-      {items.length === 0 ? (
-        <div
-          style={{
-            textAlign: "center",
-            color: "#94a3b8",
-            padding: "3rem 0",
-            fontSize: "1.125rem",
-          }}
-        >
-          {emptyMessage}
+  const formatShortTime = (dateString) => {
+    if (!dateString) return "—";
+    const d = new Date(dateString);
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    if (isToday) {
+      return d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+    }
+    return d.toLocaleDateString("th-TH", { day: "2-digit", month: "short" }) + " " +
+      d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const getStatusLabel = (status) => {
+    if (status === "completed") return "เสร็จสิ้น";
+    if (status === "approved") return "อนุมัติ";
+    return "ปฏิเสธ";
+  };
+
+  const fmt = (v) => Number(v || 0).toLocaleString("th-TH");
+
+  // ── Render ──
+  return (
+    <div className="ch-main-bg">
+      {/* Header */}
+      <header className="ch-header">
+        <Link to="/home" className="back-nav-btn" title="กลับหน้าหลัก">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 19l-7-7 7-7"/></svg>
+        </Link>
+        <div className="ch-header-center">ประวัติการตรวจสอบ</div>
+        <div className="ch-header-actions">
+          <button className={`ch-btn ch-btn-edit${editMode ? " active" : ""}`} onClick={() => setEditMode((v) => !v)}>
+            {editMode ? "✕ ปิด" : "✏️ แก้ไข"}
+          </button>
+          {editMode && (
+            <button className="ch-btn ch-btn-deleteall" onClick={handleDeleteAll}>🗑️ ลบทั้งหมด</button>
+          )}
         </div>
-      ) : (
-        items.map((item) => (
-          <div className="ch-card-section" key={item.id}>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
-              }}
-            >
-              <div style={{ color: "#1e293b" }}>
-                <b>เวลา:</b> {formatDate(item.checkedAt)}
+      </header>
+
+      <div className="ch-container">
+        {/* Summary Bar */}
+        <div className="ch-summary-bar">
+          <div className="ch-summary-card primary">
+            <div className="ch-summary-label">รายการทั้งหมด</div>
+            <div className="ch-summary-value">{fmt(summary.total)}</div>
+          </div>
+          <div className="ch-summary-card revenue">
+            <div className="ch-summary-label">รายรับรวม</div>
+            <div className="ch-summary-value">฿{fmt(summary.totalRevenue)}</div>
+          </div>
+          <div className="ch-summary-card">
+            <div className="ch-summary-label">เสร็จสิ้น</div>
+            <div className="ch-summary-value" style={{ color: "var(--success-600)" }}>{fmt(summary.completed)}</div>
+          </div>
+          <div className="ch-summary-card">
+            <div className="ch-summary-label">ปฏิเสธ</div>
+            <div className="ch-summary-value" style={{ color: "var(--danger-500)" }}>{fmt(summary.rejected)}</div>
+          </div>
+        </div>
+
+        {/* Filter Bar */}
+        <div className="ch-filter-bar">
+          <div className="ch-type-tabs">
+            {Object.entries(TYPE_LABELS).map(([key, label]) => (
+              <button key={key} className={`ch-type-tab${typeFilter === key ? " active" : ""}`} onClick={() => setTypeFilter(key)}>
+                {key !== "all" && TYPE_ICONS[key]} {label}
+                {key !== "all" && summary.byType?.[key] > 0 && <span className="badge">{summary.byType[key]}</span>}
+              </button>
+            ))}
+          </div>
+
+          <div className="ch-search-wrap">
+            <svg className="ch-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input className="ch-search-input" type="text" placeholder="ค้นหาผู้ส่ง..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          </div>
+
+          <div className="ch-date-group">
+            <input className="ch-date-input" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} title="วันเริ่มต้น" />
+            <span className="ch-date-sep">ถึง</span>
+            <input className="ch-date-input" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} title="วันสิ้นสุด" />
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="ch-table-wrap">
+          {/* Table Header */}
+          <div className="ch-table-header">
+            <div>ประเภท</div>
+            <div>รายละเอียด</div>
+            <div>เวลา</div>
+            <div>จำนวน</div>
+            <div>สถานะ</div>
+            <div></div>
+          </div>
+
+          {/* Loading skeleton */}
+          {loading && Array.from({ length: 6 }).map((_, i) => (
+            <div className="ch-skeleton-row" key={i}>
+              <div className="ch-skeleton" style={{ width: 72, height: 26 }} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div className="ch-skeleton" style={{ width: "60%", height: 14 }} />
+                <div className="ch-skeleton" style={{ width: "40%", height: 12 }} />
               </div>
-              {item.text && (
-                <div style={{ color: "#1e293b" }}>
-                  <b>รายละเอียด:</b> {item.text}
+              <div className="ch-skeleton" style={{ width: 80, height: 14 }} />
+              <div className="ch-skeleton" style={{ width: 56, height: 14 }} />
+              <div className="ch-skeleton" style={{ width: 64, height: 24 }} />
+            </div>
+          ))}
+
+          {/* Empty State */}
+          {!loading && history.length === 0 && (
+            <div className="ch-empty">
+              <div className="ch-empty-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary-400)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/>
+                </svg>
+              </div>
+              <h3>ไม่พบข้อมูลประวัติ</h3>
+              <p>ลองปรับตัวกรองหรือช่วงเวลา หรือรอจนกว่าจะมีรายการใหม่</p>
+            </div>
+          )}
+
+          {/* Data Rows */}
+          {!loading && history.map((item, idx) => (
+            <div
+              className="ch-row"
+              key={item.id}
+              style={{ animationDelay: `${idx * 0.03}s` }}
+              onClick={() => { setSelected(item); setShowModal(true); }}
+            >
+              {/* Type Badge */}
+              <div>
+                <span className={`ch-type-badge ${item.type || "text"}`}>
+                  {TYPE_ICONS[item.type] || "📄"} {TYPE_LABELS[item.type] || item.type}
+                </span>
+              </div>
+
+              {/* Detail */}
+              <div className="ch-row-detail" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {item.filePath && (
+                  <img className="ch-row-thumb" src={getImageUrl(item.filePath)} alt="" onError={(e) => { e.target.style.display = "none"; }} />
+                )}
+                <div style={{ minWidth: 0 }}>
+                  <div className="ch-row-sender">{item.sender || "ไม่ระบุ"}</div>
+                  <div className="ch-row-text">{item.text || (item.giftItems?.length ? `${item.giftItems.length} รายการ` : "—")}</div>
+                </div>
+              </div>
+
+              {/* Time */}
+              <div className="ch-row-time">{formatShortTime(item.checkedAt || item.createdAt)}</div>
+
+              {/* Amount */}
+              <div className={`ch-row-amount ${item.price > 0 ? "paid" : "free"}`}>
+                {item.price > 0 ? `฿${fmt(item.price)}` : "ฟรี"}
+              </div>
+
+              {/* Status */}
+              <div>
+                <span className={`ch-status-badge ${item.status}`}>{getStatusLabel(item.status)}</span>
+              </div>
+
+              {/* Delete */}
+              <div>
+                {editMode && (
+                  <button className="ch-row-delete" onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} title="ลบ">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Pagination */}
+          {!loading && pagination.totalPages > 1 && (
+            <div className="ch-pagination">
+              <button className="ch-page-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>← ก่อนหน้า</button>
+              <span className="ch-page-info">หน้า {page} / {pagination.totalPages} ({pagination.total} รายการ)</span>
+              <button className="ch-page-btn" disabled={page >= pagination.totalPages} onClick={() => setPage(p => p + 1)}>ถัดไป →</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Detail Modal */}
+      {showModal && selected && (
+        <div className="ch-modal-bg" onClick={() => setShowModal(false)}>
+          <div className="ch-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="ch-modal-header">
+              <h2>
+                <span className={`ch-type-badge ${selected.type || "text"}`} style={{ marginRight: 8 }}>
+                  {TYPE_ICONS[selected.type] || "📄"} {TYPE_LABELS[selected.type] || selected.type}
+                </span>
+                รายละเอียด
+              </h2>
+              <button className="ch-modal-close" onClick={() => setShowModal(false)}>✕</button>
+            </div>
+            <div className="ch-modal-body">
+              {selected.sender && (
+                <div className="ch-modal-field"><b>ผู้ส่ง</b>{selected.sender}</div>
+              )}
+              {selected.text && (
+                <div className="ch-modal-field"><b>เนื้อหา</b>{selected.text}</div>
+              )}
+              {selected.note && (
+                <div className="ch-modal-field"><b>โน้ตเพิ่มเติม</b>{selected.note}</div>
+              )}
+              {selected.filePath && (
+                <div className="ch-modal-field">
+                  <b>รูปภาพ</b>
+                  <img className="ch-modal-image" src={getImageUrl(selected.filePath)} alt="img"
+                    onError={(e) => { e.target.style.display = "none"; }} />
                 </div>
               )}
-              {/* แสดงรายการของขวัญ (ถ้ามี) */}
-              {item.giftItems && item.giftItems.length > 0 && (
-                <div style={{ color: "#1e293b", background: "#f8fafc", padding: "8px", borderRadius: "6px", fontSize: "0.9rem" }}>
-                  <div style={{ fontWeight: "bold", marginBottom: "4px", color: "#f59e0b" }}>รายการของขวัญ:</div>
-                  <ul style={{ margin: "0 0 0 20px", padding: 0 }}>
-                    {item.giftItems.map((g, i) => (
-                      <li key={i}>{g.name} x{g.quantity}</li>
+              {selected.giftItems && selected.giftItems.length > 0 && (
+                <div className="ch-modal-field">
+                  <b>รายการของขวัญ</b>
+                  <ul style={{ margin: "4px 0 0 18px", padding: 0 }}>
+                    {selected.giftItems.map((g, i) => (
+                      <li key={i} style={{ marginBottom: 2 }}>{g.name} ×{g.quantity}</li>
                     ))}
                   </ul>
                 </div>
               )}
-              {item.price !== undefined && (
-                <div style={{ color: "#1e293b" }}>
-                  <b>ราคา:</b> {item.price === 0 ? 'ฟรี' : `${item.price} บาท`}
-                </div>
+              {selected.tableNumber > 0 && (
+                <div className="ch-modal-field"><b>โต๊ะ</b>{selected.tableNumber}</div>
               )}
-              {/* แสดงสถานะ */}
-              <div style={{ color: "#1e293b" }}>
-                <b>สถานะ:</b> {
-                  item.status === "approved" ? "อนุมัติ" :
-                    item.status === "completed" ? "แสดงเสร็จสิ้น" :
-                      "ปฏิเสธ"
-                }
+              <div className="ch-modal-field">
+                <b>ราคา</b>
+                <span style={{ color: selected.price > 0 ? "var(--success-600)" : "var(--gray-400)", fontWeight: 700 }}>
+                  {selected.price > 0 ? `฿${fmt(selected.price)}` : "ฟรี"}
+                </span>
               </div>
-              {/* แสดงรูปภาพ (ถ้ามี) */}
-              {item.filePath && (
-                <div>
-                  <img
-                    src={getImageUrl(item.filePath)}
-                    alt="img"
-                    style={{
-                      maxWidth: 180,
-                      marginTop: 8,
-                      borderRadius: 8,
-                      boxShadow: "0 1px 4px 0 rgba(30,41,59,.08)",
-                    }}
-                    onError={(e) => {
-                      console.error("[CheckHistory] Image failed to load:", getImageUrl(item.filePath));
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'block';
-                    }}
-                  />
-                  <div style={{ display: 'none', color: '#ef4444', fontSize: '0.875rem', marginTop: '8px' }}>
-                    ⚠️ ไม่สามารถโหลดรูปภาพได้
-                  </div>
-                </div>
+              <div className="ch-modal-field">
+                <b>สถานะ</b>
+                <span className={`ch-status-badge ${selected.status}`}>{getStatusLabel(selected.status)}</span>
+              </div>
+              {selected.social && selected.social.type && (
+                <div className="ch-modal-field"><b>Social</b>{selected.social.type} ({selected.social.name})</div>
               )}
-              {/* ปุ่มดูรายละเอียดเพิ่มเติม */}
-              <button
-                className="ch-btn-detail"
-                onClick={() => {
-                  setSelected(item);
-                  setShowModal(true);
-                }}
-              >
-                ตรวจสอบรายละเอียด
-              </button>
+
+              {/* Timeline */}
+              <div className="ch-modal-timeline">
+                {selected.createdAt && (
+                  <div className="ch-modal-timeline-item"><div className="dot"/><span>รับข้อมูล: {formatDate(selected.createdAt)}</span></div>
+                )}
+                {selected.checkedAt && (
+                  <div className="ch-modal-timeline-item"><div className="dot"/><span>ตรวจสอบ: {formatDate(selected.checkedAt)}</span></div>
+                )}
+                {selected.startedAt && (
+                  <div className="ch-modal-timeline-item"><div className="dot"/><span>เริ่มแสดง: {formatDate(selected.startedAt)}</span></div>
+                )}
+                {selected.endedAt && (
+                  <div className="ch-modal-timeline-item"><div className="dot"/><span>จบการแสดง: {formatDate(selected.endedAt)}</span></div>
+                )}
+                {selected.duration && (
+                  <div className="ch-modal-timeline-item"><div className="dot"/><span>ระยะเวลา: {selected.duration} วินาที</span></div>
+                )}
+              </div>
             </div>
-            {/* แสดงปุ่มลบเมื่ออยู่ในโหมดแก้ไข */}
-            {editMode && (
-              <button
-                className="ch-btn-delete"
-                onClick={() => handleDelete(item.id)}
-              >
-                ลบ
-              </button>
-            )}
-          </div>
-        ))
-      )}
-    </div>
-  );
-
-  // ส่วนแสดงผล UI หลัก
-  return (
-    <div className="ch-main-bg">
-      <header className="ch-header">
-        <Link to="/home" className="back-nav-btn" title="กลับหน้าหลัก">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M15 19l-7-7 7-7" />
-          </svg>
-        </Link>
-        <div className="ch-header-center">ประวัติการตรวจสอบ</div>
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <button
-            className={`ch-btn ch-btn-edit${editMode ? " active" : ""}`}
-            onClick={() => setEditMode((v) => !v)}
-          >
-            {editMode ? "ปิดแก้ไข" : "แก้ไข"}
-          </button>
-          <button
-            className="ch-btn ch-btn-deleteall"
-            onClick={handleDeleteAll}
-          >
-            ลบทั้งหมด
-          </button>
-        </div>
-      </header>
-      <main style={{ marginTop: "100px", width: "100%" }}>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            gap: "2rem",
-            width: "100%",
-            justifyContent: "center",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            padding: "0 2rem 2rem 2rem"
-          }}
-        >
-          {renderHistoryCard("ข้อความ", "#ec4899", textHistory, "ไม่มีประวัติข้อความ")}
-          {renderHistoryCard("รูปภาพ", "#6366f1", imageHistory, "ไม่มีประวัติรูปภาพ")}
-          {renderHistoryCard("ของขวัญ", "#f59e0b", giftHistory, "ไม่มีประวัติของขวัญ")}
-          {renderHistoryCard("วันเกิด", "#ef4444", birthdayHistory, "ไม่มีประวัติวันเกิด")}
-        </div>
-      </main>
-      {/* Modal สำหรับแสดงรายละเอียดเต็มรูปแบบ */}
-      {showModal && selected && (
-        <div className="ch-modal-bg">
-          <div className="ch-modal-content">
-            <h2
-              style={{
-                fontSize: 20,
-                marginBottom: 16,
-                color: "#1e293b",
-              }}
-            >
-              รายละเอียดรายการ
-            </h2>
-            <div style={{ marginBottom: 8 }}>
-              <b>ID:</b> {selected.id}
-            </div>
-            {/* ฟิลด์ข้อมูลทั่วไป */}
-            {selected.type && (
-              <div style={{ marginBottom: 8 }}>
-                <b>ประเภท:</b> {selected.type}
-              </div>
-            )}
-
-            {/* ฟิลด์เนื้อหา */}
-            {selected.text && (
-              <div style={{ marginBottom: 8 }}>
-                <b>ข้อความ:</b> {selected.text}
-              </div>
-            )}
-            {selected.note && (
-              <div style={{ marginBottom: 8 }}>
-                <b>โน้ตเพิ่มเติม:</b> {selected.note}
-              </div>
-            )}
-
-            {/* สื่อ (รูปภาพ) */}
-            {selected.filePath && (
-              <div style={{ marginBottom: 8 }}>
-                <b>รูปภาพ:</b>
-                <br />
-                <img
-                  src={getImageUrl(selected.filePath)}
-                  alt="img"
-                  style={{
-                    maxWidth: 180,
-                    borderRadius: 8,
-                    marginTop: 4,
-                  }}
-                  onError={(e) => {
-                    console.error("[CheckHistory Modal] Image failed to load:", getImageUrl(selected.filePath));
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'block';
-                  }}
-                />
-                <div style={{ display: 'none', color: '#ef4444', fontSize: '0.875rem', marginTop: '4px' }}>
-                  ⚠️ ไม่สามารถโหลดรูปภาพได้
-                </div>
-              </div>
-            )}
-
-            {/* สถานะและข้อมูลผู้ใช้ */}
-            <div style={{ marginBottom: 8 }}>
-              <b>สถานะ:</b> {
-                selected.status === "approved" ? "อนุมัติ" :
-                  selected.status === "completed" ? "แสดงเสร็จสิ้น" :
-                    "ปฏิเสธ"
-              }
-            </div>
-
-            {selected.sender && (
-              <div style={{ marginBottom: 8 }}>
-                <b>ผู้ส่ง:</b> {selected.sender}
-              </div>
-            )}
-
-            {/* ข้อมูล Social Media */}
-            {selected.social && selected.social.type && (
-              <div style={{ marginBottom: 8 }}>
-                <b>Social:</b> {selected.social.type} ({selected.social.name})
-              </div>
-            )}
-
-            {/* ข้อมูลเฉพาะของขวัญ */}
-            {selected.tableNumber > 0 && (
-              <div style={{ marginBottom: 8 }}>
-                <b>โต๊ะ:</b> {selected.tableNumber}
-              </div>
-            )}
-
-            {selected.giftItems && selected.giftItems.length > 0 && (
-              <div style={{ marginBottom: 8 }}>
-                <b>รายการของขวัญ:</b>
-                <ul style={{ margin: "4px 0 0 20px", padding: 0 }}>
-                  {selected.giftItems.map((g, i) => (
-                    <li key={i}>{g.name} x{g.quantity}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* ราคา */}
-            {selected.price !== undefined && (
-              <div style={{ marginBottom: 8 }}>
-                <b>ราคา:</b> {selected.price === 0 ? 'ฟรี' : `${selected.price} บาท`}
-              </div>
-            )}
-
-            {/* ข้อมูลเวลาต่าง ๆ */}
-            <div style={{ marginTop: 12, borderTop: "1px solid #e2e8f0", paddingTop: 8 }}>
-              {selected.createdAt && (
-                <div style={{ marginBottom: 4, fontSize: "0.9em" }}>
-                  <b>รับข้อมูล:</b> {formatDate(selected.createdAt)}
-                </div>
-              )}
-              {selected.checkedAt && (
-                <div style={{ marginBottom: 4, fontSize: "0.9em" }}>
-                  <b>ตรวจสอบ:</b> {formatDate(selected.checkedAt)}
-                </div>
-              )}
-              {selected.startedAt && (
-                <div style={{ marginBottom: 4, fontSize: "0.9em" }}>
-                  <b>เริ่มแสดง:</b> {formatDate(selected.startedAt)}
-                </div>
-              )}
-              {selected.endedAt && (
-                <div style={{ marginBottom: 4, fontSize: "0.9em" }}>
-                  <b>จบการแสดง:</b> {formatDate(selected.endedAt)}
-                </div>
-              )}
-              {selected.duration && (
-                <div style={{ marginBottom: 4, fontSize: "0.9em" }}>
-                  <b>ระยะเวลา:</b> {selected.duration} วินาที
-                </div>
-              )}
-            </div>
-            <button
-              className="ch-btn"
-              style={{ background: "#64748b", marginTop: 16 }}
-              onClick={() => setShowModal(false)}
-            >
-              ปิด
-            </button>
           </div>
         </div>
       )}

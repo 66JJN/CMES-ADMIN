@@ -2084,19 +2084,69 @@ app.post("/api/history/restore/:id", requireAdminAuth, async (req, res) => {
 });
 
 
-// API สำหรับดึงประวัติการตรวจสอบ
+// API สำหรับดึงประวัติการตรวจสอบ (Enhanced: filter, search, pagination, summary)
 // 🔥 Multi-tenant: filter ด้วย shopId
 app.get("/api/check-history", requireAdminAuth, async (req, res) => {
   try {
     const { shopId } = req; // ได้จาก middleware
-    // 🔥 filter ด้วย shopId และดึงเฉพาะของ 2 วันย้อนหลัง
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    const { type, search, startDate, endDate, page = 1, limit = 50 } = req.query;
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 50));
+    const skip = (pageNum - 1) * limitNum;
 
-    const history = await CheckHistory.find({
-      shopId,
-      createdAt: { $gte: twoDaysAgo }
-    }).sort({ approvalDate: -1 });
+    // สร้าง query filter
+    const query = { shopId };
+
+    // Filter ตามประเภท
+    if (type && type !== 'all') {
+      query.type = type;
+    }
+
+    // Filter ตามช่วงวันที่
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    } else {
+      // Default: ดึง 7 วันย้อนหลัง (เพิ่มจาก 2 วันเดิม)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      query.createdAt = { $gte: sevenDaysAgo };
+    }
+
+    // ค้นหาตามชื่อผู้ส่งหรือเนื้อหา
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      query.$or = [
+        { sender: searchRegex },
+        { content: searchRegex },
+      ];
+    }
+
+    // ดึงข้อมูลพร้อม pagination
+    const [history, totalCount] = await Promise.all([
+      CheckHistory.find(query).sort({ approvalDate: -1 }).skip(skip).limit(limitNum),
+      CheckHistory.countDocuments(query)
+    ]);
+
+    // ===== คำนวณ Summary Stats (ใช้ query เดียวกันแต่ไม่มี pagination) =====
+    const allForSummary = await CheckHistory.find(query).select('type price status').lean();
+    const summary = {
+      total: allForSummary.length,
+      totalRevenue: allForSummary.reduce((sum, r) => sum + (r.price || 0), 0),
+      byType: {
+        image: allForSummary.filter(r => r.type === 'image').length,
+        text: allForSummary.filter(r => r.type === 'text').length,
+        gift: allForSummary.filter(r => r.type === 'gift').length,
+        birthday: allForSummary.filter(r => r.type === 'birthday').length,
+      },
+      completed: allForSummary.filter(r => r.status === 'completed').length,
+      rejected: allForSummary.filter(r => r.status === 'rejected').length,
+    };
 
     // Map data ให้ตรงกับที่ Frontend ต้องการ (รองรับทั้ง Schema เก่าและใหม่)
     const formattedHistory = history.map(item => {
@@ -2132,7 +2182,17 @@ app.get("/api/check-history", requireAdminAuth, async (req, res) => {
       };
     });
 
-    res.json(formattedHistory);
+    res.json({
+      success: true,
+      data: formattedHistory,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limitNum),
+      },
+      summary
+    });
   } catch (error) {
     console.error('Error fetching check history:', error);
     res.status(500).json({ success: false, message: 'Server error' });
