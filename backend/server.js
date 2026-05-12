@@ -2271,12 +2271,41 @@ app.get("/api/admin/income-stats", requireAdminAuth, async (req, res) => {
       .slice(0, 5)
       .map(u => ({ name: u.name, totalAmount: u.amount }));
 
+    // ===== คำนวณ Growth % เทียบกับช่วงก่อนหน้าที่มีความยาวเท่ากัน =====
+    const periodMs = end.getTime() - start.getTime();
+    const prevEnd = new Date(start.getTime() - 1); // วันก่อนหน้า startDate
+    prevEnd.setHours(23, 59, 59, 999);
+    const prevStart = new Date(prevEnd.getTime() - periodMs);
+
+    let growthPct = null;
+    try {
+      const prevRecords = await CheckHistory.find({
+        shopId,
+        createdAt: { $gte: prevStart, $lte: prevEnd },
+        status: "completed"
+      }).lean();
+      const prevIncome = prevRecords.reduce((sum, r) => sum + (r.price || 0), 0);
+      if (prevIncome > 0) {
+        growthPct = Math.round(((totalIncome - prevIncome) / prevIncome) * 100 * 10) / 10;
+      } else if (totalIncome > 0) {
+        growthPct = 100; // มีรายรับช่วงนี้ แต่ช่วงก่อนเป็น 0
+      } else {
+        growthPct = 0; // ทั้งสองช่วงเป็น 0
+      }
+    } catch (growthErr) {
+      console.warn("[IncomeStats] Growth calc error:", growthErr.message);
+    }
+
+    // ส่ง response พร้อม no-cache header เพื่อป้องกัน browser cache
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.set('Pragma', 'no-cache');
     res.json({
       success: true,
       data: {
         totalIncome,
         totalUsers: userSet.size,
         totalOrders: records.length,
+        growthPct,
         peakHours,
         peakDay,
         dailyTrend,
