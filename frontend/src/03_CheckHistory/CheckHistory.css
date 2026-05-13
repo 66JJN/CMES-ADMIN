@@ -18,21 +18,21 @@
   height: 72px;
   z-index: 100;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 32px;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--gray-200, #e5e7eb);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: visible;
 }
 
 .ch-header-center {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   color: var(--gray-800, #1f2937);
   font-weight: 700;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  flex: 1;
+  text-align: center;
 }
 
 .back-nav-btn {
@@ -59,30 +59,31 @@
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 /* ── Buttons ── */
 .ch-btn {
-  border: none; border-radius: 10px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
-  padding: 8px 16px; transition: all 0.2s ease;
-  display: flex; align-items: center; gap: 6px;
+  border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+  padding: 8px 14px; transition: all 0.2s ease;
+  display: inline-flex; align-items: center; gap: 6px;
   font-family: inherit;
+  white-space: nowrap;
 }
 
 .ch-btn:hover { transform: translateY(-1px); }
 .ch-btn-edit { background: var(--primary-100, #e0e9ff); color: var(--primary-700, #4338ca); }
 .ch-btn-edit.active { background: var(--gray-200, #e5e7eb); color: var(--gray-600, #4b5563); }
 .ch-btn-deleteall {
-  padding: 6px 14px;
-  font-size: 13px;
-  background: var(--danger-500, #ef4444);
-  color: #fff;
-  border-radius: 8px;
-  border: none;
+  background: var(--danger-50, #fef2f2);
+  color: var(--danger-600, #dc2626);
+  border: 1px solid var(--danger-200, #fecaca);
+  padding:8px 30px 8px 14px;
 }
 .ch-btn-deleteall:hover {
-  background: var(--danger-600, #dc2626);
+  background: var(--danger-500, #ef4444);
   color: #fff;
+  border-color: var(--danger-500, #ef4444);
 }
 
 /* ── Container ── */
@@ -425,29 +426,26 @@
   color: var(--danger-600, #dc2626);
 }
 
-/* Delete button in row */
+/* Delete button in row — always visible in edit mode */
 .ch-row-delete {
-  opacity: 0;
-  color: var(--danger-500, #ef4444);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
   background: transparent;
-  border: 1px solid var(--danger-500, #ef4444);
-  border-radius: 6px;
-  padding: 4px 8px;
+  color: var(--danger-500, #ef4444);
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  font-family: inherit;
-}
-
-.ch-row:hover .ch-row-delete {
-  opacity: 1;
+  font-size: 15px;
 }
 
 .ch-row-delete:hover {
-  background: var(--danger-500, #ef4444);
-  color: #fff;
+  background: var(--danger-50, #fef2f2);
+  color: var(--danger-600, #dc2626);
+  transform: scale(1.15);
 }
 
 /* ── Pagination ── */

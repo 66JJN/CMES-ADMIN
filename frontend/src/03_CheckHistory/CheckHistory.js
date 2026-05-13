@@ -145,7 +145,9 @@ function CheckHistory() {
             {editMode ? "✕ ปิด" : "✏️ แก้ไข"}
           </button>
           {editMode && (
-            <button className="ch-btn ch-btn-deleteall" onClick={handleDeleteAll}>🗑️ ลบทั้งหมด</button>
+            <button className="ch-btn ch-btn-deleteall" onClick={handleDeleteAll}>
+              <i className="fas fa-trash-can"></i> ลบทั้งหมด
+            </button>
           )}
         </div>
       </header>
@@ -276,7 +278,7 @@ function CheckHistory() {
               <div>
                 {editMode && (
                   <button className="ch-row-delete" onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} title="ลบ">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                    <i className="fas fa-trash-can"></i>
                   </button>
                 )}
               </div>
