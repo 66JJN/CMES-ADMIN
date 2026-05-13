@@ -1506,9 +1506,11 @@ function Home() {
                         topRanks.map((entry, index) => {
                           const pos = entry.position || index + 1;
                           // Get points based on ranking type
+                          // ★ สำหรับวันที่ในอดีต backend ส่ง points จาก RankingHistory aggregate
+                          //   สำหรับวันปัจจุบัน backend ส่ง dailyPoints/monthlyPoints จาก Ranking collection
                           let points = entry.points || 0;
-                          if (rankingType === "daily") points = entry.dailyPoints || 0;
-                          else if (rankingType === "monthly") points = entry.monthlyPoints || 0;
+                          if (rankingType === "daily") points = entry.dailyPoints ?? entry.points ?? 0;
+                          else if (rankingType === "monthly") points = entry.monthlyPoints ?? entry.points ?? 0;
 
                           return (
                             <li
@@ -1651,9 +1653,11 @@ function Home() {
                   {modalRanks.map((entry, idx) => {
                     const position = entry.position || idx + 1;
                     // Get points based on ranking type
+                    // ★ สำหรับวันที่ในอดีต backend ส่ง points จาก RankingHistory aggregate
+                    //   สำหรับวันปัจจุบัน backend ส่ง dailyPoints/monthlyPoints จาก Ranking collection
                     let points = entry.points || 0;
-                    if (rankingType === "daily") points = entry.dailyPoints || 0;
-                    else if (rankingType === "monthly") points = entry.monthlyPoints || 0;
+                    if (rankingType === "daily") points = entry.dailyPoints ?? entry.points ?? 0;
+                    else if (rankingType === "monthly") points = entry.monthlyPoints ?? entry.points ?? 0;
 
                     return (
                       <li key={`${entry.name}-${position}`}>
