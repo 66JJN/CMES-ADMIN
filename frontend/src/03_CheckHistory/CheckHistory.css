@@ -72,8 +72,18 @@
 .ch-btn:hover { transform: translateY(-1px); }
 .ch-btn-edit { background: var(--primary-100, #e0e9ff); color: var(--primary-700, #4338ca); }
 .ch-btn-edit.active { background: var(--gray-200, #e5e7eb); color: var(--gray-600, #4b5563); }
-.ch-btn-deleteall { background: var(--danger-50, #fef2f2); color: var(--danger-600, #dc2626); }
-.ch-btn-deleteall:hover { background: var(--danger-500, #ef4444); color: #fff; }
+.ch-btn-deleteall {
+  padding: 6px 14px;
+  font-size: 13px;
+  background: var(--danger-500, #ef4444);
+  color: #fff;
+  border-radius: 8px;
+  border: none;
+}
+.ch-btn-deleteall:hover {
+  background: var(--danger-600, #dc2626);
+  color: #fff;
+}
 
 /* ── Container ── */
 .ch-container {
@@ -417,23 +427,27 @@
 
 /* Delete button in row */
 .ch-row-delete {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: none;
+  opacity: 0;
+  color: var(--danger-500, #ef4444);
   background: transparent;
-  color: var(--gray-400, #9ca3af);
+  border: 1px solid var(--danger-500, #ef4444);
+  border-radius: 6px;
+  padding: 4px 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
+  transition: all 0.2s;
   font-family: inherit;
 }
 
+.ch-row:hover .ch-row-delete {
+  opacity: 1;
+}
+
 .ch-row-delete:hover {
-  background: var(--danger-50, #fef2f2);
-  color: var(--danger-500, #ef4444);
+  background: var(--danger-500, #ef4444);
+  color: #fff;
 }
 
 /* ── Pagination ── */
