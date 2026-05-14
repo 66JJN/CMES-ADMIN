@@ -444,7 +444,7 @@ function ImageQueue() {
       const response = await adminFetch(`${API_BASE_URL}/api/check-history`);
       if (response.ok) {
         const data = await response.json();
-        setHistoryItems(data);
+        setHistoryItems(data.data || data);
       }
     } catch (error) {
       console.error("Error fetching history:", error);
