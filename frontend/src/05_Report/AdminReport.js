@@ -241,53 +241,56 @@ function AdminReport() {
       )}
 
       {activeReport && (
-        <div className="report-drawer" role="dialog">
-          <div className="drawer-header">
-            <div>
-              <p>รายละเอียดรายงาน</p>
-              <h3>{CATEGORY_META[activeReport.category]?.label || "ไม่ทราบ"}</h3>
-            </div>
-            <button className="icon-btn" onClick={() => setActiveReport(null)}>✕</button>
-          </div>
-          <div className="drawer-body">
-            <div className="drawer-section">
-              <span className="section-label">สถานะปัจจุบัน</span>
-              {renderStatusPill(activeReport.status)}
-            </div>
-            <div className="drawer-section">
-              <span className="section-label">รายละเอียด</span>
-              <p className="drawer-detail">{activeReport.detail}</p>
-            </div>
-            <div className="drawer-timeline">
+        <>
+          <div className="report-drawer-overlay" onClick={() => setActiveReport(null)}></div>
+          <div className="report-drawer" role="dialog">
+            <div className="drawer-header">
               <div>
-                <span>สร้างเมื่อ</span>
-                <strong>{formatDate(activeReport.createdAt)}</strong>
+                <p>รายละเอียดรายงาน</p>
+                <h3>{CATEGORY_META[activeReport.category]?.label || "ไม่ทราบ"}</h3>
               </div>
-              {activeReport.updatedAt && (
+              <button className="icon-btn" onClick={() => setActiveReport(null)}>✕</button>
+            </div>
+            <div className="drawer-body">
+              <div className="drawer-section">
+                <span className="section-label">สถานะปัจจุบัน</span>
+                {renderStatusPill(activeReport.status)}
+              </div>
+              <div className="drawer-section">
+                <span className="section-label">รายละเอียด</span>
+                <p className="drawer-detail">{activeReport.detail}</p>
+              </div>
+              <div className="drawer-timeline">
                 <div>
-                  <span>อัปเดตล่าสุด</span>
-                  <strong>{formatDate(activeReport.updatedAt)}</strong>
+                  <span>สร้างเมื่อ</span>
+                  <strong>{formatDate(activeReport.createdAt)}</strong>
                 </div>
-              )}
+                {activeReport.updatedAt && (
+                  <div>
+                    <span>อัปเดตล่าสุด</span>
+                    <strong>{formatDate(activeReport.updatedAt)}</strong>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="drawer-actions">
+              <button
+                className="ghost-btn"
+                onClick={() => handleStatusChange(activeReport, "reading")}
+                disabled={updatingId === activeReport.id}
+              >
+                ทำเครื่องหมายว่ากำลังตรวจสอบ
+              </button>
+              <button
+                className="primary-btn"
+                onClick={() => handleStatusChange(activeReport, "resolved")}
+                disabled={updatingId === activeReport.id}
+              >
+                ปิดงานนี้
+              </button>
             </div>
           </div>
-          <div className="drawer-actions">
-            <button
-              className="ghost-btn"
-              onClick={() => handleStatusChange(activeReport, "reading")}
-              disabled={updatingId === activeReport.id}
-            >
-              ทำเครื่องหมายว่ากำลังตรวจสอบ
-            </button>
-            <button
-              className="primary-btn"
-              onClick={() => handleStatusChange(activeReport, "resolved")}
-              disabled={updatingId === activeReport.id}
-            >
-              ปิดงานนี้
-            </button>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );
