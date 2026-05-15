@@ -321,7 +321,7 @@
 }
 
 .view-hint {
-  color: var(--gray-500);
+  color: white;
   font-size: 0.9rem;
   font-weight: 500;
   margin-bottom: 1.5rem;
@@ -487,6 +487,7 @@
   font-size: 0.95rem;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
