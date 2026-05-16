@@ -1853,25 +1853,25 @@ function Home() {
             width: "95%",
             maxHeight: "90vh",
             overflowY: "auto",
-            background: "linear-gradient(135deg, rgba(30,30,40,0.95), rgba(15,20,30,0.98))",
-            boxShadow: "0 25px 50px -12px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.1)",
-            backdropFilter: "blur(20px)",
-            borderRadius: "20px"
+            background: "rgba(255, 255, 255, 0.95)",
+            boxShadow: "0 25px 50px -12px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.7)",
+            backdropFilter: "blur(16px)",
+            borderRadius: "24px"
           }}>
-            <div className="rank-modal-header" style={{ marginBottom: "20px", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div className="rank-modal-header" style={{ marginBottom: "20px", borderBottom: "2px solid rgba(102, 126, 234, 0.1)", paddingBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <h3 style={{ color: "#38bdf8", fontSize: "24px", fontWeight: "800", letterSpacing: "0.5px", margin: "0 0 8px 0", display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ fontSize: "28px" }}>🎥</span> OBS Studio Control Panel
+                <h3 style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", fontSize: "24px", fontWeight: "800", letterSpacing: "0.5px", margin: "0 0 8px 0", display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "28px", WebkitTextFillColor: "initial" }}>🎥</span> OBS Studio Control Panel
                 </h3>
-                <p style={{ color: "#94a3b8", margin: 0, fontSize: "14px" }}>คัดลอกลิงก์ Overlay หรือใช้แผงควบคุมสลับฉาก/คุมเสียงได้ที่นี่</p>
+                <p style={{ color: "#64748b", margin: 0, fontSize: "14px", fontWeight: "500" }}>คัดลอกลิงก์ Overlay หรือใช้แผงควบคุมสลับฉาก/คุมเสียงได้ที่นี่</p>
               </div>
               <button
                 type="button"
                 className="close-rank-modal"
                 onClick={() => setShowObsModal(false)}
-                style={{ color: "#f8fafc", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "50%", width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "16px", transition: "all 0.2s" }}
-                onMouseOver={(e) => e.currentTarget.style.background = "rgba(239,68,68,0.2)"}
-                onMouseOut={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                style={{ color: "#64748b", background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: "50%", width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "16px", transition: "all 0.2s" }}
+                onMouseOver={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; e.currentTarget.style.color = "#ef4444"; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.03)"; e.currentTarget.style.color = "#64748b"; }}
               >
                 ✕
               </button>
@@ -1879,21 +1879,21 @@ function Home() {
             <div className="rank-modal-body" style={{ padding: "0 0 10px 0", display: "flex", flexDirection: "column", gap: "24px" }}>
 
               {/* Section 1: Browser Source Links */}
-              <div style={{ background: "#1e293b", padding: "20px", borderRadius: "12px", border: "1px solid #334155" }}>
-                <h4 style={{ color: "#f1f5f9", margin: "0 0 16px 0", fontSize: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span>🔗</span> OBS Browser Source Links <span style={{ fontSize: "11px", color: "#64748b", background: "#0f172a", padding: "4px 8px", borderRadius: "6px", marginLeft: "auto" }}>{adminUsername}</span>
+              <div style={{ background: "rgba(248, 250, 252, 0.7)", padding: "20px", borderRadius: "16px", border: "1px solid rgba(102, 126, 234, 0.15)" }}>
+                <h4 style={{ color: "#334155", margin: "0 0 16px 0", fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>🔗</span> OBS Browser Source Links <span style={{ fontSize: "11px", color: "#667eea", background: "rgba(102, 126, 234, 0.1)", padding: "4px 10px", borderRadius: "8px", marginLeft: "auto", fontWeight: "600" }}>{adminUsername}</span>
                 </h4>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
 
                   {/* Image Overlay Link */}
                   <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "12px", fontWeight: "600", color: "#94a3b8" }}>1. Image & Text</label>
+                    <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748b" }}>1. Image & Text</label>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <input
                         type="text"
                         readOnly
                         value={`${API_BASE_URL}/obs-image-overlay.html?shopId=${shopId || adminId}`}
-                        style={{ flex: 1, padding: "8px 12px", border: "1px solid #475569", borderRadius: "6px", fontSize: "12px", background: "#0f172a", color: "#cbd5e1", outline: "none" }}
+                        style={{ flex: 1, padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "8px", fontSize: "12px", background: "#ffffff", color: "#334155", outline: "none", transition: "all 0.2s" }}
                       />
                       <button
                         onClick={() => {
@@ -1901,7 +1901,7 @@ function Home() {
                           setCopiedImage(true);
                           setTimeout(() => setCopiedImage(false), 2000);
                         }}
-                        style={{ padding: "8px 12px", background: copiedImage ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #0ea5e9, #0284c7)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600", transition: "all 0.2s" }}
+                        style={{ padding: "8px 16px", background: copiedImage ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #667eea, #764ba2)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "700", transition: "all 0.2s", boxShadow: copiedImage ? "0 4px 10px rgba(16, 185, 129, 0.2)" : "0 4px 10px rgba(102, 126, 234, 0.2)" }}
                       >
                         {copiedImage ? "✓" : "Copy"}
                       </button>
@@ -1910,13 +1910,13 @@ function Home() {
 
                   {/* Ranking Overlay Link */}
                   <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "12px", fontWeight: "600", color: "#94a3b8" }}>2. Ranking</label>
+                    <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748b" }}>2. Ranking</label>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <input
                         type="text"
                         readOnly
                         value={`${API_BASE_URL}/obs-ranking-overlay.html?shopId=${shopId || adminId}`}
-                        style={{ flex: 1, padding: "8px 12px", border: "1px solid #475569", borderRadius: "6px", fontSize: "12px", background: "#0f172a", color: "#cbd5e1", outline: "none" }}
+                        style={{ flex: 1, padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "8px", fontSize: "12px", background: "#ffffff", color: "#334155", outline: "none", transition: "all 0.2s" }}
                       />
                       <button
                         onClick={() => {
@@ -1924,7 +1924,7 @@ function Home() {
                           setCopiedRanking(true);
                           setTimeout(() => setCopiedRanking(false), 2000);
                         }}
-                        style={{ padding: "8px 12px", background: copiedRanking ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #0ea5e9, #0284c7)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600", transition: "all 0.2s" }}
+                        style={{ padding: "8px 16px", background: copiedRanking ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #667eea, #764ba2)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "700", transition: "all 0.2s", boxShadow: copiedRanking ? "0 4px 10px rgba(16, 185, 129, 0.2)" : "0 4px 10px rgba(102, 126, 234, 0.2)" }}
                       >
                         {copiedRanking ? "✓" : "Copy"}
                       </button>
@@ -1933,13 +1933,13 @@ function Home() {
 
                   {/* Lucky Wheel Overlay Link */}
                   <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "12px", fontWeight: "600", color: "#94a3b8" }}>3. Lucky Wheel</label>
+                    <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748b" }}>3. Lucky Wheel</label>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <input
                         type="text"
                         readOnly
                         value={`${API_BASE_URL}/obs-lucky-wheel.html?shopId=${shopId || adminId}`}
-                        style={{ flex: 1, padding: "8px 12px", border: "1px solid #475569", borderRadius: "6px", fontSize: "12px", background: "#0f172a", color: "#cbd5e1", outline: "none" }}
+                        style={{ flex: 1, padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "8px", fontSize: "12px", background: "#ffffff", color: "#334155", outline: "none", transition: "all 0.2s" }}
                       />
                       <button
                         onClick={() => {
@@ -1947,7 +1947,7 @@ function Home() {
                           setCopiedWheel(true);
                           setTimeout(() => setCopiedWheel(false), 2000);
                         }}
-                        style={{ padding: "8px 12px", background: copiedWheel ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #0ea5e9, #0284c7)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600", transition: "all 0.2s" }}
+                        style={{ padding: "8px 16px", background: copiedWheel ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #667eea, #764ba2)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "700", transition: "all 0.2s", boxShadow: copiedWheel ? "0 4px 10px rgba(16, 185, 129, 0.2)" : "0 4px 10px rgba(102, 126, 234, 0.2)" }}
                       >
                         {copiedWheel ? "✓" : "Copy"}
                       </button>
