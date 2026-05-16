@@ -77,14 +77,15 @@ function TimeHistory() {
     <div className="th-minimal-container">
       {/* Header พร้อมปุ่มย้อนกลับ */}
       <header className="th-minimal-header">
-        <Link to="/home" className="th-minimal-back-btn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M15 19l-7-7 7-7" />
-          </svg>
-          <span>ย้อนกลับ</span>
-        </Link>
-        <h1 className="th-minimal-title">ประวัติการตั้งเวลา</h1>
-        <div style={{ width: "120px" }}></div> {/* Spacer สำหรับจัดตำแหน่ง */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <Link to="/home" className="back-nav-btn" title="กลับหน้าหลัก">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 19l-7-7 7-7" />
+            </svg>
+          </Link>
+          <h1 className="th-minimal-title" style={{ textAlign: 'left', margin: 0 }}>ประวัติการตั้งเวลา</h1>
+        </div>
+        {/* Spacer for alignment if needed */}
       </header>
 
       {/* Main Content: แสดงประวัติแบ่งเป็น 3 หมวด */}

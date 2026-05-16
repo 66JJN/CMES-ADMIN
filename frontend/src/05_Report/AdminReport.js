@@ -122,13 +122,17 @@ function AdminReport() {
   return (
     <div className="admin-report-page">
       <header className="admin-report-header">
-        <div className="header-texts">
-          <p className="eyebrow">ระบบรายงาน</p>
-          <h1>ศูนย์ติดตามปัญหา</h1>
-          <p className="subtitle">ข้อมูลเชื่อมต่อจากฝั่งผู้ใช้ทันที ปรับสถานะงานได้ตามจริง</p>
+        <div className="header-texts" style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+          <Link to="/home" className="back-nav-btn" title="กลับหน้าหลัก" style={{ marginTop: '0.25rem' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 19l-7-7 7-7" /></svg>
+          </Link>
+          <div>
+            <p className="eyebrow">ระบบรายงาน</p>
+            <h1>ศูนย์ติดตามปัญหา</h1>
+            <p className="subtitle">ข้อมูลเชื่อมต่อจากฝั่งผู้ใช้ทันที ปรับสถานะงานได้ตามจริง</p>
+          </div>
         </div>
         <div className="header-actions">
-          <Link to="/home" className="ghost-btn">กลับหน้า Home</Link>
           <button className="primary-btn" onClick={loadReports}>รีเฟรชข้อมูล</button>
         </div>
       </header>

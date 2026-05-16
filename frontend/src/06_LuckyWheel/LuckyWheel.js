@@ -324,11 +324,16 @@ function LuckyWheel() {
   return (
     <div className="lucky-wheel-page">
       <header className="lucky-wheel-header">
-        <div className="header-content">
-          <h1 className="header-title">🎡 Lucky Wheel</h1>
-          <p className="header-subtitle">วงล้อเสี่ยงดวงสำหรับกิจกรรมพิเศษ</p>
+        <div className="header-content" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <Link to="/home" className="back-nav-btn" title="กลับหน้าหลัก">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 19l-7-7 7-7" /></svg>
+          </Link>
+          <div>
+            <h1 className="header-title" style={{ margin: 0 }}>🎡 Lucky Wheel</h1>
+            <p className="header-subtitle" style={{ margin: 0 }}>วงล้อเสี่ยงดวงสำหรับกิจกรรมพิเศษ</p>
+          </div>
         </div>
-        <Link to="/home" className="back-home-btn">🏠 กลับหน้า Home</Link>
+
       </header>
 
       <div className="lucky-wheel-flex">

@@ -260,13 +260,13 @@ function EditProfile() {
 
             <div className="ep-glass-card">
                 {/* Header */}
-                <div className="ep-header">
-                    <button className="ep-btn-back" onClick={() => navigate("/home")}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                <div className="ep-header" style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingBottom: '10px' }}>
+                    <button className="back-nav-btn" onClick={() => navigate("/home")} title="กลับสู่หน้าหลัก">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M15 19l-7-7 7-7" />
                         </svg>
-                        <span>กลับสู่หน้าหลัก</span>
                     </button>
+                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>โปรไฟล์ร้านค้า</h2>
                 </div>
 
                 {/* ===== SHOP LOGO SECTION ===== */}
