@@ -260,13 +260,23 @@ function EditProfile() {
 
             <div className="ep-glass-card">
                 {/* Header */}
-                <div className="ep-header" style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingBottom: '10px' }}>
-                    <button className="back-nav-btn" onClick={() => navigate("/home")} title="กลับสู่หน้าหลัก">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <div className="ep-header" style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingBottom: '16px', borderBottom: '2px solid rgba(102, 126, 234, 0.1)', marginBottom: '24px' }}>
+                    <button className="back-nav-btn" onClick={() => navigate("/home")} title="กลับสู่หน้าหลัก" style={{ color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>โปรไฟล์ร้านค้า</h2>
+                    <h2 style={{ 
+                        margin: 0, 
+                        fontSize: '1.5rem', 
+                        fontWeight: 800, 
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        letterSpacing: '0.5px'
+                    }}>
+                        โปรไฟล์ร้านค้า
+                    </h2>
                 </div>
 
                 {/* ===== SHOP LOGO SECTION ===== */}
