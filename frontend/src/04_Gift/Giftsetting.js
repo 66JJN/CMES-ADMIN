@@ -251,9 +251,13 @@ function Giftsetting() {
 					<p className="subtitle">กำหนดจำนวนโต๊ะและสินค้าที่พร้อมให้ผู้ใช้เลือก</p>
 				</div>
 				<div className="hero-actions">
-					<Link to="/home" className="ghost-link">กลับหน้าหลัก</Link>
+					<Link to="/home" className="ghost-link">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+						กลับหน้าหลัก
+					</Link>
 					<button className="ghost-button" onClick={loadSettings}>
-						โหลดข้อมูลล่าสุด
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+						รีเฟรชข้อมูล
 					</button>
 				</div>
 			</header>
@@ -266,6 +270,7 @@ function Giftsetting() {
 							<p>กำหนดเลขโต๊ะสูงสุดสำหรับคำสั่งซื้อของผู้ใช้</p>
 						</div>
 						<button className="primary-button" onClick={handleTableUpdate}>
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
 							บันทึก
 						</button>
 					</div>
@@ -336,7 +341,14 @@ function Giftsetting() {
 							placeholder="คำอธิบายเพิ่มเติม"
 						/>
 						<button type="submit" className="primary-button" disabled={saving}>
-							{saving ? "กำลังบันทึก..." : "เพิ่มสินค้า"}
+							{saving ? (
+								<>กำลังบันทึก...</>
+							) : (
+								<>
+									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+									เพิ่มสินค้า
+								</>
+							)}
 						</button>
 					</form>
 				</section>
@@ -371,7 +383,12 @@ function Giftsetting() {
 									</div>
 									<div className="gift-row-actions">
 										<span className="price">{item.price === 0 ? 'ฟรี' : `฿${item.price}`}</span>
-										<button className="ghost-button" onClick={() => handleDelete(item.id)}>
+										<button className="danger-button" onClick={() => handleDelete(item.id)}>
+											<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+												<path d="M3 6h18"></path>
+												<path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+												<path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+											</svg>
 											ลบ
 										</button>
 									</div>
