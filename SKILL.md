@@ -345,6 +345,8 @@ cd backend && npm start      # production
 | State ไม่อัปเดตหลัง API call | ลืม re-fetch หรือไม่ await | ตรวจสอบ `await` + เรียก fetch function หลัง mutation |
 | Memory leak warning | ลืม cleanup socket listener | ใช้ `return () => socket.off(...)` ใน `useEffect` |
 | FormData header bug | ตั้ง `Content-Type` เอง | `adminFetch` จัดการเอง — อย่า set `Content-Type` สำหรับ FormData |
+| Ranking past date แสดง 0 | frontend อ่าน `dailyPoints` แต่ aggregate ใช้ `points` | ใช้ `entry.dailyPoints ?? entry.points ?? 0` |
+| Monthly ranking ไม่หายหลัง clear DB | ลบแค่ `rankinghistories` แต่ `rankings` ยังอยู่ | ต้องลบทั้ง 2 collection พร้อมกัน |
 
 ---
 

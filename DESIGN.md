@@ -641,3 +641,131 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 - **อย่าสร้าง utility class ใหม่** ที่ซ้ำกับที่มีใน `theme.css`
 - **อย่าใช้ `box-shadow` แบบ flat** — ใช้ multi-layer shadows จาก design system
 - **อย่าลืม hover state** ให้ interactive elements ทุกตัว
+
+---
+
+## 16. Z-index System
+
+| Layer | Value | Usage |
+|-------|-------|-------|
+| Base content | `0` | Default |
+| Sticky elements | `10` | Sticky rows, floating buttons |
+| Header / Navbar | `100` | Fixed/sticky header (`app-header`) |
+| Dropdown / Popover | `200` | Select menus, tooltips |
+| Modal backdrop | `9998` | Overlay ด้านหลัง modal |
+| Modal content | `9999` | Modal / drawer content |
+| Toast / Alert | `10000` | Notifications บนสุด |
+
+### Usage Rule
+```css
+/* ใช้ค่าตาม table ด้านบน — ห้ามใช้ค่าแปลกๆ เช่น z-index: 999999 */
+.header { z-index: 100; }
+.modal-overlay { z-index: 9998; }
+.modal-content { z-index: 9999; }
+```
+
+---
+
+## 17. Loading States
+
+### 17.1 Skeleton Loading
+```css
+/* Placeholder ขณะโหลดข้อมูล */
+.skeleton {
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease infinite;
+  border-radius: 8px;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+```
+
+### 17.2 Spinner (Button Loading)
+```css
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--gray-200);
+  border-top-color: var(--primary-600);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+```
+
+### 17.3 Disabled State (During API Call)
+```css
+.btn:disabled,
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  pointer-events: none;
+}
+```
+
+### 17.4 Loading Pattern (React)
+```jsx
+const [loading, setLoading] = useState(false);
+
+const handleSubmit = async () => {
+  setLoading(true);
+  try {
+    await adminFetch(url, { method: "POST", body: JSON.stringify(data) });
+  } finally {
+    setLoading(false);
+  }
+};
+
+<button disabled={loading}>
+  {loading ? <span className="spinner" /> : "บันทึก"}
+</button>
+```
+
+---
+
+## 18. CSS Naming Convention
+
+### 18.1 Pattern
+```
+{page}-{component}-{modifier}
+```
+
+### 18.2 Examples
+| Class | Pattern | Page |
+|-------|---------|------|
+| `.admin-home-minimal` | page container | Home |
+| `.admin-header-minimal` | header variant | Home |
+| `.setting-card-minimal` | card variant | Home |
+| `.mode-btn-minimal` | button variant | Home |
+| `.nav-minimal` | nav variant | Home |
+| `.system-status-text.on` | modifier via state | Home |
+| `.package-item` | item in list | Home |
+| `.gift-card` | card component | Gift |
+| `.report-row` | row in list | Report |
+
+### 18.3 Rules
+- ใช้ **kebab-case** เสมอ (`setting-card` ไม่ใช่ `settingCard`)
+- Page-specific classes ขึ้นต้นด้วยชื่อ page: `admin-`, `gift-`, `report-`
+- State modifiers ใช้ class เสริม: `.on`, `.off`, `.active`, `.disabled`
+- Utility classes (จาก `theme.css`) ใช้ตรงๆ ไม่ต้อง prefix
+
+---
+
+## 19. Accessibility Checklist
+
+| Rule | Detail |
+|------|--------|
+| **Focus visible** | ทุก interactive element ต้องมี `:focus` style ที่มองเห็นได้ |
+| **Color contrast** | Text บน gradient/colored background ต้องเป็น `#fff` |
+| **Button cursor** | `:disabled` → `cursor: not-allowed`, active → `cursor: pointer` |
+| **Touch target** | ขนาดขั้นต่ำ `44px × 44px` สำหรับ mobile |
+| **Alt text** | รูปภาพทุกรูปต้องมี `alt` attribute |
+| **Form labels** | ทุก input ต้องมี `<label>` หรือ `aria-label` |
