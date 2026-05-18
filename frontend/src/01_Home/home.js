@@ -2025,19 +2025,20 @@ function Home() {
                           }}
                         >
                           {editingPerkIndex === index ? (
-                            <div style={{ display: "flex", gap: "10px", width: "100%", alignItems: "center" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
                               <input
                                 type="text"
                                 value={perkInputValue}
                                 onChange={(e) => setPerkInputValue(e.target.value)}
                                 style={{
-                                  flex: 1,
-                                  padding: "10px 14px",
+                                  width: "100%",
+                                  padding: "12px 16px",
                                   border: "2px solid #f97316",
-                                  borderRadius: "8px",
+                                  borderRadius: "10px",
                                   fontSize: "14px",
                                   outline: "none",
-                                  boxShadow: "0 0 0 3px rgba(249, 115, 22, 0.1)"
+                                  boxShadow: "0 0 0 3px rgba(249, 115, 22, 0.1)",
+                                  boxSizing: "border-box"
                                 }}
                                 placeholder="แก้ไขข้อความสิทธิพิเศษ"
                                 autoFocus
@@ -2046,12 +2047,35 @@ function Home() {
                                   if (e.key === 'Escape') handleCancelEditPerk();
                                 }}
                               />
-                              <div style={{ display: "flex", gap: "8px" }}>
+                              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                                <button
+                                  onClick={handleCancelEditPerk}
+                                  title="ยกเลิก"
+                                  style={{
+                                    padding: "8px 16px",
+                                    background: "#f1f5f9",
+                                    color: "#64748b",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    fontSize: "13px",
+                                    fontWeight: "600",
+                                    transition: "background 0.2s"
+                                  }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background = "#e2e8f0"; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background = "#f1f5f9"; }}
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                  ยกเลิก
+                                </button>
                                 <button
                                   onClick={handleSavePerk}
                                   title="บันทึก"
                                   style={{
-                                    padding: "10px",
+                                    padding: "8px 16px",
                                     background: "#10b981",
                                     color: "#fff",
                                     border: "none",
@@ -2059,29 +2083,17 @@ function Home() {
                                     cursor: "pointer",
                                     display: "flex",
                                     alignItems: "center",
-                                    justifyContent: "center",
-                                    transition: "background 0.2s"
+                                    gap: "6px",
+                                    fontSize: "13px",
+                                    fontWeight: "600",
+                                    transition: "background 0.2s",
+                                    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.3)"
                                   }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background = "#059669"; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background = "#10b981"; }}
                                 >
-                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                </button>
-                                <button
-                                  onClick={handleCancelEditPerk}
-                                  title="ยกเลิก"
-                                  style={{
-                                    padding: "10px",
-                                    background: "#94a3b8",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "8px",
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    transition: "background 0.2s"
-                                  }}
-                                >
-                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                  บันทึก
                                 </button>
                               </div>
                             </div>
@@ -2173,7 +2185,7 @@ function Home() {
                   <h4 style={{ fontSize: "16px", fontWeight: "700", color: "#334155", marginBottom: "12px" }}>
                     ➕ เพิ่มสิทธิพิเศษใหม่
                   </h4>
-                  <div style={{ display: "flex", gap: "10px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     <input
                       type="text"
                       value={editingPerkIndex === null ? perkInputValue : ""}
@@ -2181,13 +2193,14 @@ function Home() {
                       disabled={editingPerkIndex !== null}
                       placeholder="เช่น: 🎁 ลดราคาพิเศษ 10% สำหรับสมาชิก VIP"
                       style={{
-                        flex: 1,
-                        padding: "12px 16px",
+                        width: "100%",
+                        padding: "14px 16px",
                         border: "1px solid rgba(102, 126, 234, 0.3)",
                         borderRadius: "12px",
                         fontSize: "14px",
                         outline: "none",
-                        opacity: editingPerkIndex !== null ? 0.5 : 1
+                        opacity: editingPerkIndex !== null ? 0.5 : 1,
+                        boxSizing: "border-box"
                       }}
                       onKeyPress={(e) => {
                         if (e.key === "Enter" && editingPerkIndex === null) {
@@ -2195,23 +2208,26 @@ function Home() {
                         }
                       }}
                     />
-                    <button
-                      onClick={handleAddPerk}
-                      disabled={editingPerkIndex !== null}
-                      style={{
-                        padding: "12px 24px",
-                        background: editingPerkIndex !== null ? "#cbd5e1" : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "12px",
-                        cursor: editingPerkIndex !== null ? "not-allowed" : "pointer",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        whiteSpace: "nowrap"
-                      }}
-                    >
-                      ➕ เพิ่ม
-                    </button>
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                      <button
+                        onClick={handleAddPerk}
+                        disabled={editingPerkIndex !== null}
+                        style={{
+                          padding: "12px 24px",
+                          background: editingPerkIndex !== null ? "#cbd5e1" : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "12px",
+                          cursor: editingPerkIndex !== null ? "not-allowed" : "pointer",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          whiteSpace: "nowrap",
+                          boxShadow: editingPerkIndex !== null ? "none" : "0 4px 12px rgba(102, 126, 234, 0.3)"
+                        }}
+                      >
+                        ➕ เพิ่มสิทธิพิเศษ
+                      </button>
+                    </div>
                   </div>
                   <small style={{ display: "block", marginTop: "12px", color: "#64748b", fontSize: "12px" }}>
                     💡 เคล็ดลับ: เริ่มต้นด้วย emoji เพื่อให้ดูน่าสนใจมากขึ้น เช่น 🎁 🌟 💎 📱
