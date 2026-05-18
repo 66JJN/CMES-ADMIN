@@ -5,6 +5,7 @@ import { API_BASE_URL, USER_FRONTEND_URL } from "../config/apiConfig";
 import "./home.css";
 import OBSControl from "../10_OBSControl/OBSControl";
 import IncomeStats from "./IncomeStats";
+import Toast from "./Toast";
 
 // 🔥 ไม่สร้าง socket ที่นี่แล้ว - จะใช้จาก Context
 // const socket = io(REALTIME_URL); // ❌ ลบบรรทัดนี้
@@ -58,6 +59,9 @@ function Home() {
   const [refreshingRanks, setRefreshingRanks] = useState(false); // สถานะกำลังรีเฟรชข้อมูล
   const [rankError, setRankError] = useState(""); // ข้อความแสดงข้อผิดพลาด
   const [rankingType, setRankingType] = useState("alltime"); // ประเภทอันดับสำหรับ Admin ดู (daily, monthly, alltime)
+
+  const [toastConfig, setToastConfig] = useState({ message: "", type: "success" });
+  const showToast = (message, type = "success") => setToastConfig({ message, type });
   const [rankLimit, setRankLimit] = useState(DEFAULT_RANK_LIMIT); // จำนวนอันดับที่ต้องการแสดง (กรอกได้)
 
   // ===== State สำหรับ Date/Month/Year Picker =====
@@ -444,7 +448,7 @@ function Home() {
   const handleSaveBirthdayRequirement = async () => {
     const requirement = Number(birthdaySpendingRequirement);
     if (isNaN(requirement) || requirement < 0) {
-      alert("กรุณากรอกยอดเงินที่ถูกต้อง");
+      showToast("กรุณากรอกยอดเงินที่ถูกต้อง", "error");
       return;
     }
 
@@ -455,13 +459,13 @@ function Home() {
       });
 
       if (res.ok) {
-        alert("บันทึกยอดใช้จ่ายขั้นต่ำสำหรับวันเกิดสำเร็จ");
+        showToast("บันทึกยอดใช้จ่ายขั้นต่ำสำหรับวันเกิดสำเร็จ", "error");
       } else {
-        alert("เกิดข้อผิดพลาดในการบันทึก");
+        showToast("เกิดข้อผิดพลาดในการบันทึก", "error");
       }
     } catch (error) {
       console.error("[Admin] Failed to save birthday requirement:", error);
-      alert("เกิดข้อผิดพลาดในการบันทึก");
+      showToast("เกิดข้อผิดพลาดในการบันทึก", "error");
     }
   };
 
@@ -513,7 +517,7 @@ function Home() {
   // ===== ฟังก์ชัน: อัพโหลดภาพ QR Code ชำระเงิน =====
   const handleUploadPaymentQr = async () => {
     if (!paymentQrFile) {
-      alert("กรุณาเลือกรูปภาพ QR Code ก่อน");
+      showToast("กรุณาเลือกรูปภาพ QR Code ก่อน", "error");
       return;
     }
     setUploadingPaymentQr(true);
@@ -536,13 +540,13 @@ function Home() {
         setPaymentQrUrl(data.paymentQrUrl);
         setPaymentQrFile(null);
         setPaymentQrPreview(null);
-        alert("✅ อัปโหลด QR Code ชำระเงินสำเร็จ");
+        showToast("✅ อัปโหลด QR Code ชำระเงินสำเร็จ", "error");
       } else {
-        alert("❌ " + (data.message || "อัปโหลดไม่สำเร็จ"));
+        showToast("❌ " + (data.message || "อัปโหลดไม่สำเร็จ", "error"));
       }
     } catch (error) {
       console.error("[Admin] Upload payment QR failed:", error);
-      alert("❌ เกิดข้อผิดพลาดในการอัปโหลด");
+      showToast("❌ เกิดข้อผิดพลาดในการอัปโหลด", "error");
     } finally {
       setUploadingPaymentQr(false);
     }
@@ -569,7 +573,7 @@ function Home() {
   // ===== ฟังก์ชัน: บันทึกการแก้ไขสิทธิพิเศษ =====
   const handleSavePerk = () => {
     if (!perkInputValue.trim()) {
-      alert("กรุณากรอกข้อความสิทธิพิเศษ");
+      showToast("กรุณากรอกข้อความสิทธิพิเศษ", "error");
       return;
     }
 
@@ -589,7 +593,7 @@ function Home() {
   // ===== ฟังก์ชัน: เพิ่มสิทธิพิเศษใหม่ =====
   const handleAddPerk = () => {
     if (!perkInputValue.trim()) {
-      alert("กรุณากรอกข้อความสิทธิพิเศษ");
+      showToast("กรุณากรอกข้อความสิทธิพิเศษ", "error");
       return;
     }
 
@@ -608,7 +612,7 @@ function Home() {
   // ===== ฟังก์ชัน: บันทึกสิทธิพิเศษทั้งหมดและ Broadcast ไปยังผู้ใช้ =====
   const handleSaveAllPerks = async () => {
     if (perks.length === 0) {
-      alert("ต้องมีสิทธิพิเศษอย่างน้อย 1 รายการ");
+      showToast("ต้องมีสิทธิพิเศษอย่างน้อย 1 รายการ", "error");
       return;
     }
 
@@ -627,14 +631,14 @@ function Home() {
           socket.emit("adminUpdatePerks", { perks });
           console.log("[Admin] ✅ Socket emitted: adminUpdatePerks");
         }
-        alert("✅ บันทึกสิทธิพิเศษสำเร็จ\n\nการเปลี่ยนแปลงจะแสดงแบบ Real-time บนหน้า User ทันที");
+        showToast("✅ บันทึกสิทธิพิเศษสำเร็จ\n\nการเปลี่ยนแปลงจะแสดงแบบ Real-time บนหน้า User ทันที", "error");
         handleClosePerksModal();
       } else {
-        alert("เกิดข้อผิดพลาดในการบันทึก");
+        showToast("เกิดข้อผิดพลาดในการบันทึก", "error");
       }
     } catch (error) {
       console.error("[Admin] Failed to save perks:", error);
-      alert("เกิดข้อผิดพลาดในการบันทึก");
+      showToast("เกิดข้อผิดพลาดในการบันทึก", "error");
     } finally {
       setSavingPerks(false);
     }
@@ -643,11 +647,11 @@ function Home() {
   // ===== ฟังก์ชัน: บันทึกการตั้งค่าแพ็คเกจ =====
   const handleSave = () => {
     if (!minute && !second) {
-      alert("กรุณากรอกเวลาอย่างน้อย 1 ช่อง");
+      showToast("กรุณากรอกเวลาอย่างน้อย 1 ช่อง", "error");
       return;
     }
     if (!price && mode !== "birthday") {
-      alert("กรุณากรอกราคา");
+      showToast("กรุณากรอกราคา", "error");
       return;
     }
 
@@ -666,7 +670,7 @@ function Home() {
 
     // 🔥 Check socket before emit
     if (!socket || !socket.connected) {
-      alert("ไม่สามารถบันทึกได้: ยังไม่ได้เชื่อมต่อ Realtime Server กรุณารอสักครู่แล้วลองใหม่");
+      showToast("ไม่สามารถบันทึกได้: ยังไม่ได้เชื่อมต่อ Realtime Server กรุณารอสักครู่แล้วลองใหม่", "error");
       return;
     }
     socket.emit("addPackage", packageData, (ack) => {
@@ -675,7 +679,7 @@ function Home() {
     setMinute("");
     setSecond("");
     setPrice("");
-    alert("บันทึกแพ็คเกจสำเร็จ");
+    showToast("บันทึกแพ็คเกจสำเร็จ", "error");
   };
 
   // ===== ฟังก์ชัน: กำหนดประเภทอันดับที่จะแสดงบนหน้าจอผู้ใช้ =====
@@ -969,150 +973,7 @@ function Home() {
                         </small>
                       </div>
 
-                      {/* OBS Links Section (ย้ายไป Modal แล้ว) */}
-                      {false && (
-                        <div className="toggle-card" style={{ flexDirection: "column", alignItems: "flex-start", gap: "12px", marginTop: "16px", background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)", border: "2px solid #0ea5e9" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "space-between", width: "100%" }}>
-                            <span style={{ fontSize: "16px", fontWeight: "700", color: "#0369a1" }}>🎥 OBS Overlay Links</span>
-                            <span style={{ fontSize: "11px", color: "#64748b", background: "#fff", padding: "4px 8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}>
-                              {adminUsername}
-                            </span>
-                          </div>
 
-                          {/* Image Overlay Link */}
-                          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "6px" }}>
-                            <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Image & Text Overlay:</label>
-                            <div style={{ display: "flex", gap: "8px" }}>
-                              <input
-                                type="text"
-                                readOnly
-                                value={`${API_BASE_URL}/obs-image-overlay.html?shopId=${adminId}`}
-                                style={{
-                                  flex: 1,
-                                  padding: "8px 12px",
-                                  border: "1px solid #cbd5e1",
-                                  borderRadius: "8px",
-                                  fontSize: "13px",
-                                  background: "#fff",
-                                  color: "#334155"
-                                }}
-                              />
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(`${API_BASE_URL}/obs-image-overlay.html?shopId=${adminId}`);
-                                  setCopiedImage(true);
-                                  setTimeout(() => setCopiedImage(false), 2000);
-                                }}
-                                style={{
-                                  padding: "8px 16px",
-                                  background: copiedImage ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #0ea5e9, #0284c7)",
-                                  color: "#fff",
-                                  border: "none",
-                                  borderRadius: "8px",
-                                  cursor: "pointer",
-                                  fontSize: "13px",
-                                  fontWeight: "600",
-                                  whiteSpace: "nowrap",
-                                  transition: "all 0.3s ease",
-                                  transform: copiedImage ? "scale(0.95)" : "scale(1)"
-                                }}
-                              >
-                                {copiedImage ? "✓ Copied!" : "📋 Copy"}
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Ranking Overlay Link */}
-                          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "6px" }}>
-                            <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Ranking Overlay:</label>
-                            <div style={{ display: "flex", gap: "8px" }}>
-                              <input
-                                type="text"
-                                readOnly
-                                value={`${API_BASE_URL}/obs-ranking-overlay.html?shopId=${adminId}`}
-                                style={{
-                                  flex: 1,
-                                  padding: "8px 12px",
-                                  border: "1px solid #cbd5e1",
-                                  borderRadius: "8px",
-                                  fontSize: "13px",
-                                  background: "#fff",
-                                  color: "#334155"
-                                }}
-                              />
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(`${API_BASE_URL}/obs-ranking-overlay.html?shopId=${adminId}`);
-                                  setCopiedRanking(true);
-                                  setTimeout(() => setCopiedRanking(false), 2000);
-                                }}
-                                style={{
-                                  padding: "8px 16px",
-                                  background: copiedRanking ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #0ea5e9, #0284c7)",
-                                  color: "#fff",
-                                  border: "none",
-                                  borderRadius: "8px",
-                                  cursor: "pointer",
-                                  fontSize: "13px",
-                                  fontWeight: "600",
-                                  whiteSpace: "nowrap",
-                                  transition: "all 0.3s ease",
-                                  transform: copiedRanking ? "scale(0.95)" : "scale(1)"
-                                }}
-                              >
-                                {copiedRanking ? "✓ Copied!" : "📋 Copy"}
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Lucky Wheel Overlay Link */}
-                          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "6px" }}>
-                            <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Lucky Wheel Overlay:</label>
-                            <div style={{ display: "flex", gap: "8px" }}>
-                              <input
-                                type="text"
-                                readOnly
-                                value={`${API_BASE_URL}/obs-lucky-wheel.html?shopId=${adminId}`}
-                                style={{
-                                  flex: 1,
-                                  padding: "8px 12px",
-                                  border: "1px solid #cbd5e1",
-                                  borderRadius: "8px",
-                                  fontSize: "13px",
-                                  background: "#fff",
-                                  color: "#334155"
-                                }}
-                              />
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(`${API_BASE_URL}/obs-lucky-wheel.html?shopId=${adminId}`);
-                                  setCopiedWheel(true);
-                                  setTimeout(() => setCopiedWheel(false), 2000);
-                                }}
-                                style={{
-                                  padding: "8px 16px",
-                                  background: copiedWheel ? "linear-gradient(135deg, #10b981, #059669)" : "linear-gradient(135deg, #0ea5e9, #0284c7)",
-                                  color: "#fff",
-                                  border: "none",
-                                  borderRadius: "8px",
-                                  cursor: "pointer",
-                                  fontSize: "13px",
-                                  fontWeight: "600",
-                                  whiteSpace: "nowrap",
-                                  transition: "all 0.3s ease",
-                                  transform: copiedWheel ? "scale(0.95)" : "scale(1)"
-                                }}
-                              >
-                                {copiedWheel ? "✓ Copied!" : "📋 Copy"}
-                              </button>
-                            </div>
-                          </div>
-
-                          <small style={{ color: "#64748b", fontSize: "11px", marginTop: "4px" }}>
-                            💡 คัดลอกลิงก์เหล่านี้ไปเพิ่มใน OBS Studio เป็น Browser Source (ลิงก์เฉพาะร้านของคุณ)
-                          </small>
-                        </div>
-                      )}
                     </div>
                   </>)}
                 </section>
@@ -1252,49 +1113,7 @@ function Home() {
                       )}
                     </div>
 
-                    {/* QR Code Section (ซ่อนไว้เพราะใช้ปุ่มด้านบนแทน) */}
-                    {false && (
-                      <div style={{
-                        marginTop: "24px",
 
-                        padding: "20px",
-                        background: "linear-gradient(135deg, #fef3c7, #fde68a)",
-                        border: "2px solid #f59e0b",
-                        borderRadius: "12px",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: "12px"
-                      }}>
-                        <span style={{ fontSize: "16px", fontWeight: "700", color: "#92400e", textAlign: "center" }}>
-                          📱 QR Code สำหรับลูกค้า
-                        </span>
-
-                        <button
-                          onClick={generateQRCode}
-                          style={{
-                            padding: "12px 24px",
-                            background: "linear-gradient(135deg, #f59e0b, #d97706)",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: "8px",
-                            cursor: "pointer",
-                            fontSize: "14px",
-                            fontWeight: "600",
-                            width: "100%",
-                            transition: "transform 0.2s ease"
-                          }}
-                          onMouseEnter={(e) => e.target.style.transform = "scale(1.02)"}
-                          onMouseLeave={(e) => e.target.style.transform = "scale(1)"}
-                        >
-                          🎯 สร้าง QR Code
-                        </button>
-
-                        <small style={{ color: "#92400e", fontSize: "11px", textAlign: "center" }}>
-                          💡 ลูกค้าสแกน QR Code เพื่อเข้าสู่ระบบของร้านคุณ
-                        </small>
-                      </div>
-                    )}
                   </>)}
                 </section>
               </div>
@@ -1750,7 +1569,7 @@ function Home() {
                       onClick={() => {
                         const url = `${USER_FRONTEND_URL}/?shopId=${shopId || localStorage.getItem('shopId') || 'CMES ADMIN'}`;
                         navigator.clipboard.writeText(url);
-                        alert("✅ คัดลอกลิงก์สำเร็จ!");
+                        showToast("✅ คัดลอกลิงก์สำเร็จ!", "error");
                       }}
                       style={{
                         padding: "14px 24px",
@@ -2313,6 +2132,7 @@ function Home() {
 
       {/* ===== Modal: Income Stats Analyzer (ย้ายไปเป็น Component แยก) ===== */}
       <IncomeStats show={showIncomeStats} onClose={() => setShowIncomeStats(false)} />
+      <Toast message={toastConfig.message} type={toastConfig.type} onClose={() => setToastConfig({ message: "", type: "success" })} />
 
     </div >
   );
