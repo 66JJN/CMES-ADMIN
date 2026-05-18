@@ -459,7 +459,7 @@ function Home() {
       });
 
       if (res.ok) {
-        showToast("บันทึกยอดใช้จ่ายขั้นต่ำสำหรับวันเกิดสำเร็จ", "error");
+        showToast("บันทึกยอดใช้จ่ายขั้นต่ำสำหรับวันเกิดสำเร็จ", "success");
       } else {
         showToast("เกิดข้อผิดพลาดในการบันทึก", "error");
       }
@@ -540,9 +540,9 @@ function Home() {
         setPaymentQrUrl(data.paymentQrUrl);
         setPaymentQrFile(null);
         setPaymentQrPreview(null);
-        showToast("✅ อัปโหลด QR Code ชำระเงินสำเร็จ", "error");
+        showToast("✅ อัปโหลด QR Code ชำระเงินสำเร็จ", "success");
       } else {
-        showToast("❌ " + (data.message || "อัปโหลดไม่สำเร็จ", "error"));
+        showToast("❌ " + (data.message || "อัปโหลดไม่สำเร็จ"), "error");
       }
     } catch (error) {
       console.error("[Admin] Upload payment QR failed:", error);
@@ -631,7 +631,7 @@ function Home() {
           socket.emit("adminUpdatePerks", { perks });
           console.log("[Admin] ✅ Socket emitted: adminUpdatePerks");
         }
-        showToast("✅ บันทึกสิทธิพิเศษสำเร็จ\n\nการเปลี่ยนแปลงจะแสดงแบบ Real-time บนหน้า User ทันที", "error");
+        showToast("✅ บันทึกสิทธิพิเศษสำเร็จ\n\nการเปลี่ยนแปลงจะแสดงแบบ Real-time บนหน้า User ทันที", "success");
         handleClosePerksModal();
       } else {
         showToast("เกิดข้อผิดพลาดในการบันทึก", "error");
@@ -679,7 +679,7 @@ function Home() {
     setMinute("");
     setSecond("");
     setPrice("");
-    showToast("บันทึกแพ็คเกจสำเร็จ", "error");
+    showToast("บันทึกแพ็คเกจสำเร็จ", "success");
   };
 
   // ===== ฟังก์ชัน: กำหนดประเภทอันดับที่จะแสดงบนหน้าจอผู้ใช้ =====
@@ -769,22 +769,7 @@ function Home() {
           <button
             onClick={generateQRCode}
             title="QR Code ร้านค้า"
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#f8f9fa",
-              color: "#333",
-              border: "1px solid #ddd",
-              borderRadius: "20px",
-              cursor: "pointer",
-              fontWeight: "600",
-              fontSize: "14px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#e2e8f0"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#f8f9fa"; }}
+            className="btn-qr-link"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -800,33 +785,13 @@ function Home() {
           <button
             onClick={() => navigate("/edit-profile")}
             title={shopProfile.name}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              background: shopProfile.logo ? "transparent" : "linear-gradient(135deg, #667eea, #764ba2)",
-              border: "2px solid rgba(255,255,255,0.3)",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 15,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              boxShadow: "0 2px 8px rgba(102,126,234,0.4)",
-              transition: "transform 0.2s, box-shadow 0.2s",
-              overflow: "hidden",
-              padding: 0,
-            }}
-            onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.1)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(102,126,234,0.6)"; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(102,126,234,0.4)"; }}
+            className={`btn-avatar ${shopProfile.logo ? 'btn-avatar-bg-transparent' : 'btn-avatar-bg-default'}`}
           >
             {shopProfile.logo ? (
               <img 
                 src={shopProfile.logo.startsWith('http') ? shopProfile.logo : `${API_BASE_URL}${shopProfile.logo.startsWith('/') ? '' : '/'}${shopProfile.logo}`}
                 alt="Shop Logo"
-                style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+                className="avatar-img"
               />
             ) : (
               (shopProfile.name || adminUsername || "JJ").slice(0, 2).toUpperCase()
@@ -1569,7 +1534,7 @@ function Home() {
                       onClick={() => {
                         const url = `${USER_FRONTEND_URL}/?shopId=${shopId || localStorage.getItem('shopId') || 'CMES ADMIN'}`;
                         navigator.clipboard.writeText(url);
-                        showToast("✅ คัดลอกลิงก์สำเร็จ!", "error");
+                        showToast("✅ คัดลอกลิงก์สำเร็จ!", "success");
                       }}
                       style={{
                         padding: "14px 24px",
