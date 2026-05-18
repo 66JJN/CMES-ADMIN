@@ -2014,9 +2014,9 @@ function Home() {
                           key={index}
                           style={{
                             padding: "16px",
-                            background: editingPerkIndex === index ? "#fff7ed" : "#fff",
+                            background: editingPerkIndex === index ? "#fff7ed" : "rgba(248, 250, 252, 0.7)",
                             borderRadius: "12px",
-                            border: editingPerkIndex === index ? "2px solid #f97316" : "1px solid #e2e8f0",
+                            border: editingPerkIndex === index ? "2px solid #f97316" : "1px solid rgba(102, 126, 234, 0.15)",
                             display: "flex",
                             alignItems: "center",
                             gap: "16px",
@@ -2166,11 +2166,11 @@ function Home() {
                 <div style={{
                   marginTop: "24px",
                   padding: "20px",
-                  background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)",
-                  borderRadius: "12px",
-                  border: "2px solid #0ea5e9"
+                  background: "rgba(102, 126, 234, 0.05)",
+                  borderRadius: "16px",
+                  border: "1px dashed rgba(102, 126, 234, 0.4)"
                 }}>
-                  <h4 style={{ fontSize: "16px", fontWeight: "700", color: "#0369a1", marginBottom: "12px" }}>
+                  <h4 style={{ fontSize: "16px", fontWeight: "700", color: "#334155", marginBottom: "12px" }}>
                     ➕ เพิ่มสิทธิพิเศษใหม่
                   </h4>
                   <div style={{ display: "flex", gap: "10px" }}>
@@ -2183,8 +2183,8 @@ function Home() {
                       style={{
                         flex: 1,
                         padding: "12px 16px",
-                        border: "2px solid #0ea5e9",
-                        borderRadius: "10px",
+                        border: "1px solid rgba(102, 126, 234, 0.3)",
+                        borderRadius: "12px",
                         fontSize: "14px",
                         outline: "none",
                         opacity: editingPerkIndex !== null ? 0.5 : 1
@@ -2200,10 +2200,10 @@ function Home() {
                       disabled={editingPerkIndex !== null}
                       style={{
                         padding: "12px 24px",
-                        background: editingPerkIndex !== null ? "#cbd5e1" : "linear-gradient(135deg, #10b981, #059669)",
+                        background: editingPerkIndex !== null ? "#cbd5e1" : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                         color: "#fff",
                         border: "none",
-                        borderRadius: "10px",
+                        borderRadius: "12px",
                         cursor: editingPerkIndex !== null ? "not-allowed" : "pointer",
                         fontSize: "14px",
                         fontWeight: "600",
@@ -2213,7 +2213,7 @@ function Home() {
                       ➕ เพิ่ม
                     </button>
                   </div>
-                  <small style={{ display: "block", marginTop: "8px", color: "#0369a1", fontSize: "12px" }}>
+                  <small style={{ display: "block", marginTop: "12px", color: "#64748b", fontSize: "12px" }}>
                     💡 เคล็ดลับ: เริ่มต้นด้วย emoji เพื่อให้ดูน่าสนใจมากขึ้น เช่น 🎁 🌟 💎 📱
                   </small>
                 </div>
@@ -2256,7 +2256,7 @@ function Home() {
                     style={{
                       flex: 1,
                       padding: "16px 24px",
-                      background: savingPerks || perks.length === 0 ? "#cbd5e1" : "linear-gradient(135deg, #f59e0b, #d97706)",
+                      background: savingPerks || perks.length === 0 ? "#cbd5e1" : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                       color: "#fff",
                       border: "none",
                       borderRadius: "12px",
@@ -2264,7 +2264,7 @@ function Home() {
                       fontSize: "16px",
                       fontWeight: "700",
                       transition: "all 0.3s ease",
-                      boxShadow: savingPerks || perks.length === 0 ? "none" : "0 4px 12px rgba(245, 158, 11, 0.3)"
+                      boxShadow: savingPerks || perks.length === 0 ? "none" : "0 8px 16px rgba(102, 126, 234, 0.25)"
                     }}
                   >
                     {savingPerks ? "กำลังบันทึก..." : "💾 บันทึกทั้งหมด"}
@@ -2275,12 +2275,12 @@ function Home() {
                 <div style={{
                   marginTop: "20px",
                   padding: "16px",
-                  background: "#fef3c7",
-                  borderRadius: "10px",
-                  border: "1px solid #f59e0b"
+                  background: "rgba(241, 245, 249, 0.7)",
+                  borderRadius: "12px",
+                  border: "1px solid rgba(226, 232, 240, 0.8)"
                 }}>
                   <small style={{
-                    color: "#92400e",
+                    color: "#475569",
                     fontSize: "13px",
                     display: "block",
                     lineHeight: "1.6"
