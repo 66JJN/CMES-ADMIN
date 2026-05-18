@@ -2241,7 +2241,7 @@ app.get("/api/admin/income-stats", requireAdminAuth, async (req, res) => {
     const records = await CheckHistory.find({
       shopId,
       createdAt: { $gte: start, $lte: end },
-      status: "completed" // นับเฉพาะที่ขึ้นจอแล้วหรืออนุมัติแล้ว
+      status: { $in: ["completed", "rejected"] } // นับทั้งที่ขึ้นจอแล้วและถูกปฏิเสธ (เพราะ user จ่ายเงินแล้ว)
     }).lean();
 
     let totalIncome = 0;
@@ -2342,7 +2342,7 @@ app.get("/api/admin/income-stats", requireAdminAuth, async (req, res) => {
       const prevRecords = await CheckHistory.find({
         shopId,
         createdAt: { $gte: prevStart, $lte: prevEnd },
-        status: "completed"
+        status: { $in: ["completed", "rejected"] } // นับทั้งที่ขึ้นจอแล้วและถูกปฏิเสธ
       }).lean();
       const prevIncome = prevRecords.reduce((sum, r) => sum + (r.price || 0), 0);
       if (prevIncome > 0) {
