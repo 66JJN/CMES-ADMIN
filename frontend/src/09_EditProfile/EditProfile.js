@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { ShopContext } from "../contexts/ShopContext";
 import { API_BASE_URL } from "../config/apiConfig";
 import adminFetch from "../config/authFetch";
@@ -261,11 +261,11 @@ function EditProfile() {
             <div className="ep-glass-card">
                 {/* Header */}
                 <div className="ep-header" style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingBottom: '16px', borderBottom: '2px solid rgba(102, 126, 234, 0.1)', marginBottom: '24px' }}>
-                    <button className="back-nav-btn" onClick={() => navigate("/home")} title="กลับสู่หน้าหลัก" style={{ color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <Link to="/home" className="back-nav-btn" title="กลับหน้าหลัก">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M15 19l-7-7 7-7" />
                         </svg>
-                    </button>
+                    </Link>
                     <h2 style={{ 
                         margin: 0, 
                         fontSize: '1.5rem', 
