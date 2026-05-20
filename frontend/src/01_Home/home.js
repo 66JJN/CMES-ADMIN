@@ -296,7 +296,7 @@ function Home() {
       if (silent) setRefreshingRanks(false);
       else setRankLoading(false);
     }
-  }, [rankingType, rankLimit, selectedDate, selectedMonth, selectedYear]);
+  }, [rankingType, rankLimit, selectedDate, selectedMonth, selectedYear, authFetch]);
 
   // ===== ฟังก์ชัน: โหลดยอดรวม (Summary) =====
   const loadRankingSummary = useCallback(async () => {
@@ -315,7 +315,7 @@ function Home() {
     } catch (error) {
       console.error("[Admin] loadRankingSummary failed", error);
     }
-  }, [rankingType, selectedDate, selectedMonth, selectedYear]);
+  }, [rankingType, selectedDate, selectedMonth, selectedYear, authFetch]);
 
   // ===== useEffect: โหลดข้อมูลเริ่มต้น =====
   // โหลดอันดับและยอดใช้จ่ายวันเกิดเมื่อเริ่มต้น
@@ -323,7 +323,7 @@ function Home() {
     loadTopRanks();
     loadRankingSummary();
     loadBirthdayRequirement();
-  }, [loadTopRanks, loadRankingSummary]);
+  }, [loadTopRanks, loadRankingSummary, loadBirthdayRequirement]);
 
   // ===== useEffect: โหลดอันดับใหม่เมื่อเปลี่ยนประเภทหรือ filter =====
   // Reset cache ของ Modal และ reset filter เมื่อเปลี่ยนประเภท
@@ -335,7 +335,7 @@ function Home() {
   }, [rankingType, rankLimit, selectedDate, selectedMonth, selectedYear, loadTopRanks, loadRankingSummary]);
 
   // ===== ฟังก์ชัน: โหลดยอดใช้จ่ายขั้นต่ำสำหรับวันเกิด =====
-  const loadBirthdayRequirement = async () => {
+  const loadBirthdayRequirement = useCallback(async () => {
     try {
       const res = await authFetch(`${API_BASE_URL}/api/config/birthday-requirement`);
       if (res.ok) {
@@ -347,7 +347,7 @@ function Home() {
     } catch (error) {
       console.error("[Admin] Failed to load birthday requirement:", error);
     }
-  };
+  }, [authFetch]);
 
   // ===== ฟังก์ชัน: เปิด/ปิดระบบทั้งหมด =====
   // เมื่อปิดระบบ จะปิดฟังก์ชันทั้งหมด / เมื่อเปิดจะเปิดฟังก์ชันทั้งหมด
@@ -485,7 +485,7 @@ function Home() {
       }
     };
     loadPerks();
-  }, []);
+  }, [authFetch]);
 
   // ===== useEffect: โหลดภาพ QR Code ชำระเงินปัจจุบัน =====
   useEffect(() => {
@@ -503,7 +503,7 @@ function Home() {
       }
     };
     loadPaymentQr();
-  }, []);
+  }, [authFetch]);
 
   // ===== ฟังก์ชัน: เลือกไฟล์ QR Code ชำระเงิน =====
   const handlePaymentQrFileChange = (e) => {
