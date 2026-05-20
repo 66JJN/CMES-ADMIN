@@ -317,6 +317,21 @@ function Home() {
     }
   }, [rankingType, selectedDate, selectedMonth, selectedYear, authFetch]);
 
+  // ===== ฟังก์ชัน: โหลดยอดใช้จ่ายขั้นต่ำสำหรับวันเกิด =====
+  const loadBirthdayRequirement = useCallback(async () => {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/config/birthday-requirement`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setBirthdaySpendingRequirement(data.birthdaySpendingRequirement || 100);
+        }
+      }
+    } catch (error) {
+      console.error("[Admin] Failed to load birthday requirement:", error);
+    }
+  }, [authFetch]);
+
   // ===== useEffect: โหลดข้อมูลเริ่มต้น =====
   // โหลดอันดับและยอดใช้จ่ายวันเกิดเมื่อเริ่มต้น
   useEffect(() => {
@@ -333,21 +348,6 @@ function Home() {
     loadTopRanks();
     loadRankingSummary();
   }, [rankingType, rankLimit, selectedDate, selectedMonth, selectedYear, loadTopRanks, loadRankingSummary]);
-
-  // ===== ฟังก์ชัน: โหลดยอดใช้จ่ายขั้นต่ำสำหรับวันเกิด =====
-  const loadBirthdayRequirement = useCallback(async () => {
-    try {
-      const res = await authFetch(`${API_BASE_URL}/api/config/birthday-requirement`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setBirthdaySpendingRequirement(data.birthdaySpendingRequirement || 100);
-        }
-      }
-    } catch (error) {
-      console.error("[Admin] Failed to load birthday requirement:", error);
-    }
-  }, [authFetch]);
 
   // ===== ฟังก์ชัน: เปิด/ปิดระบบทั้งหมด =====
   // เมื่อปิดระบบ จะปิดฟังก์ชันทั้งหมด / เมื่อเปิดจะเปิดฟังก์ชันทั้งหมด
