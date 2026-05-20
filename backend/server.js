@@ -2238,11 +2238,34 @@ app.get("/api/admin/income-stats", requireAdminAuth, async (req, res) => {
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
 
-    const records = await CheckHistory.find({
-      shopId,
-      createdAt: { $gte: start, $lte: end },
-      status: { $in: ["completed", "rejected"] } // นับทั้งที่ขึ้นจอแล้วและถูกปฏิเสธ (เพราะ user จ่ายเงินแล้ว)
-    }).lean();
+    // 🔥 ดึงข้อมูลจากทั้ง CheckHistory และ ImageQueue เพื่อนับรายรับที่ user จ่ายแล้วทั้งหมด
+    // (รวมรายการที่ยังค้างใน ImageQueue เช่น รูปที่ถูก AI ปฏิเสธแต่ user จ่ายเงินแล้ว)
+    const [historyRecords, queueRecords] = await Promise.all([
+      CheckHistory.find({
+        shopId,
+        createdAt: { $gte: start, $lte: end },
+        status: { $in: ["completed", "rejected"] }
+      }).lean(),
+      ImageQueue.find({
+        shopId,
+        receivedAt: { $gte: start, $lte: end }
+      }).lean()
+    ]);
+
+    // 🔥 รวมข้อมูลจากทั้ง 2 collections โดย normalize field names
+    const records = [
+      ...historyRecords.map(r => ({
+        ...r,
+        _source: 'history',
+        _dateField: r.createdAt
+      })),
+      ...queueRecords.map(r => ({
+        ...r,
+        sender: r.sender || 'Unknown',
+        _source: 'queue',
+        _dateField: r.receivedAt || r.createdAt
+      }))
+    ];
 
     let totalIncome = 0;
     const userSet = new Set();
@@ -2272,11 +2295,12 @@ app.get("/api/admin/income-stats", requireAdminAuth, async (req, res) => {
       userAmtMap[uKey].amount += price;
 
       // Activity type breakdown
-      const t = r.type || "other";
+      const t = r.type || (r.filePath ? 'image' : 'other');
       typeMap[t] = (typeMap[t] || 0) + 1;
 
-      if (r.createdAt) {
-        const localTime = new Date(r.createdAt.getTime() + TH_OFFSET);
+      const dateField = r._dateField;
+      if (dateField) {
+        const localTime = new Date(new Date(dateField).getTime() + TH_OFFSET);
 
         // Peak hour
         const hour = localTime.getUTCHours().toString().padStart(2, "0");
@@ -2339,12 +2363,18 @@ app.get("/api/admin/income-stats", requireAdminAuth, async (req, res) => {
 
     let growthPct = null;
     try {
-      const prevRecords = await CheckHistory.find({
-        shopId,
-        createdAt: { $gte: prevStart, $lte: prevEnd },
-        status: { $in: ["completed", "rejected"] } // นับทั้งที่ขึ้นจอแล้วและถูกปฏิเสธ
-      }).lean();
-      const prevIncome = prevRecords.reduce((sum, r) => sum + (r.price || 0), 0);
+      const [prevHistoryRecords, prevQueueRecords] = await Promise.all([
+        CheckHistory.find({
+          shopId,
+          createdAt: { $gte: prevStart, $lte: prevEnd },
+          status: { $in: ["completed", "rejected"] }
+        }).lean(),
+        ImageQueue.find({
+          shopId,
+          receivedAt: { $gte: prevStart, $lte: prevEnd }
+        }).lean()
+      ]);
+      const prevIncome = [...prevHistoryRecords, ...prevQueueRecords].reduce((sum, r) => sum + (r.price || 0), 0);
       if (prevIncome > 0) {
         growthPct = Math.round(((totalIncome - prevIncome) / prevIncome) * 100 * 10) / 10;
       } else if (totalIncome > 0) {
