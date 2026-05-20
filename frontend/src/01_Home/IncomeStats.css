@@ -146,39 +146,12 @@
   background: rgba(255, 255, 255, 0.18);
 }
 
-/* Quick date presets */
-.income-presets {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  align-items: center;
-  padding-bottom: 2px;
-}
-
-.income-preset-btn {
-  padding: 7px 14px;
-  border-radius: 8px;
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-  white-space: nowrap;
-}
-
-.income-preset-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.35);
-}
-
-.income-preset-btn.active {
-  background: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.5);
+.income-date-input option {
+  background: #2d3748;
   color: #fff;
 }
+
+
 
 /* ── Body ── */
 .income-body {
@@ -806,9 +779,7 @@
     grid-template-columns: 1fr;
   }
 
-  .income-presets {
-    display: none;
-  }
+
 }
 
 @media (max-width: 480px) {

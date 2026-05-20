@@ -21,14 +21,56 @@ const PEAK_COLORS = ["#4f46e5", "#6d28d9", "#7c3aed"];
  * 🔥 ดึงข้อมูลสดจาก MongoDB ทุกครั้งที่เปิด (ไม่ cache)
  */
 function IncomeStats({ show, onClose }) {
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() - 7);
-    return d.toISOString().split("T")[0];
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split("T")[0]);
+  // ===== LocalStorage persistence =====
+  const getInitialDates = () => {
+    try {
+      const saved = localStorage.getItem('adminIncomeStats');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Migrate old presets
+        if (parsed.activePreset === '30_days' || parsed.activePreset === '7_days') {
+          parsed.activePreset = 'this_week';
+          
+          // Re-calculate dates for this_week
+          const end = new Date();
+          const start = new Date();
+          const day = end.getDay();
+          const diff = end.getDate() - day + (day === 0 ? -6 : 1);
+          start.setDate(diff);
+          
+          parsed.startDate = start.toISOString().split("T")[0];
+          parsed.endDate = end.toISOString().split("T")[0];
+        }
+        return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to parse adminIncomeStats from localStorage');
+    }
+    // Default to this week
+    const end = new Date();
+    const start = new Date();
+    const day = end.getDay();
+    const diff = end.getDate() - day + (day === 0 ? -6 : 1); // 1 = จันทร์
+    start.setDate(diff);
+    return { 
+      startDate: start.toISOString().split("T")[0], 
+      endDate: end.toISOString().split("T")[0], 
+      activePreset: 'this_week' 
+    };
+  };
+
+  const initial = getInitialDates();
+  const [startDate, setStartDate] = useState(initial.startDate);
+  const [endDate, setEndDate] = useState(initial.endDate);
+  const [activePreset, setActivePreset] = useState(initial.activePreset || '');
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // ป้องกันการอัปเดตแบบ infinite loop: บันทึกเฉพาะเมื่อเปลี่ยนด้วยมือ ไม่ใช่ตอน render
+  useEffect(() => {
+    localStorage.setItem('adminIncomeStats', JSON.stringify({ startDate, endDate, activePreset }));
+  }, [startDate, endDate, activePreset]);
 
   // ===== Fetch สถิติจาก API (ไม่ cache) =====
   const fetchStats = useCallback(async () => {
@@ -62,11 +104,39 @@ function IncomeStats({ show, onClose }) {
   if (!show) return null;
 
   // ===== Quick date preset helpers =====
-  const setPreset = (days) => {
+  const handlePreset = (type) => {
+    if (type === 'custom') {
+      setActivePreset('custom');
+      return;
+    }
+    
     const end = new Date();
-    const start = new Date(); start.setDate(start.getDate() - days);
+    let start = new Date();
+    
+    if (type === 'today') {
+      // วันนี้ (Today) - ใช้ start=end
+    } else if (type === 'this_week') {
+      const day = end.getDay();
+      const diff = end.getDate() - day + (day === 0 ? -6 : 1); // เริ่มวันจันทร์
+      start.setDate(diff);
+    } else if (type === 'this_month') {
+      start = new Date(end.getFullYear(), end.getMonth(), 1);
+    } else if (type === 'this_year') {
+      start = new Date(end.getFullYear(), 0, 1);
+    } else if (type === 'all_time') {
+      // ถอยไป 5 ปี ก็เพียงพอให้ครอบคลุมเวลาเริ่มต้นโปรเจค
+      start = new Date(end.getFullYear() - 5, 0, 1); 
+    }
+    
     setStartDate(start.toISOString().split("T")[0]);
     setEndDate(end.toISOString().split("T")[0]);
+    setActivePreset(type);
+  };
+
+  const handleCustomDateChange = (isStart, value) => {
+    setActivePreset('custom');
+    if (isStart) setStartDate(value);
+    else setEndDate(value);
   };
 
   // ===== Check if data is completely empty =====
@@ -96,16 +166,26 @@ function IncomeStats({ show, onClose }) {
           <div className="income-date-row">
             <div className="income-date-group">
               <label className="income-date-label">📅 เริ่มต้นที่</label>
-              <input type="date" className="income-date-input" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <input type="date" className="income-date-input" value={startDate} onChange={(e) => handleCustomDateChange(true, e.target.value)} />
             </div>
             <div className="income-date-group">
               <label className="income-date-label">📅 ถึงวันที่</label>
-              <input type="date" className="income-date-input" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              <input type="date" className="income-date-input" value={endDate} onChange={(e) => handleCustomDateChange(false, e.target.value)} />
             </div>
-            <div className="income-presets">
-              <button className="income-preset-btn" onClick={() => setPreset(7)}>7 วัน</button>
-              <button className="income-preset-btn" onClick={() => setPreset(14)}>14 วัน</button>
-              <button className="income-preset-btn" onClick={() => setPreset(30)}>30 วัน</button>
+            <div className="income-date-group">
+              <label className="income-date-label">⌛ ช่วงเวลา</label>
+              <select 
+                className="income-date-input" 
+                value={activePreset} 
+                onChange={(e) => handlePreset(e.target.value)}
+              >
+                <option value="today">วันนี้</option>
+                <option value="this_week">สัปดาห์นี้</option>
+                <option value="this_month">เดือนนี้</option>
+                <option value="this_year">ปีนี้</option>
+                <option value="all_time">ตลอดกาล</option>
+                <option value="custom" disabled hidden>กำหนดเอง</option>
+              </select>
             </div>
           </div>
         </div>
