@@ -255,6 +255,39 @@
   color: var(--gray-400, #9ca3af);
 }
 
+/* Preset filter tabs */
+.ch-preset-group {
+  display: flex;
+  gap: 4px;
+  background: var(--gray-100, #f3f4f6);
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.ch-preset-btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--gray-500, #6b7280);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.ch-preset-btn:hover {
+  color: var(--gray-700, #374151);
+}
+
+.ch-preset-btn.active {
+  background: #fff;
+  color: var(--primary-700, #4338ca);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
 /* Date filters */
 .ch-date-group {
   display: flex;
@@ -713,6 +746,11 @@
   }
 
   .ch-type-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ch-preset-group {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }

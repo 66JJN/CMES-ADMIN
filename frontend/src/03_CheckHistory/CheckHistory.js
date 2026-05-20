@@ -15,6 +15,29 @@ const TYPE_LABELS = { all: "ทั้งหมด", image: "รูปภาพ",
 const TYPE_ICONS = { image: "🖼️", text: "💬", gift: "🎁", birthday: "🎂" };
 const ITEMS_PER_PAGE = 50;
 
+// ── Timezone-Safe Date Helpers ──
+const getLocalDateString = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getThisMonthRange = () => {
+  const now = new Date();
+  const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const end = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  return { start, end };
+};
+
+const getThisYearRange = () => {
+  const now = new Date();
+  const start = `${now.getFullYear()}-01-01`;
+  const end = `${now.getFullYear()}-12-31`;
+  return { start, end };
+};
+
 function CheckHistory() {
   const { shopId } = useContext(ShopContext);
 
@@ -25,11 +48,31 @@ function CheckHistory() {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
-  // ── Filters ──
+  // ── Filters & Session Persistence ──
+  const [presetFilter, setPresetFilter] = useState(() => {
+    return localStorage.getItem("ch-filter-preset") || null;
+  });
+
   const [typeFilter, setTypeFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+
+  const [startDate, setStartDate] = useState(() => {
+    const savedPreset = localStorage.getItem("ch-filter-preset");
+    if (savedPreset === "today") return localStorage.getItem("ch-start-date") || getLocalDateString();
+    if (savedPreset === "month") return getThisMonthRange().start;
+    if (savedPreset === "year") return getThisYearRange().start;
+    if (savedPreset === "custom") return localStorage.getItem("ch-start-date") || "";
+    return ""; // null means first-time visit: fetch empty initially to determine the latest day's history
+  });
+
+  const [endDate, setEndDate] = useState(() => {
+    const savedPreset = localStorage.getItem("ch-filter-preset");
+    if (savedPreset === "today") return localStorage.getItem("ch-end-date") || getLocalDateString();
+    if (savedPreset === "month") return getThisMonthRange().end;
+    if (savedPreset === "year") return getThisYearRange().end;
+    if (savedPreset === "custom") return localStorage.getItem("ch-end-date") || "";
+    return ""; // null means first-time visit: fetch empty initially to determine the latest day's history
+  });
 
   // ── Pagination ──
   const [page, setPage] = useState(1);
@@ -77,6 +120,63 @@ function CheckHistory() {
   useEffect(() => {
     setPage(1);
   }, [typeFilter, searchQuery, startDate, endDate]);
+
+  // ── First-time visit auto-detection ──
+  useEffect(() => {
+    if (presetFilter === null && !loading) {
+      if (history.length > 0) {
+        // Find the date of the latest item (history is already sorted by approvalDate/createdAt desc)
+        const latestItem = history[0];
+        const latestDateStr = latestItem.checkedAt || latestItem.createdAt;
+        if (latestDateStr) {
+          const latestDate = new Date(latestDateStr);
+          const dateStr = getLocalDateString(latestDate);
+          
+          setStartDate(dateStr);
+          setEndDate(dateStr);
+          setPresetFilter("today");
+          localStorage.setItem("ch-filter-preset", "today");
+          localStorage.setItem("ch-start-date", dateStr);
+          localStorage.setItem("ch-end-date", dateStr);
+        }
+      } else {
+        // No history at all, fallback to today's date
+        const todayStr = getLocalDateString();
+        setStartDate(todayStr);
+        setEndDate(todayStr);
+        setPresetFilter("today");
+        localStorage.setItem("ch-filter-preset", "today");
+        localStorage.setItem("ch-start-date", todayStr);
+        localStorage.setItem("ch-end-date", todayStr);
+      }
+    }
+  }, [presetFilter, loading, history]);
+
+  const handleApplyPreset = (preset) => {
+    let start = "";
+    let end = "";
+    const todayStr = getLocalDateString();
+    
+    if (preset === "today") {
+      start = todayStr;
+      end = todayStr;
+    } else if (preset === "month") {
+      const range = getThisMonthRange();
+      start = range.start;
+      end = range.end;
+    } else if (preset === "year") {
+      const range = getThisYearRange();
+      start = range.start;
+      end = range.end;
+    }
+    
+    setStartDate(start);
+    setEndDate(end);
+    setPresetFilter(preset);
+    localStorage.setItem("ch-filter-preset", preset);
+    localStorage.setItem("ch-start-date", start);
+    localStorage.setItem("ch-end-date", end);
+  };
 
   // ── Delete handlers ──
   const handleDelete = async (id) => {
@@ -191,10 +291,40 @@ function CheckHistory() {
             <input className="ch-search-input" type="text" placeholder="ค้นหาผู้ส่ง..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
 
+          <div className="ch-preset-group">
+            <button className={`ch-preset-btn${presetFilter === "today" ? " active" : ""}`} onClick={() => handleApplyPreset("today")}>วันนี้</button>
+            <button className={`ch-preset-btn${presetFilter === "month" ? " active" : ""}`} onClick={() => handleApplyPreset("month")}>เดือนนี้</button>
+            <button className={`ch-preset-btn${presetFilter === "year" ? " active" : ""}`} onClick={() => handleApplyPreset("year")}>ปีนี้</button>
+          </div>
+
           <div className="ch-date-group">
-            <input className="ch-date-input" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} title="วันเริ่มต้น" />
+            <input
+              className="ch-date-input"
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                const val = e.target.value;
+                setStartDate(val);
+                setPresetFilter("custom");
+                localStorage.setItem("ch-filter-preset", "custom");
+                localStorage.setItem("ch-start-date", val);
+              }}
+              title="วันเริ่มต้น"
+            />
             <span className="ch-date-sep">ถึง</span>
-            <input className="ch-date-input" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} title="วันสิ้นสุด" />
+            <input
+              className="ch-date-input"
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                const val = e.target.value;
+                setEndDate(val);
+                setPresetFilter("custom");
+                localStorage.setItem("ch-filter-preset", "custom");
+                localStorage.setItem("ch-end-date", val);
+              }}
+              title="วันสิ้นสุด"
+            />
           </div>
         </div>
 
