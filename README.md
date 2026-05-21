@@ -76,7 +76,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/gift-setting.png" width="700" alt="Gift Setting" />
+  <img src="docs/screenshots/gift-setting.png" width="701" alt="Gift Setting" />
 </p>
 
 
