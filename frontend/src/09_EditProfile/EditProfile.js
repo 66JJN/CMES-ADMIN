@@ -371,11 +371,11 @@ function EditProfile() {
                                             >
                                                 😀
                                             </button>
-                                            <button className="ep-btn-icon ep-btn-confirm" onClick={handleSaveName} disabled={nameLoading} title="บันทึก" style={{ fontSize: "16px" }}>
-                                                ✅
+                                            <button className="ep-btn-icon ep-btn-confirm" onClick={handleSaveName} disabled={nameLoading} title="บันทึก">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                             </button>
-                                            <button className="ep-btn-icon ep-btn-cancel" onClick={handleCancelEditName} disabled={nameLoading} title="ยกเลิก" style={{ fontSize: "16px" }}>
-                                                ❌
+                                            <button className="ep-btn-icon ep-btn-cancel" onClick={handleCancelEditName} disabled={nameLoading} title="ยกเลิก">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                                             </button>
                                         </div>
 
@@ -440,11 +440,11 @@ function EditProfile() {
                                             autoFocus
                                         />
                                         <div className="ep-shop-action-buttons">
-                                            <button className="ep-btn-icon ep-btn-confirm" onClick={handleSaveShopId} disabled={shopIdLoading} title="บันทึก" style={{ fontSize: "16px" }}>
-                                                ✅
+                                            <button className="ep-btn-icon ep-btn-confirm" onClick={handleSaveShopId} disabled={shopIdLoading} title="บันทึก">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                             </button>
-                                            <button className="ep-btn-icon ep-btn-cancel" onClick={handleCancelEditShopId} disabled={shopIdLoading} title="ยกเลิก" style={{ fontSize: "16px" }}>
-                                                ❌
+                                            <button className="ep-btn-icon ep-btn-cancel" onClick={handleCancelEditShopId} disabled={shopIdLoading} title="ยกเลิก">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                                             </button>
                                         </div>
                                     </div>
