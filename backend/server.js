@@ -11,6 +11,8 @@ import dotenv from "dotenv";
 import cron from "node-cron"; // Import node-cron
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import helmet from 'helmet'; // 🛡️ Security headers
+import rateLimit from 'express-rate-limit'; // 🛡️ Rate limiting
 
 import AdminReport from "./models/AdminReport.js";
 import CheckHistory from "./models/CheckHistory.js";
@@ -25,6 +27,7 @@ import { verifyPassword, hashPassword } from './hashPasswords.js'; // Keep passw
 import { requireShopId, requireAdminAuth } from './middleware/authMiddleware.js'; // Multi-tenant middleware
 import { startCleanupJob } from "./cron-cleanup.js";
 import { moderateImage, isAIModerationEnabled } from './contentModeration.js'; // 🤖 AI Content Moderation
+import { mongoSanitize } from './middleware/securityMiddleware.js'; // 🛡️ NoSQL Injection Prevention
 dotenv.config();
 
 // ===== Helper Functions สำหรับ Thai Timezone (UTC+7) =====
@@ -159,10 +162,52 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'x-shop-id', 'x-admin-id']
 }));
 
+// ===== 🛡️ SECURITY MIDDLEWARE =====
+// Helmet — เพิ่ม security headers อัตโนมัติ (X-Content-Type-Options, X-Frame-Options, etc.)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // อนุญาต Cloudinary images
+  contentSecurityPolicy: false // ปิด CSP เพื่อไม่ block frontend resources
+}));
+
+// Rate Limiting — ป้องกันการยิง API ซ้ำๆ
+// ⚠️ ปรับค่าสำหรับร้านเหล้า: ลูกค้าหลายคนใช้ WiFi เดียวกัน (IP เดียว)
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 นาที
+  max: 500, // max 500 requests ต่อ IP ต่อ 15 นาที
+  message: { success: false, message: 'คำขอมากเกินไป กรุณารอสักครู่' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20, // login/auth: max 20 ครั้งต่อ 15 นาที
+  message: { success: false, message: 'พยายามเข้าสู่ระบบมากเกินไป กรุณารอ 15 นาที' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 50, // upload: max 50 ครั้งต่อ 15 นาที
+  message: { success: false, message: 'อัปโหลดมากเกินไป กรุณารอสักครู่' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// ใช้ rate limit กับทุก API
+app.use('/api/', globalLimiter);
+app.use('/api/login', authLimiter);
+app.use('/api/upload', uploadLimiter);
+app.use('/api/shop/logo', uploadLimiter);
+
 // ===== Middleware สำหรับ Parse ข้อมูล =====
 // Middleware สำหรับแปลง JSON body (สำคัญสำหรับ POST/PUT requests)
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// 🛡️ NoSQL Injection Prevention — ลบ MongoDB operators จาก input
+app.use(mongoSanitize);
 
 // Serve ไฟล์ static สำหรับ OBS overlay
 app.use(express.static(path.join(__dirname, "public")));
