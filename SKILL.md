@@ -483,3 +483,19 @@ try {
 | **5. Cloudinary** | ตรวจสอบ API key + cloud name ตรงกัน |
 | **6. Build** | Frontend: `npm run build` (Vercel ทำให้อัตโนมัติ) |
 | **7. Start** | Backend: `npm start` (ไม่ใช่ `npm run dev`) |
+
+---
+
+## 15. Standard Engineering Skills (9arm-style)
+
+เพื่อรักษามาตรฐานงานวิศวกรรมให้สูงอยู่เสมอ โปรเจคนี้ได้นำระเบียบปฏิบัติต่อไปนี้มาใช้:
+
+| Skill | Description | Location |
+|-------|-------------|----------|
+| **Debug Mantra** | ระเบียบ 4 ขั้นในการไล่บัค (Reproduce -> Trace -> Falsify -> Ledger) | [`docs/skills/debug-mantra.md`](./docs/skills/debug-mantra.md) |
+| **Post-mortem** | การบันทึกรายละเอียดการแก้บัคสำคัญ เพื่อเป็นความรู้ให้ทีม | [`docs/skills/post-mortem.md`](./docs/skills/post-mortem.md) |
+| **Scrutinize** | การรีวิวแผนงานหรือโค้ดจากมุมมองคนนอก (Intent-first review) | [`docs/skills/scrutinize.md`](./docs/skills/scrutinize.md) |
+| **Management Talk** | การสื่อสารงานเทคนิคให้ผู้บริหารหรือคนนอกเข้าใจ | [`docs/skills/management-talk.md`](./docs/skills/management-talk.md) |
+
+### การจดบันทึก Post-mortem
+เมื่อมีการแก้บัคที่มีความสำคัญหรือซับซ้อน ให้สร้างไฟล์บันทึกไว้ที่ [`docs/postmortems/`](./docs/postmortems/) โดยใช้ Template จากไฟล์ท skill ด้านบน
