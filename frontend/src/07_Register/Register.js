@@ -150,9 +150,9 @@ function Register() {
               title={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
             >
               {showPassword ? (
-                <i className="fas fa-eye"></i> // ไอคอนแสดงรหัสผ่าน
-              ) : (
                 <i className="fas fa-eye-slash"></i> // ไอคอนซ่อนรหัสผ่าน
+              ) : (
+                <i className="fas fa-eye"></i> // ไอคอนแสดงรหัสผ่าน
               )}
             </span>
           </div>

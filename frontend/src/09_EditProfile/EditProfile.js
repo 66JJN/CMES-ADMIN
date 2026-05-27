@@ -269,10 +269,10 @@ function EditProfile() {
                             <path d="M15 19l-7-7 7-7" />
                         </svg>
                     </Link>
-                    <h2 style={{ 
-                        margin: 0, 
-                        fontSize: '1.5rem', 
-                        fontWeight: 800, 
+                    <h2 style={{
+                        margin: 0,
+                        fontSize: '1.5rem',
+                        fontWeight: 800,
                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
