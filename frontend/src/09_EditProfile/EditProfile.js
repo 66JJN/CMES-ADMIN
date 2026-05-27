@@ -44,6 +44,9 @@ function EditProfile() {
     const [currentPw, setCurrentPw] = useState("");
     const [newPw, setNewPw] = useState("");
     const [confirmPw, setConfirmPw] = useState("");
+    const [showCurrentPw, setShowCurrentPw] = useState(false);
+    const [showNewPw, setShowNewPw] = useState(false);
+    const [showConfirmPw, setShowConfirmPw] = useState(false);
     const [message, setMessage] = useState({ text: "", type: "" });
     const [loading, setLoading] = useState(false);
 
@@ -468,33 +471,42 @@ function EditProfile() {
                     <form className="ep-form" onSubmit={handleChangePassword}>
                         <div className="ep-input-group">
                             <label>รหัสผ่านปัจจุบัน</label>
-                            <div className="ep-input-wrapper">
+                            <div className="ep-input-wrapper password-toggle-wrapper">
                                 <svg className="ep-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                                     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                                 </svg>
-                                <input type="password" placeholder="กรอกรหัสผ่านปัจจุบันของคุณ" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} className="ep-input-field" />
+                                <input type={showCurrentPw ? "text" : "password"} placeholder="กรอกรหัสผ่านปัจจุบันของคุณ" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} className="ep-input-field" />
+                                <span className="ep-toggle-password" onClick={() => setShowCurrentPw(!showCurrentPw)} title={showCurrentPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}>
+                                    <i className={`fas ${showCurrentPw ? "fa-eye-slash" : "fa-eye"}`}></i>
+                                </span>
                             </div>
                         </div>
 
                         <div className="ep-input-group">
                             <label>รหัสผ่านใหม่</label>
-                            <div className="ep-input-wrapper">
+                            <div className="ep-input-wrapper password-toggle-wrapper">
                                 <svg className="ep-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                                     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                                 </svg>
-                                <input type="password" placeholder="อย่างน้อย 6 ตัวอักษร" value={newPw} onChange={(e) => setNewPw(e.target.value)} className="ep-input-field" />
+                                <input type={showNewPw ? "text" : "password"} placeholder="อย่างน้อย 6 ตัวอักษร" value={newPw} onChange={(e) => setNewPw(e.target.value)} className="ep-input-field" />
+                                <span className="ep-toggle-password" onClick={() => setShowNewPw(!showNewPw)} title={showNewPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}>
+                                    <i className={`fas ${showNewPw ? "fa-eye-slash" : "fa-eye"}`}></i>
+                                </span>
                             </div>
                         </div>
 
                         <div className="ep-input-group">
                             <label>ยืนยันรหัสผ่านใหม่</label>
-                            <div className="ep-input-wrapper">
+                            <div className="ep-input-wrapper password-toggle-wrapper">
                                 <svg className="ep-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                                 </svg>
-                                <input type="password" placeholder="ยืนยันรหัสผ่านใหม่อีกครั้ง" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} className="ep-input-field" />
+                                <input type={showConfirmPw ? "text" : "password"} placeholder="ยืนยันรหัสผ่านใหมีกว่านี้อีกครั้ง" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} className="ep-input-field" />
+                                <span className="ep-toggle-password" onClick={() => setShowConfirmPw(!showConfirmPw)} title={showConfirmPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}>
+                                    <i className={`fas ${showConfirmPw ? "fa-eye-slash" : "fa-eye"}`}></i>
+                                </span>
                             </div>
                         </div>
 

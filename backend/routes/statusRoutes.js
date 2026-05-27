@@ -15,7 +15,8 @@ import {
   getAdminReport,
   getStatSlip,
   postStatSlip,
-  changeShopId
+  changeShopId,
+  changePassword
 } from '../controllers/statusController.js';
 
 const router = express.Router();
@@ -45,7 +46,7 @@ router.get('/api/admin/report', getAdminReport);
 router.get('/api/stat-slip', getStatSlip);
 router.post('/api/stat-slip', postStatSlip);
 
-// CHANGE SHOP ID
-router.post('/api/admin/change-shopid', requireAdminAuth, changeShopId);
+// CHANGE PASSWORD
+router.post('/api/admin/change-password', requireAdminAuth, changePassword);
 
 export default router;

@@ -760,3 +760,39 @@
         padding: 20px 16px;
     }
 }
+
+/* ===== Password Visibility Toggle ===== */
+.password-toggle-wrapper {
+    position: relative;
+    display: flex !important;
+    align-items: center;
+}
+
+.password-toggle-wrapper .ep-input-field {
+    padding-right: 48px !important;
+}
+
+.ep-toggle-password {
+    position: absolute;
+    right: 12px;
+    height: 36px;
+    width: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #94a3b8;
+    transition: all 0.2s ease;
+    z-index: 10;
+    border-radius: 50%;
+}
+
+.ep-toggle-password:hover {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+    transform: scale(1.1);
+}
+
+.ep-toggle-password i {
+    font-size: 16px;
+}

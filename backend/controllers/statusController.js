@@ -245,3 +245,35 @@ export const changeShopId = async (req, res) => {
     res.status(500).json({ success: false, message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์" });
   }
 };
+// POST /api/admin/change-password
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const adminId = req.adminId;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
+    }
+
+    const admin = await AdminUser.findById(adminId);
+    if (!admin) {
+      return res.status(404).json({ success: false, message: 'ไม่พบข้อมูลผู้ใช้งาน' });
+    }
+
+    // ตรวจสอบรหัสผ่านปัจจุบัน
+    const isMatch = await verifyPassword(currentPassword, admin.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
+    }
+
+    // เข้ารหัสรหัสผ่านใหม่
+    const { hashPassword } = await import('../hashPasswords.js');
+    admin.password = await hashPassword(newPassword);
+    await admin.save();
+
+    res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จ' });
+  } catch (error) {
+    console.error('[Admin] Change Password Error:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์' });
+  }
+};
