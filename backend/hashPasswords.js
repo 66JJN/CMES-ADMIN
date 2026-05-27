@@ -1,5 +1,8 @@
 import fs from "fs";
 import bcrypt from "bcrypt";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // ฟังก์ชันสำหรับเข้ารหัสรหัสผ่าน
 export async function hashPassword(password) {
@@ -14,9 +17,9 @@ export async function verifyPassword(password, hashedPassword) {
 // สร้างข้อมูล admin และบันทึกลงไฟล์
 async function createAdminCredentials() {
   const users = [
-    { username: "admin", password: "admin123" },
-    { username: "cms1", password: "dfhy1785" },
-    { username: "cms2", password: "sdgsd5996" },
+    { username: "admin", password: process.env.ADMIN_PASSWORD || "admin" },
+    { username: "cms1", password: process.env.CMS1_PASSWORD || "cms1_default_pass" },
+    { username: "cms2", password: process.env.CMS2_PASSWORD || "cms2_default_pass" },
   ];
 
   const hashedUsers = await Promise.all(
