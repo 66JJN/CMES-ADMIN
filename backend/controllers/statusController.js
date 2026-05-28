@@ -9,7 +9,7 @@ import AdminUser from '../models/AdminUser.js';
 import ShopSetting from '../models/ShopSetting.js';
 import ImageQueue from '../models/ImageQueue.js';
 import TimeHistory from '../models/TimeHistory.js';
-import { verifyPassword } from '../hashPasswords.js';
+import { verifyPassword } from '../utils/hashPasswords.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -267,7 +267,7 @@ export const changePassword = async (req, res) => {
     }
 
     // เข้ารหัสรหัสผ่านใหม่
-    const { hashPassword } = await import('../hashPasswords.js');
+    const { hashPassword } = await import('../utils/hashPasswords.js');
     admin.password = await hashPassword(newPassword);
     await admin.save();
 

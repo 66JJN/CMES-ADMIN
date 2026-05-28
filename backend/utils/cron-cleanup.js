@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import CheckHistory from './models/CheckHistory.js';
+import CheckHistory from '../models/CheckHistory.js';
 import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 import path from 'path';

@@ -9,7 +9,7 @@ import CheckHistory from '../models/CheckHistory.js';
 import Ranking from '../models/Ranking.js';
 import { addRankingPoint } from '../services/rankingService.js';
 import { completeItem, getShopState } from '../services/queueService.js';
-import { moderateImage, isAIModerationEnabled } from '../contentModeration.js';
+import { moderateImage, isAIModerationEnabled } from '../utils/contentModeration.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

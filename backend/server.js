@@ -22,8 +22,8 @@ import rateLimit from 'express-rate-limit';
 // Models (needed for queue worker + Socket.IO handlers)
 import ImageQueue from './models/ImageQueue.js';
 import TimeHistory from './models/TimeHistory.js';
-import { hashPassword } from './hashPasswords.js';
-import { startCleanupJob } from "./cron-cleanup.js";
+import { hashPassword } from './utils/hashPasswords.js';
+import { startCleanupJob } from "./utils/cron-cleanup.js";
 import { mongoSanitize } from './middleware/securityMiddleware.js';
 
 // Services
