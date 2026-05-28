@@ -11,7 +11,7 @@
     &nbsp;&nbsp;·&nbsp;&nbsp;
     <a href="#-quick-start">Quick Start</a>
     &nbsp;&nbsp;·&nbsp;&nbsp;
-    <a href="./SKILL.md">SKILL.md</a>
+    <a href="./docs/SKILL.md">SKILL.md</a>
   </p>
 </p>
 
@@ -255,18 +255,25 @@ CMES-ADMIN/
 │   │   │   └── ShopContext.js # ★ Multi-tenant context
 │   │   ├── theme.css         # ★ Design system (CSS vars)
 │   │   └── App.js            # Router + ShopProvider
+│   ├── postcss.config.js     # PostCSS config (moved)
+│   ├── tailwind.config.js    # Tailwind config (moved)
 │   └── package.json
 │
 ├── backend/
 │   ├── server.js             # ★ Express + Socket.IO + all routes
-│   ├── middleware/            # requireShopId, requireAdminAuth
+│   ├── middleware/           # requireShopId, requireAdminAuth
 │   ├── models/               # 10 Mongoose models
-│   ├── contentModeration.js  # SightEngine AI moderation
-│   ├── cron-cleanup.js       # Scheduled cleanup
-│   ├── hashPasswords.js      # Password utilities
+│   ├── utils/                # ★ Relocated utility scripts
+│   │   ├── contentModeration.js  # SightEngine AI moderation
+│   │   ├── cron-cleanup.js       # Scheduled cleanup
+│   │   └── hashPasswords.js      # Password utilities
 │   └── package.json
 │
-├── SKILL.md                  # AI coding guidelines
+├── docs/                     # ★ Project documentation folder
+│   ├── screenshots/          # Dashboard screenshots
+│   ├── BUGLOG.md             # Change history & bug tracking
+│   ├── DESIGN.md             # System design specifications
+│   └── SKILL.md              # AI coding guidelines
 └── README.md                 # ← You are here
 ```
 
