@@ -33,12 +33,13 @@ export const getIncomeStats = async (req, res) => {
     ];
 
     let totalIncome = 0;
-    const userSet = new Set();
-    const hourCounts = {};
-    const dayCounts = {};
-    const dailyMap = {};
-    const typeMap = {};
-    const userAmtMap = {};
+    let paidOrders = 0;
+    const userSet = new Set();       // ผู้สนับสนุน (เฉพาะคนที่จ่ายเงิน)
+    const hourCounts = {};            // กิจกรรม (ทุกรายการ)
+    const dayCounts = {};             // กิจกรรม (ทุกรายการ)
+    const dailyMap = {};              // แนวโน้มรายรับ (เฉพาะจ่ายเงิน)
+    const typeMap = {};               // สัดส่วนกิจกรรม (ทุกรายการ)
+    const userAmtMap = {};            // ยอดสะสมต่อคน (เฉพาะจ่ายเงิน)
 
     const TH_OFFSET = 7 * 60 * 60 * 1000;
     const DAY_NAMES = ["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัส","ศุกร์","เสาร์"];
@@ -47,16 +48,22 @@ export const getIncomeStats = async (req, res) => {
 
     records.forEach(r => {
       const price = r.price || 0;
-      totalIncome += price;
 
-      // ใช้ sender name เป็น key หลัก เพื่อไม่ให้คนเดียวกัน (เช่น JJKUBB)
-      // ถูกนับซ้ำเมื่อบาง record มี userId และบาง record มี userId: null (rejected)
-      const uKey = r.sender ? r.sender.toLowerCase().trim() : (r.userId || "unknown");
-      userSet.add(uKey);
+      // ===== Income Metrics (เฉพาะ paid orders เท่านั้น) =====
+      if (price > 0) {
+        totalIncome += price;
+        paidOrders++;
 
-      if (!userAmtMap[uKey]) userAmtMap[uKey] = { name: r.sender || "ผู้ใช้", amount: 0 };
-      userAmtMap[uKey].amount += price;
+        // ใช้ sender name เป็น key หลัก เพื่อไม่ให้คนเดียวกัน (เช่น JJKUBB)
+        // ถูกนับซ้ำเมื่อบาง record มี userId และบาง record มี userId: null (rejected)
+        const uKey = r.sender ? r.sender.toLowerCase().trim() : (r.userId || "unknown");
+        userSet.add(uKey);
 
+        if (!userAmtMap[uKey]) userAmtMap[uKey] = { name: r.sender || "ผู้ใช้", amount: 0 };
+        userAmtMap[uKey].amount += price;
+      }
+
+      // ===== Activity Metrics (ทุกรายการ รวมฟรี) =====
       const t = r.type || (r.filePath ? 'image' : 'other');
       typeMap[t] = (typeMap[t] || 0) + 1;
 
@@ -69,11 +76,14 @@ export const getIncomeStats = async (req, res) => {
         const dow = localTime.getUTCDay();
         dayCounts[dow] = (dayCounts[dow] || 0) + 1;
 
-        const y = localTime.getUTCFullYear();
-        const m = String(localTime.getUTCMonth() + 1).padStart(2, "0");
-        const d = String(localTime.getUTCDate()).padStart(2, "0");
-        const dateKey = `${y}-${m}-${d}`;
-        dailyMap[dateKey] = (dailyMap[dateKey] || 0) + price;
+        // แนวโน้มรายรับ — เฉพาะ paid
+        if (price > 0) {
+          const y = localTime.getUTCFullYear();
+          const m = String(localTime.getUTCMonth() + 1).padStart(2, "0");
+          const d = String(localTime.getUTCDate()).padStart(2, "0");
+          const dateKey = `${y}-${m}-${d}`;
+          dailyMap[dateKey] = (dailyMap[dateKey] || 0) + price;
+        }
       }
     });
 
@@ -137,7 +147,19 @@ export const getIncomeStats = async (req, res) => {
     res.set('Pragma', 'no-cache');
     res.json({
       success: true,
-      data: { totalIncome, totalUsers: userSet.size, totalOrders: records.length, growthPct, peakHours, peakDay, dailyTrend, activities, topUsers }
+      data: { 
+        totalIncome, 
+        totalUsers: userSet.size, 
+        totalOrders: paidOrders, 
+        freeOrders: records.length - paidOrders,
+        totalAllOrders: records.length,
+        growthPct, 
+        peakHours, 
+        peakDay, 
+        dailyTrend, 
+        activities, 
+        topUsers 
+      }
     });
   } catch (error) {
     console.error("Error fetching income stats:", error);

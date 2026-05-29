@@ -195,6 +195,91 @@
   grid-column: span 2;
 }
 
+.income-kpi-card.span-2 {
+  grid-column: span 2;
+}
+
+.income-skeleton-card.span-2 {
+  grid-column: span 2;
+}
+
+/* ── Split Card & Progress Split ── */
+.income-kpi-card.split-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.income-split-container {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.income-split-bar-wrapper {
+  width: 100%;
+}
+
+.income-split-bar {
+  height: 8px;
+  background: var(--gray-100, #f3f4f6);
+  border-radius: 99px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.income-split-fill {
+  height: 100%;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.income-split-fill.paid {
+  background: linear-gradient(90deg, #4f46e5, #6d28d9);
+}
+
+.income-split-fill.free {
+  background: linear-gradient(90deg, #93c5fd, #a78bfa);
+}
+
+.income-split-details {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.income-split-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+}
+
+.income-split-detail-item .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.income-split-detail-item .dot.paid {
+  background: #4f46e5;
+}
+
+.income-split-detail-item .dot.free {
+  background: #93c5fd;
+}
+
+.income-split-detail-item .label {
+  color: var(--gray-500, #6b7280);
+}
+
+.income-split-detail-item .value {
+  font-weight: 700;
+  color: var(--gray-800, #1f2937);
+}
+
 .income-kpi-card.featured .kpi-label {
   color: rgba(255, 255, 255, 0.75);
 }

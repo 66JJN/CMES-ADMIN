@@ -225,9 +225,10 @@ function SkeletonLoader() {
   return (
     <>
       <div className="income-skeleton-grid">
-        <div className="income-skeleton-card wide"><Bone h={16} w="40%" mb={10}/><Bone h={32} w="60%" mb={8}/><Bone h={20} w="35%"/></div>
-        <div className="income-skeleton-card"><Bone h={14} w="50%" mb={10}/><Bone h={28} w="70%"/></div>
-        <div className="income-skeleton-card"><Bone h={14} w="50%" mb={10}/><Bone h={28} w="50%" mb={10}/><Bone h={1} mb={10}/><Bone h={14} w="50%" mb={10}/><Bone h={28} w="40%"/></div>
+        <div className="income-skeleton-card span-2"><Bone h={16} w="40%" mb={10}/><Bone h={32} w="60%" mb={8}/><Bone h={20} w="35%"/></div>
+        <div className="income-skeleton-card span-2"><Bone h={14} w="50%" mb={10}/><Bone h={28} w="70%" mb={12}/><Bone h={8} w="90%" mb={8}/><Bone h={12} w="40%"/></div>
+        <div className="income-skeleton-card span-2"><Bone h={14} w="50%" mb={10}/><Bone h={28} w="50%" mb={10}/><Bone h={14} w="40%"/></div>
+        <div className="income-skeleton-card span-2"><Bone h={14} w="50%" mb={10}/><Bone h={28} w="50%" mb={10}/><Bone h={14} w="40%"/></div>
       </div>
       <div className="income-skeleton-charts">
         <div className="income-skeleton-card"><Bone h={14} w="30%" mb={14}/><Bone h={120}/></div>
@@ -259,10 +260,19 @@ function EmptyState() {
 // ── Main Stats Content ──
 function StatsContent({ stats }) {
   const {
-    totalIncome = 0, totalUsers = 0, totalOrders = 0,
-    growthPct, peakHours = [], topUsers = [], peakDay,
-    dailyTrend = [], activities = []
+    totalIncome = 0, 
+    totalUsers = 0, 
+    totalOrders = 0, // เฉพาะจ่ายเงิน
+    freeOrders = 0,
+    totalAllOrders = 0,
+    growthPct, 
+    peakHours = [], 
+    topUsers = [], 
+    peakDay,
+    dailyTrend = [], 
+    activities = []
   } = stats;
+  
   const avgPerUser = totalUsers > 0 ? Math.round(totalIncome / totalUsers) : 0;
 
   // Growth badge
@@ -270,12 +280,16 @@ function StatsContent({ stats }) {
   const growthIcon = growthPct > 0 ? "↑" : growthPct < 0 ? "↓" : "→";
   const growthText = growthPct != null ? `${growthPct > 0 ? "+" : ""}${growthPct}%` : "—";
 
+  // Calculate percentage splits safely
+  const paidPct = totalAllOrders > 0 ? Math.round((totalOrders / totalAllOrders) * 100) : 0;
+  const freePct = totalAllOrders > 0 ? Math.round((freeOrders / totalAllOrders) * 100) : 0;
+
   return (
     <>
       {/* ── ROW 1: KPI Cards ── */}
       <div className="income-kpi-grid">
         {/* รายรับรวม (featured) */}
-        <div className="income-kpi-card featured">
+        <div className="income-kpi-card featured span-2">
           <div className="income-kpi-icon" style={{ background: "rgba(255,255,255,0.15)" }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
@@ -288,37 +302,70 @@ function StatsContent({ stats }) {
           </span>
         </div>
 
-        {/* ยอดเฉลี่ย/คน */}
-        <div className="income-kpi-card">
-          <div className="income-kpi-icon" style={{ background: "linear-gradient(135deg, #ddd6fe, #c4b5fd)" }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-            </svg>
-          </div>
-          <div className="kpi-label">ยอดเฉลี่ย/คน</div>
-          <div className="kpi-value">฿{fmt(avgPerUser)}</div>
-        </div>
-
-        {/* จำนวนรายการ */}
-        <div className="income-kpi-card">
+        {/* รายการเข้าร่วมทั้งหมด (split paid & free) */}
+        <div className="income-kpi-card split-card span-2">
           <div className="income-kpi-icon" style={{ background: "linear-gradient(135deg, #c7d2fe, #a5b4fc)" }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4338ca" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>
             </svg>
           </div>
-          <div className="kpi-label">จำนวนรายการ</div>
-          <div className="kpi-value" style={{ color: "var(--primary-600)" }}>{totalOrders.toLocaleString("th-TH")}</div>
+          <div className="kpi-label">รายการเข้าร่วมทั้งหมด</div>
+          <div className="kpi-value" style={{ color: "var(--primary-700, #4338ca)" }}>
+            {totalAllOrders.toLocaleString("th-TH")} <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--gray-500)" }}>รายการ</span>
+          </div>
+
+          <div className="income-split-container">
+            <div className="income-split-bar-wrapper">
+              <div className="income-split-bar">
+                <div 
+                  className="income-split-fill paid" 
+                  style={{ width: `${paidPct}%` }}
+                  title={`สนับสนุน (จ่ายเงิน): ${totalOrders} รายการ (${paidPct}%)`}
+                />
+                <div 
+                  className="income-split-fill free" 
+                  style={{ width: `${freePct}%` }}
+                  title={`ร่วมกิจกรรม (ฟรี): ${freeOrders} รายการ (${freePct}%)`}
+                />
+              </div>
+            </div>
+            <div className="income-split-details">
+              <div className="income-split-detail-item">
+                <div className="dot paid" />
+                <span className="label">เปรียบเสมือนเปย์:</span>
+                <span className="value">{totalOrders} บิล ({paidPct}%)</span>
+              </div>
+              <div className="income-split-detail-item">
+                <div className="dot free" />
+                <span className="label">ร่วมสนุกฟรี:</span>
+                <span className="value">{freeOrders} บิล ({freePct}%)</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* ผู้เปย์ไม่ซ้ำ */}
-        <div className="income-kpi-card">
+        {/* ยอดเฉลี่ย/คน */}
+        <div className="income-kpi-card span-2">
+          <div className="income-kpi-icon" style={{ background: "linear-gradient(135deg, #ddd6fe, #c4b5fd)" }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div className="kpi-label">ยอดเฉลี่ยต่อผู้สนับสนุน</div>
+          <div className="kpi-value">฿{fmt(avgPerUser)}</div>
+          <span style={{ fontSize: "11px", color: "var(--gray-400)", fontWeight: 500 }}>เฉลี่ยต่อยอดเปย์สะสมของผู้สนับสนุนแต่ละคน</span>
+        </div>
+
+        {/* ผู้สนับสนุน */}
+        <div className="income-kpi-card span-2">
           <div className="income-kpi-icon" style={{ background: "linear-gradient(135deg, #bbf7d0, #86efac)" }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#047857" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
           </div>
-          <div className="kpi-label">ผู้สนับสนุน</div>
-          <div className="kpi-value" style={{ color: "var(--success-600)" }}>{totalUsers.toLocaleString("th-TH")}</div>
+          <div className="kpi-label">ผู้สนับสนุนผู้ใจดี</div>
+          <div className="kpi-value" style={{ color: "var(--success-600)" }}>{totalUsers.toLocaleString("th-TH")} <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--gray-500)" }}>คน</span></div>
+          <span style={{ fontSize: "11px", color: "var(--gray-400)", fontWeight: 500 }}>จำนวนผู้เปย์สนับสนุนทั้งหมดที่ไม่ซ้ำกัน</span>
         </div>
       </div>
 
