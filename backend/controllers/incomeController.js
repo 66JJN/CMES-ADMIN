@@ -20,8 +20,7 @@ export const getIncomeStats = async (req, res) => {
 
     const [historyRecords, queueRecords] = await Promise.all([
       CheckHistory.find({
-        shopId, createdAt: { $gte: start, $lte: end },
-        status: { $in: ["completed", "rejected"] }
+        shopId, createdAt: { $gte: start, $lte: end }
       }).lean(),
       ImageQueue.find({
         shopId, receivedAt: { $gte: start, $lte: end }
@@ -50,8 +49,9 @@ export const getIncomeStats = async (req, res) => {
       const price = r.price || 0;
       totalIncome += price;
 
-      const uKey = (r.userId && r.userId !== "guest" && r.userId !== "unknown")
-        ? r.userId : `guest_${r.sender || "unknown"}`;
+      // ใช้ sender name เป็น key หลัก เพื่อไม่ให้คนเดียวกัน (เช่น JJKUBB)
+      // ถูกนับซ้ำเมื่อบาง record มี userId และบาง record มี userId: null (rejected)
+      const uKey = r.sender ? r.sender.toLowerCase().trim() : (r.userId || "unknown");
       userSet.add(uKey);
 
       if (!userAmtMap[uKey]) userAmtMap[uKey] = { name: r.sender || "ผู้ใช้", amount: 0 };
@@ -115,8 +115,7 @@ export const getIncomeStats = async (req, res) => {
     try {
       const [prevHistoryRecords, prevQueueRecords] = await Promise.all([
         CheckHistory.find({
-          shopId, createdAt: { $gte: prevStart, $lte: prevEnd },
-          status: { $in: ["completed", "rejected"] }
+          shopId, createdAt: { $gte: prevStart, $lte: prevEnd }
         }).lean(),
         ImageQueue.find({
           shopId, receivedAt: { $gte: prevStart, $lte: prevEnd }
