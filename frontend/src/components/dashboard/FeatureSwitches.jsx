@@ -5,6 +5,7 @@ import Switch from '../ui/Switch';
 import Button from '../ui/Button';
 import useSocket from '../../hooks/useSocket';
 import useDashboardData from '../../hooks/useDashboardData';
+import './FeatureSwitches.css';
 
 /**
  * FeatureSwitches dashboard component.
@@ -103,9 +104,9 @@ export default function FeatureSwitches({
                 disabled={!systemOn}
                 className="input-minimal input-spend-limit"
               />
-              <Button 
-                onClick={handleSaveBirthdayRequirement} 
-                disabled={!systemOn} 
+              <Button
+                onClick={handleSaveBirthdayRequirement}
+                disabled={!systemOn}
                 className="btn-spend-save"
               >
                 บันทึก

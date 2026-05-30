@@ -11,6 +11,9 @@ import Switch from '../components/ui/Switch';
 import { API_BASE_URL, USER_FRONTEND_URL } from '../config/apiConfig';
 import { useNavigate } from 'react-router-dom';
 import '../01_Home/home.css';
+import '../components/dashboard/AdminHeader.css';
+import '../components/dashboard/DashboardShared.css';
+import '../components/dashboard/DashboardCards.css';
 
 /**
  * Main Home page wrapper initializing local HomeProvider context contextually.

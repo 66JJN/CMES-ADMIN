@@ -2,10 +2,10 @@ import React, { useContext } from 'react';
 import { HomeContext } from '../../contexts/HomeContext';
 import { ShopContext } from '../../contexts/ShopContext';
 import Card from '../ui/Card';
-import Button from '../ui/Button';
 import Select from '../ui/Select';
 import useDashboardData from '../../hooks/useDashboardData';
 import { getTodayStr, getCurrentMonthStr } from '../../utils/dateHelpers';
+import './VipSupporters.css';
 
 // Format helpers
 const formatCurrency = (value) => Number(value || 0).toLocaleString("th-TH");
@@ -121,17 +121,17 @@ export default function VipSupporters({
               <p className="rank-panel-title">VIP Supporters (Admin View)</p>
               <small>อันดับ 1-{rankLimit}</small>
             </div>
-            <Button 
-              variant="secondary" 
+            <button
+              type="button"
               onClick={() => {
                 loadTopRanks(topRanks.length > 0);
                 loadRankingSummary();
-              }} 
-              disabled={refreshingRanks} 
+              }}
+              disabled={refreshingRanks}
               className="rank-refresh-btn"
             >
               {refreshingRanks ? "รีเฟรช..." : "รีเฟรช"}
-            </Button>
+            </button>
           </div>
 
           <div className="rank-limit-row">
@@ -214,7 +214,7 @@ export default function VipSupporters({
                     { value: '', label: 'ทุกปี' }, 
                     ...Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => ({ value: String(year), label: String(year) }))
                   ]} 
-                  className="date-picker-input select-picker-year" 
+                  className="vip-year-select" 
                 />
                 {selectedYear && (
                   <button className="clear-filter-btn" onClick={() => setSelectedYear("")}>✕ ล้าง</button>

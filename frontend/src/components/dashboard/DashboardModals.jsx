@@ -5,6 +5,7 @@ import { API_BASE_URL, USER_FRONTEND_URL } from '../../config/apiConfig';
 import adminFetch from '../../config/authFetch';
 import Button from '../ui/Button';
 import ErrorBoundary from '../ui/ErrorBoundary';
+import './DashboardModals.css';
 
 // Lazy-loaded heavy modules
 const LazyIncomeStats = lazy(() => import('../../01_Home/IncomeStats'));

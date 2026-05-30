@@ -15,7 +15,7 @@ export default function Select({
     <select
       value={value}
       onChange={onChange}
-      className={`income-date-input ${className}`}
+      className={className || 'ui-select'}
       {...props}
     >
       {options.map((opt) => (

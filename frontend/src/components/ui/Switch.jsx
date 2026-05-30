@@ -1,4 +1,5 @@
 import React from 'react';
+import '../dashboard/DashboardShared.css';
 
 /**
  * Reusable presentational Switch component.

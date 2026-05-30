@@ -1,4 +1,5 @@
 import React from 'react';
+import '../dashboard/DashboardShared.css';
 
 /**
  * Reusable ErrorBoundary to intercept chunk/module network loading failures

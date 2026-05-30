@@ -1,0 +1,187 @@
+/* Auto-split from home.css — DashboardShared.css */
+
+.system-off-msg {
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(232, 245, 233, 0.1) 100%);
+  border-left: 4px solid #e74c3c;
+  color: #d32f2f;
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  padding: 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.save-btn {
+  width: 100%;
+  padding: 12px 24px; /* ปรับลดขนาดปุ่มให้พอดีกับมาตรฐานของเว็บ (40px) */
+  border-radius: 10px; /* มุมโค้งมนที่ดูหรูหราแบบพอดี */
+  border: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-size: 14px; /* มาตรฐาน 14px สำหรับตัวอักษร */
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+  position: relative;
+  overflow: hidden;
+  height: 44px; /* ความสูงมาตรฐานของเว็บแอปพลิเคชัน */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.save-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.save-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+}
+
+.save-btn:active {
+  transform: translateY(-1px);
+}
+
+.save-btn:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+.save-btn:disabled {
+  background: #eee;
+  color: #aaa;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.switch-minimal {
+  width: 56px;
+  height: 32px;
+  background: #e0e0e0;
+  border-radius: 16px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  border: 2px solid transparent;
+}
+
+.switch-minimal.on {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+
+.switch-minimal.off {
+  background: #f0f0f0;
+  border: 2px solid #e0e0e0;
+}
+
+.switch-dot {
+  width: 26px;
+  height: 26px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  left: 3px;
+  top: 2px;
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.switch-minimal.on .switch-dot {
+  left: 27px;
+}
+
+.input-minimal {
+  padding: 1rem;
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+  font-size: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: #f8f9fa;
+  color: #333;
+  font-family: 'Prompt', 'Kanit', sans-serif;
+}
+
+.input-minimal:focus {
+  outline: none;
+  border-color: #667eea;
+  background-color: #fff;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Error Boundary Fallback Styles */
+.error-boundary-fallback {
+  margin: 20px;
+  border-left: 4px solid var(--danger-500, #ef4444) !important;
+  color: var(--danger-600, #dc2626) !important;
+  background: var(--danger-50, #fef2f2);
+  padding: 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.error-boundary-retry-btn {
+  margin-top: 12px !important;
+}
+
+/* Custom Buttons derived from Button.jsx options */
+.btn-danger-custom {
+  padding: 8px 16px;
+  background: var(--danger-50, #fef2f2);
+  color: var(--danger-600, #dc2626);
+  border: 1px solid var(--danger-100, #fee2e2);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-danger-custom:hover {
+  background: var(--danger-100, #fee2e2);
+  transform: translateY(-1px);
+}
+
+.btn-edit-custom {
+  padding: 8px 16px;
+  background: var(--primary-50, #f0f4ff);
+  color: var(--primary-600, #4f46e5);
+  border: 1px solid var(--primary-100, #e0e9ff);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-edit-custom:hover {
+  background: var(--primary-100, #e0e9ff);
+  transform: translateY(-1px);
+}

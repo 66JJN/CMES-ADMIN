@@ -3,6 +3,7 @@ import { HomeContext } from '../../contexts/HomeContext';
 import { ShopContext } from '../../contexts/ShopContext';
 import { API_BASE_URL } from '../../config/apiConfig';
 import adminFetch from '../../config/authFetch';
+import './PackageConfig.css';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 

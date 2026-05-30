@@ -1,0 +1,90 @@
+/* Auto-split from home.css — FeatureSwitches.css */
+
+.function-toggle-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.feature-card .toggle-card {
+  display: flex;
+  background: #f8f9ff;
+  border: 1px solid rgba(102, 126, 234, 0.12);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin: 0;
+  box-shadow: none;
+}
+
+.feature-card .toggle-card span {
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: #4338ca;
+  line-height: 1.35;
+}
+
+/* Toggle แนวนอน: ชื่อซ้าย — สวิตช์ขวา */
+.feature-card .toggle-card:not(.toggle-card-vertical) {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* ยอดใช้จ่ายวันเกิด: หัวข้อบน — แถว input + ปุ่มล่าง */
+.feature-card .toggle-card-vertical {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.65rem;
+}
+
+.feature-card .toggle-card-vertical .spend-requirement-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 0;
+}
+
+.feature-card .toggle-card-vertical .input-spend-limit {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
+.feature-card .toggle-card-vertical .btn-spend-save {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 5.5rem;
+}
+
+.feature-card .input-minimal {
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.feature-card .btn-spend-save.save-btn {
+  width: auto;
+  min-width: 5.75rem;
+  height: 42px;
+  padding: 0 1.1rem;
+  font-size: 0.9rem;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.spend-requirement-hint {
+  color: var(--gray-500, #64748b);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  display: block;
+  margin-top: 0.25rem;
+}
