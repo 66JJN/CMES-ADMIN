@@ -30,14 +30,14 @@ function IncomeStats({ show, onClose }) {
         // Migrate old presets
         if (parsed.activePreset === '30_days' || parsed.activePreset === '7_days') {
           parsed.activePreset = 'this_week';
-          
+
           // Re-calculate dates for this_week
           const end = new Date();
           const start = new Date();
           const day = end.getDay();
           const diff = end.getDate() - day + (day === 0 ? -6 : 1);
           start.setDate(diff);
-          
+
           parsed.startDate = start.toISOString().split("T")[0];
           parsed.endDate = end.toISOString().split("T")[0];
         }
@@ -52,10 +52,10 @@ function IncomeStats({ show, onClose }) {
     const day = end.getDay();
     const diff = end.getDate() - day + (day === 0 ? -6 : 1); // 1 = จันทร์
     start.setDate(diff);
-    return { 
-      startDate: start.toISOString().split("T")[0], 
-      endDate: end.toISOString().split("T")[0], 
-      activePreset: 'this_week' 
+    return {
+      startDate: start.toISOString().split("T")[0],
+      endDate: end.toISOString().split("T")[0],
+      activePreset: 'this_week'
     };
   };
 
@@ -109,10 +109,10 @@ function IncomeStats({ show, onClose }) {
       setActivePreset('custom');
       return;
     }
-    
+
     const end = new Date();
     let start = new Date();
-    
+
     if (type === 'today') {
       // วันนี้ (Today) - ใช้ start=end
     } else if (type === 'this_week') {
@@ -125,9 +125,9 @@ function IncomeStats({ show, onClose }) {
       start = new Date(end.getFullYear(), 0, 1);
     } else if (type === 'all_time') {
       // ถอยไป 5 ปี ก็เพียงพอให้ครอบคลุมเวลาเริ่มต้นโปรเจค
-      start = new Date(end.getFullYear() - 5, 0, 1); 
+      start = new Date(end.getFullYear() - 5, 0, 1);
     }
-    
+
     setStartDate(start.toISOString().split("T")[0]);
     setEndDate(end.toISOString().split("T")[0]);
     setActivePreset(type);
@@ -152,7 +152,7 @@ function IncomeStats({ show, onClose }) {
               <div className="income-header-title">
                 <div className="header-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
+                    <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /><line x1="2" y1="20" x2="22" y2="20" />
                   </svg>
                 </div>
                 <h2>สถิติรายรับและกิจกรรม</h2>
@@ -174,9 +174,9 @@ function IncomeStats({ show, onClose }) {
             </div>
             <div className="income-date-group">
               <label className="income-date-label">⌛ ช่วงเวลา</label>
-              <select 
-                className="income-date-input" 
-                value={activePreset} 
+              <select
+                className="income-date-input"
+                value={activePreset}
                 onChange={(e) => handlePreset(e.target.value)}
               >
                 <option value="today">วันนี้</option>
@@ -225,18 +225,18 @@ function SkeletonLoader() {
   return (
     <>
       <div className="income-skeleton-grid">
-        <div className="income-skeleton-card span-2"><Bone h={16} w="40%" mb={10}/><Bone h={32} w="60%" mb={8}/><Bone h={20} w="35%"/></div>
-        <div className="income-skeleton-card span-2"><Bone h={14} w="50%" mb={10}/><Bone h={28} w="70%" mb={12}/><Bone h={8} w="90%" mb={8}/><Bone h={12} w="40%"/></div>
-        <div className="income-skeleton-card span-2"><Bone h={14} w="50%" mb={10}/><Bone h={28} w="50%" mb={10}/><Bone h={14} w="40%"/></div>
-        <div className="income-skeleton-card span-2"><Bone h={14} w="50%" mb={10}/><Bone h={28} w="50%" mb={10}/><Bone h={14} w="40%"/></div>
+        <div className="income-skeleton-card span-2"><Bone h={16} w="40%" mb={10} /><Bone h={32} w="60%" mb={8} /><Bone h={20} w="35%" /></div>
+        <div className="income-skeleton-card span-2"><Bone h={14} w="50%" mb={10} /><Bone h={28} w="70%" mb={12} /><Bone h={8} w="90%" mb={8} /><Bone h={12} w="40%" /></div>
+        <div className="income-skeleton-card span-2"><Bone h={14} w="50%" mb={10} /><Bone h={28} w="50%" mb={10} /><Bone h={14} w="40%" /></div>
+        <div className="income-skeleton-card span-2"><Bone h={14} w="50%" mb={10} /><Bone h={28} w="50%" mb={10} /><Bone h={14} w="40%" /></div>
       </div>
       <div className="income-skeleton-charts">
-        <div className="income-skeleton-card"><Bone h={14} w="30%" mb={14}/><Bone h={120}/></div>
-        <div className="income-skeleton-card"><Bone h={14} w="35%" mb={14}/><Bone h={120}/></div>
+        <div className="income-skeleton-card"><Bone h={14} w="30%" mb={14} /><Bone h={120} /></div>
+        <div className="income-skeleton-card"><Bone h={14} w="35%" mb={14} /><Bone h={120} /></div>
       </div>
       <div className="income-skeleton-bottom">
-        <div className="income-skeleton-card"><Bone h={14} w="35%" mb={12}/><Bone h={40} mb={8}/><Bone h={40} mb={8}/><Bone h={40}/></div>
-        <div className="income-skeleton-card"><Bone h={14} w="40%" mb={12}/><Bone h={50} mb={8}/><Bone h={50} mb={8}/><Bone h={50}/></div>
+        <div className="income-skeleton-card"><Bone h={14} w="35%" mb={12} /><Bone h={40} mb={8} /><Bone h={40} mb={8} /><Bone h={40} /></div>
+        <div className="income-skeleton-card"><Bone h={14} w="40%" mb={12} /><Bone h={50} mb={8} /><Bone h={50} mb={8} /><Bone h={50} /></div>
       </div>
     </>
   );
@@ -248,7 +248,7 @@ function EmptyState() {
     <div className="income-empty">
       <div className="income-empty-icon">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
+          <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /><line x1="2" y1="20" x2="22" y2="20" />
         </svg>
       </div>
       <h3>ยังไม่มีข้อมูลในช่วงเวลานี้</h3>
@@ -260,19 +260,19 @@ function EmptyState() {
 // ── Main Stats Content ──
 function StatsContent({ stats }) {
   const {
-    totalIncome = 0, 
-    totalUsers = 0, 
+    totalIncome = 0,
+    totalUsers = 0,
     totalOrders = 0, // เฉพาะจ่ายเงิน
     freeOrders = 0,
     totalAllOrders = 0,
-    growthPct, 
-    peakHours = [], 
-    topUsers = [], 
+    growthPct,
+    peakHours = [],
+    topUsers = [],
     peakDay,
-    dailyTrend = [], 
+    dailyTrend = [],
     activities = []
   } = stats;
-  
+
   const avgPerUser = totalUsers > 0 ? Math.round(totalIncome / totalUsers) : 0;
 
   // Growth badge
@@ -292,7 +292,7 @@ function StatsContent({ stats }) {
         <div className="income-kpi-card featured span-2">
           <div className="income-kpi-icon" style={{ background: "rgba(255,255,255,0.15)" }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
             </svg>
           </div>
           <div className="kpi-label">รายรับรวม</div>
@@ -306,7 +306,7 @@ function StatsContent({ stats }) {
         <div className="income-kpi-card split-card span-2">
           <div className="income-kpi-icon" style={{ background: "linear-gradient(135deg, #c7d2fe, #a5b4fc)" }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4338ca" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>
+              <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="3" x2="9" y2="21" />
             </svg>
           </div>
           <div className="kpi-label">รายการเข้าร่วมทั้งหมด</div>
@@ -317,13 +317,13 @@ function StatsContent({ stats }) {
           <div className="income-split-container">
             <div className="income-split-bar-wrapper">
               <div className="income-split-bar">
-                <div 
-                  className="income-split-fill paid" 
+                <div
+                  className="income-split-fill paid"
                   style={{ width: `${paidPct}%` }}
                   title={`สนับสนุน (จ่ายเงิน): ${totalOrders} รายการ (${paidPct}%)`}
                 />
-                <div 
-                  className="income-split-fill free" 
+                <div
+                  className="income-split-fill free"
                   style={{ width: `${freePct}%` }}
                   title={`ร่วมกิจกรรม (ฟรี): ${freeOrders} รายการ (${freePct}%)`}
                 />
@@ -348,7 +348,7 @@ function StatsContent({ stats }) {
         <div className="income-kpi-card span-2">
           <div className="income-kpi-icon" style={{ background: "linear-gradient(135deg, #ddd6fe, #c4b5fd)" }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
             </svg>
           </div>
           <div className="kpi-label">ยอดเฉลี่ยต่อผู้สนับสนุน</div>
@@ -360,7 +360,7 @@ function StatsContent({ stats }) {
         <div className="income-kpi-card span-2">
           <div className="income-kpi-icon" style={{ background: "linear-gradient(135deg, #bbf7d0, #86efac)" }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#047857" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
           </div>
           <div className="kpi-label">ผู้สนับสนุนผู้ใจดี</div>
@@ -390,10 +390,10 @@ function RevenueChart({ data }) {
     return (
       <div className="income-chart-card">
         <div className="income-chart-header">
-          <div className="income-chart-title"><div className="dot" style={{ background: "#4f46e5" }}/><span>แนวโน้มรายรับ</span></div>
+          <div className="income-chart-title"><div className="dot" style={{ background: "#4f46e5" }} /><span>แนวโน้มรายรับ</span></div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 140, color: "#9ca3af", fontSize: 13, gap: 8 }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="1.5"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /><line x1="2" y1="20" x2="22" y2="20" /></svg>
           ยังไม่มีข้อมูลเพียงพอสำหรับกราฟ
         </div>
       </div>
@@ -420,15 +420,15 @@ function RevenueChart({ data }) {
   return (
     <div className="income-chart-card">
       <div className="income-chart-header">
-        <div className="income-chart-title"><div className="dot" style={{ background: "#4f46e5" }}/><span>แนวโน้มรายรับ</span></div>
+        <div className="income-chart-title"><div className="dot" style={{ background: "#4f46e5" }} /><span>แนวโน้มรายรับ</span></div>
         <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 500 }}>{data.length} วัน</span>
       </div>
       <div className="income-revenue-chart">
         <svg viewBox={`0 0 ${cW} ${cH}`} style={{ height: 140 }}>
           <defs>
             <linearGradient id="incAreaGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.2"/>
-              <stop offset="100%" stopColor="#4f46e5" stopOpacity="0"/>
+              <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#4f46e5" stopOpacity="0" />
             </linearGradient>
           </defs>
           {/* Grid lines */}
@@ -442,13 +442,13 @@ function RevenueChart({ data }) {
             return <text key={i} x={padL - 6} y={y + 3.5} textAnchor="end" fontSize="9" fill="#9ca3af" fontWeight="500">฿{fmt(tick)}</text>;
           })}
           {/* Area */}
-          <polygon points={areaStr} fill="url(#incAreaGrad)"/>
+          <polygon points={areaStr} fill="url(#incAreaGrad)" />
           {/* Line */}
-          <polyline points={lineStr} fill="none" stroke="#4f46e5" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
+          <polyline points={lineStr} fill="none" stroke="#4f46e5" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
           {/* Dots */}
           {pts.map(([x, y], i) => (
             <g key={i}>
-              <circle cx={x} cy={y} r="4" fill="#fff" stroke="#4f46e5" strokeWidth="2"/>
+              <circle cx={x} cy={y} r="4" fill="#fff" stroke="#4f46e5" strokeWidth="2" />
               <title>{data[i].date}: ฿{fmt(vals[i])}</title>
             </g>
           ))}
@@ -479,7 +479,7 @@ function ActivityDonut({ activities }) {
   return (
     <div className="income-chart-card">
       <div className="income-chart-header">
-        <div className="income-chart-title"><div className="dot" style={{ background: "#6d28d9" }}/><span>สัดส่วนกิจกรรม</span></div>
+        <div className="income-chart-title"><div className="dot" style={{ background: "#6d28d9" }} /><span>สัดส่วนกิจกรรม</span></div>
       </div>
       {activities.length === 0 ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 120, color: "#9ca3af", fontSize: 13, gap: 8 }}>
@@ -494,12 +494,12 @@ function ActivityDonut({ activities }) {
                 style={{ transition: "stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease" }}
               />
             ))}
-            <circle cx={CX} cy={CY} r="32" fill="#fff"/>
+            <circle cx={CX} cy={CY} r="32" fill="#fff" />
           </svg>
           <div className="income-donut-legend">
             {activities.map((a, i) => (
               <div key={i} className="income-donut-legend-item">
-                <div className="dot" style={{ background: a.color }}/>
+                <div className="dot" style={{ background: a.color }} />
                 <span className="label">{a.label}</span>
                 <span className="pct" style={{ color: a.color }}>{a.pct}%</span>
               </div>
@@ -527,7 +527,7 @@ function TopSpenders({ users }) {
           const barPct = Math.round(((u.totalAmount || 0) / maxAmt) * 100);
           return (
             <div key={idx} className="income-spender-row">
-              <div className="income-spender-avatar" style={{ background: `linear-gradient(135deg, ${SPENDER_COLORS[idx] || "#a78bfa"}, ${SPENDER_COLORS[Math.min(idx + 1, 4)]})`}}>
+              <div className="income-spender-avatar" style={{ background: `linear-gradient(135deg, ${SPENDER_COLORS[idx] || "#a78bfa"}, ${SPENDER_COLORS[Math.min(idx + 1, 4)]})` }}>
                 {(u.name || "?").slice(0, 2)}
               </div>
               <div className="income-spender-info">
@@ -536,7 +536,7 @@ function TopSpenders({ users }) {
                   <span className="amount">฿{fmt(u.totalAmount)}</span>
                 </div>
                 <div className="income-spender-bar">
-                  <div className="income-spender-bar-fill" style={{ width: `${barPct}%`, background: SPENDER_COLORS[idx] || "#a78bfa" }}/>
+                  <div className="income-spender-bar-fill" style={{ width: `${barPct}%`, background: SPENDER_COLORS[idx] || "#a78bfa" }} />
                 </div>
               </div>
             </div>
@@ -571,7 +571,7 @@ function PeakHoursCard({ hours, day }) {
                   <span className="income-peak-count">{ph.count} บิล</span>
                 </div>
                 <div className="income-peak-bar">
-                  <div className="income-peak-bar-fill" style={{ width: `${pct}%`, background: PEAK_COLORS[idx] }}/>
+                  <div className="income-peak-bar-fill" style={{ width: `${pct}%`, background: PEAK_COLORS[idx] }} />
                 </div>
               </div>
             );

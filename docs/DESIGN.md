@@ -224,10 +224,12 @@ linear-gradient(135deg, #f0f4ff 0%, #e0e9ff 100%)
 ```css
 .save-btn {
   width: 100%;
-  padding: 1.1rem 2.5rem;
+  height: 40px;
+  padding: 12px 24px;
   border-radius: 12px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
+  font-size: 14px;
   font-weight: 600;
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
   /* Ripple effect on :active::before */
@@ -237,11 +239,13 @@ linear-gradient(135deg, #f0f4ff 0%, #e0e9ff 100%)
 #### Mode/Toggle Buttons
 ```css
 .mode-btn-minimal {
-  padding: 0.8rem 1.8rem;
+  height: 40px;
+  padding: 12px 24px;
   border-radius: 12px;
   border: 2px solid #e0e0e0;
   background: #f8f9fa;
   color: #667eea;
+  font-size: 14px;
   font-weight: 600;
 }
 .mode-btn-minimal.active {
@@ -249,6 +253,28 @@ linear-gradient(135deg, #f0f4ff 0%, #e0e9ff 100%)
   color: #fff;
   border: 2px solid transparent;
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+```
+
+#### Danger & Edit Buttons (Class-based, no inline styles)
+```css
+.btn-danger-custom {
+  height: 40px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: var(--danger-500);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+.btn-edit-custom {
+  height: 40px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: var(--primary-600);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
 }
 ```
 
@@ -270,11 +296,12 @@ linear-gradient(135deg, #f0f4ff 0%, #e0e9ff 100%)
 #### Glassmorphism Card (Home Page variant)
 ```css
 .setting-card-minimal {
+  width: 440px;  /* ★ Updated from 380px to 440px for balanced, wider layout */
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 20px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.5);
-  padding: 2.5rem 1.8rem;
+  padding: 36px 32px;  /* ★ Updated from 2.5rem 1.8rem for professional whitespace */
   border: 1px solid rgba(255, 255, 255, 0.7);
   animation: scaleUp 0.6s ease 0.1s both;
 }
@@ -468,16 +495,17 @@ input:focus {
 ```css
 /* Container max-width varies by page */
 .admin-main          { max-width: 750px; margin: 32px auto; }
-.admin-dashboard-grid { max-width: 1400px; grid-template-columns: 320px 420px 320px; }
+.admin-dashboard-grid { max-width: 1500px; grid-template-columns: 440px 440px 440px; }
 ```
 
 ### 9.3 Dashboard Grid (Home Page)
 ```css
+/* ★ Updated: card widths increased from 380px → 440px for modern proportions */
 .admin-dashboard-grid {
   display: grid;
-  grid-template-columns: 320px 420px 320px;
+  grid-template-columns: 440px 440px 440px;
   gap: 2rem;
-  max-width: 1400px;
+  max-width: 1500px;
   margin: 0 auto;
   justify-content: center;
 }
@@ -644,7 +672,45 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 
 ---
 
-## 16. Z-index System
+## 16. Component Architecture (Clean Architecture)
+
+> ★ ตั้งแต่ v2.0 หน้า Home ถูก refactor จาก monolith (`home.js` ~2,100 lines) เป็น Clean Architecture
+
+### 16.1 Dashboard Subcomponents (`src/components/dashboard/`)
+| Component | Responsibility |
+|-----------|----------------|
+| `FeatureSwitches.jsx` | คอลัมน์ซ้าย — switches (image, text, gift, birthday) + birthday threshold input |
+| `PackageConfig.jsx` | คอลัมน์กลาง — timing package, mode selector, inputs, QR code uploader |
+| `VipSupporters.jsx` | คอลัมน์ขวา — VIP rank lists, date/month/year selectors, summary box |
+| `DashboardModals.jsx` | Modals ทุกตัว (All Ranks, QR Linker, OBS Studio, Premium Perks) |
+
+### 16.2 Custom Hooks (`src/hooks/`)
+| Hook | Responsibility |
+|------|----------------|
+| `useSocket.js` | Socket.IO listeners (status, public ranking toggles) + cleanup |
+| `useDashboardData.js` | HTTP API fetches, drag-and-drop, card ordering + perks CRUD |
+| `useDashboardSocket.js` | Legacy socket hook (real-time system config) |
+| `useRankingStats.js` | Ranking API interactions, date parameters, birthday config |
+| `useCardReorder.js` | Card drag-and-drop mechanics + localStorage persistence |
+
+### 16.3 Pages (`src/pages/`)
+| Page | Description |
+|------|-------------|
+| `Home.jsx` | Dashboard wrapper — declares `HomeProvider`, assembles header + 3-column layout (~50 lines) |
+| `Login.jsx` | Login wrapper — wraps `Register.js` in a clean container |
+
+### 16.4 Reusable UI Components (`src/components/ui/`)
+| Component | Description |
+|-----------|-------------|
+| `Card.jsx` | Standard panel layout with native Drag & Drop binding |
+| `Button.jsx` | Gradient buttons, outline buttons, danger action styles — zero inline styles |
+| `Switch.jsx` | Toggle switch with glassmorphism styling |
+| `Select.jsx` | Clean dropdown picker for date presets and year selectors |
+| `ErrorBoundary.jsx` | Error Boundary for lazy-loaded component crash interception |
+
+---
+
+## 17. Z-index System
 
 | Layer | Value | Usage |
 |-------|-------|-------|
@@ -666,7 +732,7 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 
 ---
 
-## 17. Loading States
+## 18. Loading States
 
 ### 17.1 Skeleton Loading
 ```css
@@ -731,7 +797,7 @@ const handleSubmit = async () => {
 
 ---
 
-## 18. CSS Naming Convention
+## 19. CSS Naming Convention
 
 ### 18.1 Pattern
 ```
@@ -759,7 +825,7 @@ const handleSubmit = async () => {
 
 ---
 
-## 19. Accessibility Checklist
+## 20. Accessibility Checklist
 
 | Rule | Detail |
 |------|--------|

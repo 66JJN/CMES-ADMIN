@@ -1,0 +1,145 @@
+/**
+ * Shared dashboard card chrome — drag wrappers, headers, 3 card shells.
+ */
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-drag-wrapper {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 20px;
+  position: relative;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+}
+
+.card-drag-wrapper.dragging {
+  opacity: 0.45;
+  transform: scale(0.98);
+}
+
+.card-drag-wrapper.drag-over {
+  box-shadow: 0 0 0 3px #667eea, 0 12px 28px rgba(102, 126, 234, 0.22);
+}
+
+.card-drag-wrapper.drag-over::before {
+  content: '📌 วางที่นี่';
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  z-index: 5;
+  white-space: nowrap;
+}
+
+/* Card shells — equal visual weight */
+.feature-card,
+.package-settings-card,
+.vip-card {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 1.35rem 1.25rem 1.25rem;
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  box-sizing: border-box;
+}
+
+.card-drag-handle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  cursor: grab;
+  padding: 0 0 0.85rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  user-select: none;
+}
+
+.card-drag-handle:active {
+  cursor: grabbing;
+}
+
+.card-drag-handle .card-drag-title {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  letter-spacing: 0.02em;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.drag-icon {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  color: #94a3b8;
+  line-height: 1;
+}
+
+.card-eye-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 4.5rem;
+  padding: 0.35rem 0.5rem;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-eye-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+}
+
+.card-collapsed {
+  min-height: auto !important;
+  opacity: 0.75;
+}
+
+.card-collapsed .card-drag-handle {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0.25rem;
+}
+
+.card-drag-wrapper .functions-panel,
+.card-drag-wrapper .setting-card-minimal {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}

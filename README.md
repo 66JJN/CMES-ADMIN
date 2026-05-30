@@ -238,43 +238,67 @@ http://localhost:3000
 CMES-ADMIN/
 ├── frontend/
 │   ├── src/
-│   │   ├── 01_Home/          # Dashboard + system switches
-│   │   ├── 02_ImageQueue/    # Image queue management
-│   │   ├── 03_CheckHistory/  # Verification history
-│   │   ├── 04_Gift/          # Gift settings CRUD
-│   │   ├── 05_Report/        # Report management
-│   │   ├── 06_LuckyWheel/    # Lucky wheel config
-│   │   ├── 07_Register/      # Admin login
-│   │   ├── 08_TimeHistory/   # Time history
-│   │   ├── 09_EditProfile/   # Shop profile editor
-│   │   ├── 10_OBSControl/    # OBS WebSocket control
-│   │   ├── config/
-│   │   │   ├── apiConfig.js  # API URLs
-│   │   │   └── authFetch.js  # ★ Admin fetch utility
+│   │   ├── pages/                  # ★ Clean Architecture entry points
+│   │   │   ├── Home.jsx            #   Dashboard wrapper (~50 lines)
+│   │   │   └── Login.jsx           #   Login wrapper
+│   │   ├── components/
+│   │   │   ├── ui/                 # ★ Reusable presentational components
+│   │   │   │   ├── Button.jsx      #   Gradient/outline/danger buttons
+│   │   │   │   ├── Card.jsx        #   Panel layout + Drag & Drop
+│   │   │   │   ├── Switch.jsx      #   Toggle switch (glassmorphism)
+│   │   │   │   ├── Select.jsx      #   Clean dropdown picker
+│   │   │   │   └── ErrorBoundary.jsx  # Lazy-load crash interceptor
+│   │   │   └── dashboard/          # ★ Dashboard layout sections
+│   │   │       ├── FeatureSwitches.jsx  # Left column (switches)
+│   │   │       ├── PackageConfig.jsx    # Middle column (timing + QR)
+│   │   │       ├── VipSupporters.jsx    # Right column (VIP ranking)
+│   │   │       └── DashboardModals.jsx  # All dialog overlays
+│   │   ├── hooks/                  # ★ Business logic custom hooks
+│   │   │   ├── useSocket.js        #   Socket.IO listeners + cleanup
+│   │   │   ├── useDashboardData.js #   HTTP fetches, drag-drop, perks CRUD
+│   │   │   ├── useDashboardSocket.js  # Legacy socket hook
+│   │   │   ├── useRankingStats.js  #   Ranking API + birthday config
+│   │   │   └── useCardReorder.js   #   Card reordering + localStorage
 │   │   ├── contexts/
-│   │   │   └── ShopContext.js # ★ Multi-tenant context
-│   │   ├── theme.css         # ★ Design system (CSS vars)
-│   │   └── App.js            # Router + ShopProvider
-│   ├── postcss.config.js     # PostCSS config (moved)
-│   ├── tailwind.config.js    # Tailwind config (moved)
+│   │   │   ├── ShopContext.js      # ★ Multi-tenant context (shopId + Socket.IO)
+│   │   │   └── HomeContext.js      # ★ Dashboard local state (40+ config vars)
+│   │   ├── utils/
+│   │   │   └── dateHelpers.js      #   Asia/Bangkok date helpers
+│   │   ├── config/
+│   │   │   ├── apiConfig.js        # API URLs
+│   │   │   └── authFetch.js        # ★ Admin fetch utility
+│   │   ├── 01_Home/                # Dashboard CSS + legacy home.js
+│   │   ├── 02_ImageQueue/          # Image queue management
+│   │   ├── 03_CheckHistory/        # Verification history
+│   │   ├── 04_Gift/                # Gift settings CRUD
+│   │   ├── 05_Report/              # Report management
+│   │   ├── 06_LuckyWheel/          # Lucky wheel config
+│   │   ├── 07_Register/            # Admin login
+│   │   ├── 08_TimeHistory/         # Time history
+│   │   ├── 09_EditProfile/         # Shop profile editor
+│   │   ├── 10_OBSControl/          # OBS WebSocket control
+│   │   ├── theme.css               # ★ Design system (CSS vars)
+│   │   └── App.js                  # Router + ShopProvider
+│   ├── postcss.config.js           # PostCSS config
+│   ├── tailwind.config.js          # Tailwind config
 │   └── package.json
 │
 ├── backend/
-│   ├── server.js             # ★ Express + Socket.IO + all routes
-│   ├── middleware/           # requireShopId, requireAdminAuth
-│   ├── models/               # 10 Mongoose models
-│   ├── utils/                # ★ Relocated utility scripts
-│   │   ├── contentModeration.js  # SightEngine AI moderation
-│   │   ├── cron-cleanup.js       # Scheduled cleanup
-│   │   └── hashPasswords.js      # Password utilities
+│   ├── server.js                   # ★ Express + Socket.IO + all routes
+│   ├── middleware/                  # requireShopId, requireAdminAuth
+│   ├── models/                     # 10 Mongoose models
+│   ├── utils/                      # ★ Relocated utility scripts
+│   │   ├── contentModeration.js    # SightEngine AI moderation
+│   │   ├── cron-cleanup.js         # Scheduled cleanup
+│   │   └── hashPasswords.js        # Password utilities
 │   └── package.json
 │
-├── docs/                     # ★ Project documentation folder
-│   ├── screenshots/          # Dashboard screenshots
-│   ├── BUGLOG.md             # Change history & bug tracking
-│   ├── DESIGN.md             # System design specifications
-│   └── SKILL.md              # AI coding guidelines
-└── README.md                 # ← You are here
+├── docs/                           # ★ Project documentation folder
+│   ├── screenshots/                # Dashboard screenshots
+│   ├── BUGLOG.md                   # Change history & bug tracking
+│   ├── DESIGN.md                   # System design specifications
+│   └── SKILL.md                    # AI coding guidelines
+└── README.md                       # ← You are here
 ```
 
 ---

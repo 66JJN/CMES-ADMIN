@@ -1,0 +1,179 @@
+/* Auto-split from home.css — AdminHeader.css */
+
+.admin-header-minimal {
+  padding: 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  border-radius: 0 0 24px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  animation: slideDown 0.6s ease;
+}
+
+.admin-header-inner {
+  display: grid;
+  grid-template-columns: minmax(140px, auto) 1fr minmax(auto, max-content);
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.brand-minimal {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 1.8rem;
+  font-weight: 700;
+  justify-self: start;
+}
+
+.brand-minimal::before {
+  content: '⚙️ ';
+  font-size: 1.8rem;
+}
+
+/* Marquee container */
+.brand-title-container {
+  display: flex;
+  overflow: hidden;
+  max-width: 170px;
+  /* Adjust max-width based on header layout */
+  white-space: nowrap;
+  position: relative;
+  /* Add fade effect on left and right edges */
+  mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+  padding: 0 4px;
+}
+
+.brand-title-content {
+  display: flex;
+  gap: 2rem;
+  width: max-content;
+}
+
+.brand-title-content.marquee {
+  animation: marquee-scroll 8s linear infinite;
+}
+
+.brand-title-content.marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-50% - 1rem));
+  }
+}
+
+.brand-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.nav-minimal {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+  justify-self: center;
+  min-width: 0;
+}
+
+.nav-minimal a {
+  color: #667eea;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.95rem;
+  border: 2px solid rgba(102, 126, 234, 0.2);
+}
+
+.nav-minimal a:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+  border-color: transparent;
+}
+
+/* Header Buttons */
+.btn-qr-link {
+  padding: 8px 16px;
+  background-color: var(--gray-50, #f8f9fa);
+  color: var(--gray-800, #333);
+  border: 1px solid var(--gray-300, #ddd);
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-qr-link:hover {
+  background-color: var(--gray-200, #e2e8f0);
+}
+
+.btn-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+  padding: 0;
+}
+
+.btn-avatar-bg-default {
+  background: var(--gradient-primary, linear-gradient(135deg, #667eea, #764ba2));
+}
+
+.btn-avatar-bg-transparent {
+  background: transparent;
+}
+
+.btn-avatar:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.6);
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* Header Elements Sizing and Alignments */
+.header-avatar-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-self: end;
+  flex-shrink: 0;
+  margin-left: auto;
+}
