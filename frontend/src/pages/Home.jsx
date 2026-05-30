@@ -57,6 +57,7 @@ function HomeContent() {
     handleDragOver,
     handleDrop,
     toggleCardVisibility,
+    loadShopProfile,
     loadPerks,
     loadTopRanks,
     loadRankingSummary,
@@ -66,9 +67,10 @@ function HomeContent() {
 
   // Restore auto-fetch removed during refactor (perks, ranks, birthday config)
   useEffect(() => {
+    loadShopProfile();
     loadPerks();
     loadBirthdayRequirement();
-  }, [loadPerks, loadBirthdayRequirement]);
+  }, [loadShopProfile, loadPerks, loadBirthdayRequirement]);
 
   useEffect(() => {
     loadTopRanks();

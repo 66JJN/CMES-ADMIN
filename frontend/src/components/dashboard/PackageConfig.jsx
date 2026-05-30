@@ -132,7 +132,7 @@ export default function PackageConfig({
     >
       <div className="card-drag-handle" title="กดค้างแล้วลากเพื่อย้ายตำแหน่ง">
         <span className="drag-icon">⠿</span>
-        <h2>ตั้งค่าแพ็คเกจ</h2>
+        <h3 className="card-drag-title">ตั้งค่าแพ็คเกจ</h3>
         <button 
           className="card-eye-btn" 
           onClick={(e) => { e.stopPropagation(); onToggleVisibility(); }} 

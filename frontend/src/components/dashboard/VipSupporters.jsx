@@ -5,7 +5,7 @@ import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Select from '../ui/Select';
 import useDashboardData from '../../hooks/useDashboardData';
-import { getTodayStr, getCurrentMonthStr, getCurrentYearStr } from '../../utils/dateHelpers';
+import { getTodayStr, getCurrentMonthStr } from '../../utils/dateHelpers';
 
 // Format helpers
 const formatCurrency = (value) => Number(value || 0).toLocaleString("th-TH");
@@ -66,7 +66,7 @@ export default function VipSupporters({
     >
       <div className="card-drag-handle" title="กดค้างแล้วลากเพื่อย้ายตำแหน่ง">
         <span className="drag-icon">⠿</span>
-        <span className="vip-card-title">VIP & Display Control</span>
+        <h3 className="card-drag-title">VIP & Display Control</h3>
         <button 
           className="card-eye-btn" 
           onClick={(e) => { e.stopPropagation(); onToggleVisibility(); }} 
@@ -273,27 +273,19 @@ export default function VipSupporters({
 
           {rankError && <div className="rank-error">{rankError}</div>}
 
-          <button type="button" className="view-more-ranks" onClick={handleOpenAllRanks}>
-            ดูอันดับทั้งหมด
-          </button>
-
-          {/* จัดการสิทธิพิเศษ Button */}
-          <Button 
-            variant="danger" 
-            onClick={handleOpenPerksModal} 
-            className="manage-perks-btn"
-          >
-            <span>⚙️</span><span>จัดการสิทธิพิเศษ</span>
-          </Button>
-
-          {/* สถิติรายรับ Button */}
-          <Button 
-            variant="edit" 
-            onClick={() => setShowIncomeStats(true)} 
-            className="income-stats-btn"
-          >
-            <span>📈</span> เช็คสถิติรายรับ
-          </Button>
+          <div className="vip-card-actions">
+            <button type="button" className="vip-action-btn vip-action-btn--teal" onClick={handleOpenAllRanks}>
+              ดูอันดับทั้งหมด
+            </button>
+            <button type="button" className="vip-action-btn vip-action-btn--danger" onClick={handleOpenPerksModal}>
+              <span aria-hidden="true">⚙️</span>
+              <span>จัดการสิทธิพิเศษ</span>
+            </button>
+            <button type="button" className="vip-action-btn vip-action-btn--primary" onClick={() => setShowIncomeStats(true)}>
+              <span aria-hidden="true">📈</span>
+              <span>เช็คสถิติรายรับ</span>
+            </button>
+          </div>
         </>
       )}
     </Card>

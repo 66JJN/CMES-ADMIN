@@ -61,24 +61,21 @@ export default function useDashboardData() {
     localStorage.setItem('adminCardVisibility', JSON.stringify(cardVisibility));
   }, [cardVisibility]);
 
-  // Load shop profile (logo + name) for header avatar
-  useEffect(() => {
-    const fetchShopProfile = async () => {
-      try {
-        const res = await adminFetch(`${API_BASE_URL}/api/shop/profile`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.success && data.shop) {
-          setShopProfile({
-            name: data.shop.name || 'Admin',
-            logo: data.shop.logo || null,
-          });
-        }
-      } catch (error) {
-        console.warn('[useDashboardData] Failed to load shop profile:', error);
+  // loadShopProfile: header avatar (call once from Home.jsx — avoid duplicate fetches)
+  const loadShopProfile = useCallback(async () => {
+    try {
+      const res = await adminFetch(`${API_BASE_URL}/api/shop/profile`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && data.shop) {
+        setShopProfile({
+          name: data.shop.name || 'Admin',
+          logo: data.shop.logo || null,
+        });
       }
-    };
-    fetchShopProfile();
+    } catch (error) {
+      console.warn('[useDashboardData] Failed to load shop profile:', error);
+    }
   }, [setShopProfile]);
 
   // ===== Drag & Drop Actions =====
@@ -283,6 +280,7 @@ export default function useDashboardData() {
     handleDragOver,
     handleDrop,
     toggleCardVisibility,
+    loadShopProfile,
     loadPerks,
     loadTopRanks,
     loadRankingSummary,

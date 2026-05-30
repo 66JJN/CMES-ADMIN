@@ -1115,22 +1115,6 @@ h.admin-home-container {
   text-align: center;
 }
 
-.view-more-ranks {
-  border: none;
-  border-radius: 12px;
-  padding: 0.7rem 0.9rem;
-  font-weight: 600;
-  background: linear-gradient(135deg, #14b8a6, #0ea5e9);
-  color: #fff;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.view-more-ranks:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 15px 30px rgba(14, 165, 233, 0.35);
-}
-
 .rank-list-item.skeleton {
   opacity: 0.7;
 }
@@ -1630,18 +1614,47 @@ h.admin-home-container {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
 }
 
-.feature-card h3 {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.feature-card .toggle-card {
-  display: flex;
+/* Toggle แนวนอน: ชื่อซ้าย — สวิตช์ขวา */
+.feature-card .toggle-card:not(.toggle-card-vertical) {
+  flex-direction: row;
+  align-items: center;
   justify-content: space-between;
   background: #f5f5ff;
   border-radius: 12px;
   padding: 15px 20px;
   margin-bottom: 16px;
+}
+
+/* ยอดใช้จ่ายวันเกิด: หัวข้อบน — แถว input + ปุ่มล่าง */
+.feature-card .toggle-card-vertical {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  background: #f5f5ff;
+  border-radius: 12px;
+  padding: 15px 20px;
+  margin-bottom: 16px;
+}
+
+.feature-card .toggle-card-vertical .spend-requirement-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 0;
+}
+
+.feature-card .toggle-card-vertical .input-spend-limit {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
+.feature-card .toggle-card-vertical .btn-spend-save {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 5.5rem;
 }
 
 
@@ -1654,11 +1667,6 @@ h.admin-home-container {
   border-radius: 20px;
   padding: 36px 32px; /* เพิ่ม Whitespace ภายในกล่อง */
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
-}
-
-.package-settings-card h2 {
-  text-align: center;
-  margin-bottom: 24px;
 }
 
 .package-settings-card .mode-select-row {
@@ -1974,9 +1982,67 @@ h.admin-home-container {
   margin-bottom: 10px;
 }
 
-.vip-card .view-more-ranks {
+/* VIP card footer actions — single stack, DESIGN gap-3 (~12px) */
+.vip-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.vip-action-btn {
   width: 100%;
-  margin-top: 15px;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.vip-action-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.vip-action-btn--teal {
+  border: none;
+  background: linear-gradient(135deg, #14b8a6, #0ea5e9);
+  color: #fff;
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+}
+
+.vip-action-btn--teal:hover:not(:disabled) {
+  box-shadow: 0 10px 25px rgba(14, 165, 233, 0.35);
+}
+
+.vip-action-btn--danger {
+  background: var(--danger-50, #fef2f2);
+  color: var(--danger-600, #dc2626);
+  border: 1px solid var(--danger-100, #fee2e2);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+.vip-action-btn--danger:hover:not(:disabled) {
+  background: var(--danger-100, #fee2e2);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+}
+
+.vip-action-btn--primary {
+  background: var(--primary-50, #f0f4ff);
+  color: var(--primary-600, #4f46e5);
+  border: 1px solid var(--primary-100, #e0e9ff);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+.vip-action-btn--primary:hover:not(:disabled) {
+  background: var(--primary-100, #e0e9ff);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
 }
 
 /* ===== Card Eye Button (ปุ่มตาบนขวาของ card header) ===== */
@@ -2063,10 +2129,19 @@ h.admin-home-container {
   cursor: grabbing;
 }
 
-.card-drag-handle h2,
-.card-drag-handle h3,
-.card-drag-handle span {
+.card-drag-handle .card-drag-title {
+  flex: 1;
   margin: 0;
+  padding: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1.35;
+  text-align: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .drag-icon {
@@ -2781,35 +2856,12 @@ h.admin-home-container {
    DASHBOARD NEW LAYOUT AND WHITESPACE SYSTEM - ADDONS
    ========================================================================== */
 
-/* Spend Requirement Row inside Left Panel */
-.spend-requirement-row {
-  display: flex;
-  width: 100%;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.input-spend-limit {
-  flex: 1;
-  padding: 10px 14px;
-  border: 1px solid var(--gray-200, #e2e8f0);
-  border-radius: 8px;
-  font-size: 14px;
-  background-color: #fff;
-  transition: all 0.2s;
-}
-
-.btn-spend-save {
-  padding: 10px 20px !important;
-  font-size: 14px !important;
-  height: 42px !important;
-}
-
 .spend-requirement-hint {
   color: var(--gray-500, #64748b);
-  font-size: 12px;
+  font-size: 0.75rem;
+  line-height: 1.45;
   display: block;
-  margin-top: 6px;
+  margin-top: 0.25rem;
 }
 
 /* Header Elements Sizing and Alignments */

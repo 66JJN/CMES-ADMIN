@@ -4,7 +4,6 @@ import { ShopContext } from '../../contexts/ShopContext';
 import { API_BASE_URL, USER_FRONTEND_URL } from '../../config/apiConfig';
 import adminFetch from '../../config/authFetch';
 import Button from '../ui/Button';
-import Select from '../ui/Select';
 import ErrorBoundary from '../ui/ErrorBoundary';
 
 // Lazy-loaded heavy modules

@@ -43,7 +43,7 @@ export default function FeatureSwitches({
     >
       <div className="card-drag-handle" title="กดค้างแล้วลากเพื่อย้ายตำแหน่ง">
         <span className="drag-icon">⠿</span>
-        <h3>ฟังก์ชันต่างๆ</h3>
+        <h3 className="card-drag-title">ฟังก์ชันต่างๆ</h3>
         <button 
           className="card-eye-btn" 
           onClick={(e) => { e.stopPropagation(); onToggleVisibility(); }} 
