@@ -53,50 +53,78 @@
 CMES-ADMIN/
 ├── frontend/
 │   ├── src/
-│   │   ├── 01_Home/          # Dashboard หลัก (home.js + home.css)
-│   │   ├── 02_ImageQueue/    # จัดการคิวรูปภาพ
-│   │   ├── 03_CheckHistory/  # ประวัติการตรวจสอบ
-│   │   ├── 04_Gift/          # ตั้งค่าของขวัญ
-│   │   ├── 05_Report/        # ดูรายงานปัญหา
-│   │   ├── 06_LuckyWheel/    # วงล้อสุ่มรางวัล
-│   │   ├── 07_Register/      # Admin login
-│   │   ├── 08_TimeHistory/   # ประวัติเวลา
-│   │   ├── 09_EditProfile/   # แก้ไขโปรไฟล์ร้าน
-│   │   ├── 10_OBSControl/    # ควบคุม OBS
-│   │   ├── config/
-│   │   │   ├── apiConfig.js  # API_BASE_URL, REALTIME_URL, USER_API_URL, USER_FRONTEND_URL
-│   │   │   └── authFetch.js  # ★ adminFetch() — shared fetch utility
+│   │   ├── pages/              # ★ Clean entry points
+│   │   │   ├── Home.jsx        #   Dashboard wrapper (~50 lines)
+│   │   │   └── Login.jsx       #   Login wrapper (wraps Register.js)
+│   │   ├── components/
+│   │   │   ├── ui/             # ★ Reusable presentational components
+│   │   │   │   ├── Button.jsx  #   Gradient/outline/danger — zero inline styles
+│   │   │   │   ├── Card.jsx    #   Panel layout + Drag & Drop binding
+│   │   │   │   ├── Switch.jsx  #   Toggle switch (glassmorphism)
+│   │   │   │   ├── Select.jsx  #   Clean dropdown picker
+│   │   │   │   └── ErrorBoundary.jsx  # Lazy-load crash interceptor
+│   │   │   └── dashboard/      # ★ Dashboard-specific layout sections
+│   │   │       ├── FeatureSwitches.jsx  # Left column (switches + threshold)
+│   │   │       ├── PackageConfig.jsx    # Middle column (timing + QR)
+│   │   │       ├── VipSupporters.jsx    # Right column (VIP + ranking)
+│   │   │       └── DashboardModals.jsx  # All dialog overlays
+│   │   ├── hooks/              # ★ Business logic custom hooks
+│   │   │   ├── useSocket.js    #   Socket.IO listeners + cleanup
+│   │   │   ├── useDashboardData.js     #   HTTP fetches, drag-drop, perks CRUD
+│   │   │   ├── useDashboardSocket.js   #   Legacy socket hook
+│   │   │   ├── useRankingStats.js       #   Ranking API + birthday config
+│   │   │   └── useCardReorder.js        #   Card reordering + localStorage
 │   │   ├── contexts/
-│   │   │   └── ShopContext.js # ★ Multi-tenant Context (shopId + Socket.IO)
-│   │   ├── theme.css         # ★ Design system (CSS variables + utilities)
-│   │   ├── App.js            # Router + ShopProvider wrapper
-│   │   ├── App.css           # Shared component styles (btn, card, input)
-│   │   ├── Stat-slip.js      # สถิติสลิป
+│   │   │   ├── ShopContext.js  # ★ Multi-tenant Context (shopId + Socket.IO)
+│   │   │   └── HomeContext.js  # ★ Dashboard local state (40+ config vars)
+│   │   ├── utils/
+│   │   │   └── dateHelpers.js  #   Asia/Bangkok date format helpers
+│   │   ├── config/
+│   │   │   ├── apiConfig.js   # API_BASE_URL, REALTIME_URL, USER_API_URL, USER_FRONTEND_URL
+│   │   │   └── authFetch.js   # ★ adminFetch() — shared fetch utility
+│   │   ├── 01_Home/           # Dashboard CSS + legacy home.js (deprecated)
+│   │   ├── 02_ImageQueue/     # จัดการคิวรูปภาพ
+│   │   ├── 03_CheckHistory/   # ประวัติการตรวจสอบ
+│   │   ├── 04_Gift/           # ตั้งค่าของขวัญ
+│   │   ├── 05_Report/         # ดูรายงานปัญหา
+│   │   ├── 06_LuckyWheel/     # วงล้อสุ่มรางวัล
+│   │   ├── 07_Register/       # Admin login
+│   │   ├── 08_TimeHistory/    # ประวัติเวลา
+│   │   ├── 09_EditProfile/    # แก้ไขโปรไฟล์ร้าน
+│   │   ├── 10_OBSControl/     # ควบคุม OBS
+│   │   ├── data-icon/         # Static icon assets
+│   │   ├── theme.css          # ★ Design system (CSS variables + utilities)
+│   │   ├── App.js             # Router + ShopProvider wrapper
+│   │   ├── App.css            # Shared component styles (btn, card, input)
+│   │   ├── Stat-slip.js       # สถิติสลิป
 │   │   └── index.js
 │   └── package.json
 │
 ├── backend/
-│   ├── server.js             # ★ Main entry — Express + Socket.IO + ทุก API route (3700+ lines)
+│   ├── server.js              # ★ Main entry — Express + Socket.IO + ทุก API route (3700+ lines)
 │   ├── middleware/
-│   │   └── authMiddleware.js # requireShopId, requireAdminAuth
+│   │   └── authMiddleware.js  # requireShopId, requireAdminAuth
 │   ├── models/
-│   │   ├── AdminUser.js      # Admin user (shopId + username unique compound)
-│   │   ├── AdminReport.js    # Reports
-│   │   ├── CheckHistory.js   # ประวัติตรวจสอบ
-│   │   ├── GiftSetting.js    # ตั้งค่าของขวัญ
-│   │   ├── ImageQueue.js     # คิวรูปภาพ
-│   │   ├── Ranking.js        # คะแนนสะสม
-│   │   ├── RankingHistory.js # ประวัติ ranking ทุกรายการ
-│   │   ├── Setting.js        # System settings
-│   │   ├── ShopSetting.js    # ตั้งค่าร้าน (ชื่อ, โลโก้, QR)
-│   │   └── TimeHistory.js    # ประวัติเวลา
-│   ├── contentModeration.js  # AI content moderation (Sightengine)
-│   ├── cron-cleanup.js       # Scheduled cleanup (ลบรูปเก่า > 2 วัน)
-│   ├── hashPasswords.js      # Password hashing utilities
+│   │   ├── AdminUser.js       # Admin user (shopId + username unique compound)
+│   │   ├── AdminReport.js     # Reports
+│   │   ├── CheckHistory.js    # ประวัติตรวจสอบ
+│   │   ├── GiftSetting.js     # ตั้งค่าของขวัญ
+│   │   ├── ImageQueue.js      # คิวรูปภาพ
+│   │   ├── Ranking.js         # คะแนนสะสม
+│   │   ├── RankingHistory.js  # ประวัติ ranking ทุกรายการ
+│   │   ├── Setting.js         # System settings
+│   │   ├── ShopSetting.js     # ตั้งค่าร้าน (ชื่อ, โลโก้, QR)
+│   │   └── TimeHistory.js     # ประวัติเวลา
+│   ├── contentModeration.js   # AI content moderation (Sightengine)
+│   ├── cron-cleanup.js        # Scheduled cleanup (ลบรูปเก่า > 2 วัน)
+│   ├── hashPasswords.js       # Password hashing utilities
 │   └── package.json
 │
-├── SKILL.md                  # ← ไฟล์นี้ (Coding rules & architecture)
-└── DESIGN.md                 # ← Design system & visual patterns
+├── docs/
+│   ├── DESIGN.md              # ← Design system & visual patterns
+│   ├── SKILL.md               # ← ไฟล์นี้ (Coding rules & architecture)
+│   └── ...
+└── README.md
 ```
 
 ---
@@ -120,6 +148,28 @@ const { shopId, setShopId, socket, isSocketConnected, logout, systemConfig } = u
 | `isSocketConnected` | boolean | สถานะ connection |
 | `logout` | function | Clear ทุกอย่าง + disconnect socket |
 | `systemConfig` | object | Config switches จาก server |
+
+### 4.2 HomeContext (`contexts/HomeContext.js`)
+```javascript
+// ★ Page-level context สำหรับ Dashboard — 40+ state variables + handlers
+import { HomeContext } from '../contexts/HomeContext';
+
+const {
+  systemOn, shopProfile, showQrModal, setShowQrModal,
+  showObsModal, setShowObsModal, qrCodeUrl, setQrCodeUrl,
+  // ... 30+ other states and setters
+} = useContext(HomeContext);
+```
+
+**HomeContext provides:**
+| Value | Type | Description |
+|-------|------|-------------|
+| `systemOn` | boolean | สถานะระบบ (เปิด/ปิด) |
+| `shopProfile` | object | ข้อมูลร้าน (name, logo) |
+| `showQrModal` | boolean | แสดง QR Code dialog |
+| `showObsModal` | boolean | แสดง OBS Links dialog |
+| `qrCodeUrl` | string | URL ของ QR Code |
+| `...30+ states` | various | Feature toggles, configs, modal states |
 
 ### 4.2 Admin Auth Flow
 1. Admin login → ได้ `shopId` + `adminId` + `adminUsername`
@@ -432,7 +482,54 @@ function PageName() {
 export default PageName;
 ```
 
-### 13.2 Backend API Route Pattern
+### 13.2 Dashboard Component Pattern (Clean Architecture)
+```javascript
+// ★ Dashboard subcomponents consume HomeContext directly
+import React, { useContext } from "react";
+import { HomeContext } from "../../contexts/HomeContext";
+import Switch from "../ui/Switch";
+
+function FeatureSwitches({ isCollapsed, onToggleVisibility }) {
+  const {
+    imageOn, setImageOn,
+    textOn, setTextOn,
+    giftOn, setGiftOn
+  } = useContext(HomeContext);
+
+  return (
+    <div className="setting-card-minimal feature-card">
+      <Switch checked={imageOn} onChange={() => setImageOn(!imageOn)} />
+      {/* ... */}
+    </div>
+  );
+}
+
+export default FeatureSwitches;
+```
+
+### 13.3 Custom Hook Pattern
+```javascript
+// ★ Custom hooks consume HomeContext and ShopContext
+import { useContext, useEffect } from 'react';
+import { HomeContext } from '../contexts/HomeContext';
+import { ShopContext } from '../contexts/ShopContext';
+
+export default function useSocket() {
+  const { socket } = useContext(ShopContext);
+  const { setSystemOn } = useContext(HomeContext);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (config) => setSystemOn(config.systemOn);
+    socket.on('status', handler);
+    return () => socket.off('status', handler);  // ★ Always cleanup
+  }, [socket]);
+
+  return { handleToggleSystem };
+}
+```
+
+### 13.4 Backend API Route Pattern
 ```javascript
 // ★ ทุก route ต้องใช้ middleware + filter shopId
 app.get('/api/resource', requireAdminAuth, async (req, res) => {
