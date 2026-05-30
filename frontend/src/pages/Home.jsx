@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { ShopContext } from '../contexts/ShopContext';
 import { HomeProvider, HomeContext } from '../contexts/HomeContext';
 import useSocket from '../hooks/useSocket';
@@ -35,6 +35,12 @@ function HomeContent() {
     shopId,
     systemOn,
     shopProfile,
+    rankingType,
+    rankLimit,
+    selectedDate,
+    selectedMonth,
+    selectedYear,
+    showAllRanks,
     setQrCodeUrl,
     setShowQrModal,
     setShowObsModal
@@ -50,8 +56,45 @@ function HomeContent() {
     handleDragEnd,
     handleDragOver,
     handleDrop,
-    toggleCardVisibility
+    toggleCardVisibility,
+    loadPerks,
+    loadTopRanks,
+    loadRankingSummary,
+    loadAllRanks,
+    loadBirthdayRequirement
   } = useDashboardData();
+
+  // Restore auto-fetch removed during refactor (perks, ranks, birthday config)
+  useEffect(() => {
+    loadPerks();
+    loadBirthdayRequirement();
+  }, [loadPerks, loadBirthdayRequirement]);
+
+  useEffect(() => {
+    loadTopRanks();
+    loadRankingSummary();
+  }, [
+    rankingType,
+    rankLimit,
+    selectedDate,
+    selectedMonth,
+    selectedYear,
+    loadTopRanks,
+    loadRankingSummary,
+  ]);
+
+  useEffect(() => {
+    if (showAllRanks) {
+      loadAllRanks();
+    }
+  }, [
+    showAllRanks,
+    rankingType,
+    selectedDate,
+    selectedMonth,
+    selectedYear,
+    loadAllRanks,
+  ]);
 
   const adminUsername = localStorage.getItem("adminUsername") || "Admin";
 
@@ -67,23 +110,24 @@ function HomeContent() {
     <div className="admin-home-minimal">
       {/* ===== Header Navigation Panel ===== */}
       <header className="admin-header-minimal">
-        <div className="brand-minimal" title={shopId || "CMES ADMIN"}>
-          <div className={`brand-title-content ${(shopId || "CMES ADMIN").length > 15 ? 'marquee' : ''}`}>
-            <span className="brand-title">{shopId || "CMES ADMIN"}</span>
-            {(shopId || "CMES ADMIN").length > 15 && <span className="brand-title">{shopId || "CMES ADMIN"}</span>}
+        <div className="admin-header-inner">
+          <div className="brand-minimal" title={shopId || "CMES ADMIN"}>
+            <div className={`brand-title-content ${(shopId || "CMES ADMIN").length > 15 ? 'marquee' : ''}`}>
+              <span className="brand-title">{shopId || "CMES ADMIN"}</span>
+              {(shopId || "CMES ADMIN").length > 15 && <span className="brand-title">{shopId || "CMES ADMIN"}</span>}
+            </div>
           </div>
-        </div>
-        <nav className="nav-minimal">
-          <a href="/TimeHistory">ประวัติการตั้งเวลา</a>
-          <a href="/image-queue">ตรวจสอบรูปภาพ</a>
-          <a href="/report">รายงาน</a>
-          <a href="/check-history">ประวัติการตรวจสอบ</a>
-          <a href="/lucky-wheel">วงล้อเสี่ยงดวง</a>
-          <a href="/gift-setting">ตั้งค่าส่งของขวัญ</a>
-          <a href="#!" onClick={(e) => { e.preventDefault(); setShowObsModal(true); }}>🎥 OBS Links</a>
-        </nav>
-        <div className="header-avatar-group">
-          <button onClick={generateQRCode} title="QR Code ร้านค้า" className="btn-qr-link">
+          <nav className="nav-minimal" aria-label="เมนูหลัก">
+            <a href="/TimeHistory">ประวัติการตั้งเวลา</a>
+            <a href="/image-queue">ตรวจสอบรูปภาพ</a>
+            <a href="/report">รายงาน</a>
+            <a href="/check-history">ประวัติการตรวจสอบ</a>
+            <a href="/lucky-wheel">วงล้อเสี่ยงดวง</a>
+            <a href="/gift-setting">ตั้งค่าส่งของขวัญ</a>
+            <a href="#!" onClick={(e) => { e.preventDefault(); setShowObsModal(true); }}>🎥 OBS Links</a>
+          </nav>
+          <div className="header-avatar-group">
+            <button onClick={generateQRCode} title="QR Code ร้านค้า" className="btn-qr-link">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
               <rect x="7" y="7" width="3" height="3" />
@@ -91,23 +135,24 @@ function HomeContent() {
               <rect x="7" y="14" width="3" height="3" />
               <rect x="14" y="14" width="3" height="3" />
             </svg>
-            ลิงก์ & QR Code
-          </button>
-          <button
-            onClick={() => navigate("/edit-profile")}
-            title={shopProfile.name}
-            className={`btn-avatar ${shopProfile.logo ? 'btn-avatar-bg-transparent' : 'btn-avatar-bg-default'}`}
-          >
-            {shopProfile.logo ? (
-              <img
-                src={shopProfile.logo.startsWith('http') ? shopProfile.logo : `${API_BASE_URL}${shopProfile.logo.startsWith('/') ? '' : '/'}${shopProfile.logo}`}
-                alt="Shop Logo"
-                className="avatar-img"
-              />
-            ) : (
-              (shopProfile.name || adminUsername || "JJ").slice(0, 2).toUpperCase()
-            )}
-          </button>
+              ลิงก์ & QR Code
+            </button>
+            <button
+              onClick={() => navigate("/edit-profile")}
+              title={shopProfile.name}
+              className={`btn-avatar ${shopProfile.logo ? 'btn-avatar-bg-transparent' : 'btn-avatar-bg-default'}`}
+            >
+              {shopProfile.logo ? (
+                <img
+                  src={shopProfile.logo.startsWith('http') ? shopProfile.logo : `${API_BASE_URL}${shopProfile.logo.startsWith('/') ? '' : '/'}${shopProfile.logo}`}
+                  alt="Shop Logo"
+                  className="avatar-img"
+                />
+              ) : (
+                (shopProfile.name || adminUsername || "JJ").slice(0, 2).toUpperCase()
+              )}
+            </button>
+          </div>
         </div>
       </header>
 

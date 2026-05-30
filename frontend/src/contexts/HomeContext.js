@@ -1,5 +1,5 @@
 import React, { createContext, useState } from 'react';
-import { getTodayStr, getCurrentMonthStr, getCurrentYearStr } from '../utils/dateHelpers';
+import { getTodayStr, getCurrentMonthStr } from '../utils/dateHelpers';
 
 export const HomeContext = createContext();
 
@@ -30,13 +30,15 @@ export function HomeProvider({ children, socket, shopId }) {
   // ===== Date filter pickers state =====
   const [selectedDate, setSelectedDate] = useState(getTodayStr());
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthStr());
-  const [selectedYear, setSelectedYear] = useState(getCurrentYearStr());
+  // ว่าง = อันดับตลอดกาลจาก Ranking หลัก (ไม่กรองปี); ระบุปี = ดึงจาก RankingHistory
+  const [selectedYear, setSelectedYear] = useState('');
   const [rankingSummary, setRankingSummary] = useState({ totalSum: 0, totalUsers: 0 });
   const [publicRankingType, setPublicRankingType] = useState("alltime");
 
   // ===== Modal triggers state =====
   const [showIncomeStats, setShowIncomeStats] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [showObsModal, setShowObsModal] = useState(false);
   const [showPerksModal, setShowPerksModal] = useState(false);
   const [showAllRanks, setShowAllRanks] = useState(false);
@@ -83,6 +85,7 @@ export function HomeProvider({ children, socket, shopId }) {
     publicRankingType, setPublicRankingType,
     showIncomeStats, setShowIncomeStats,
     showQrModal, setShowQrModal,
+    qrCodeUrl, setQrCodeUrl,
     showObsModal, setShowObsModal,
     showPerksModal, setShowPerksModal,
     showAllRanks, setShowAllRanks,

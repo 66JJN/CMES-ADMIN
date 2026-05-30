@@ -22,6 +22,11 @@ export default function Card({
     panel: 'functions-panel',
   };
 
+  const isDashboardCard = ['feature-card', 'package-settings-card', 'vip-card'].some(
+    (token) => className.includes(token)
+  );
+  const baseClass = isDashboardCard ? '' : (layoutClasses[type] || 'setting-card-minimal');
+
   return (
     <div 
       draggable={draggable}
@@ -29,7 +34,7 @@ export default function Card({
       onDragEnd={onDragEnd}
       onDragOver={onDragOver}
       onDrop={onDrop}
-      className={`${layoutClasses[type] || 'setting-card-minimal'} ${className}`}
+      className={`${baseClass} ${className}`.trim()}
       {...props}
     >
       {title && <h2>{title}</h2>}

@@ -48,7 +48,7 @@ export default function VipSupporters({
     setShowAllRanks
   } = useContext(HomeContext);
 
-  const { loadTopRanks } = useDashboardData();
+  const { loadTopRanks, loadRankingSummary } = useDashboardData();
 
   const handleSetPublicRankingType = (type) => {
     if (!socket) return;
@@ -123,7 +123,10 @@ export default function VipSupporters({
             </div>
             <Button 
               variant="secondary" 
-              onClick={() => loadTopRanks(topRanks.length > 0)} 
+              onClick={() => {
+                loadTopRanks(topRanks.length > 0);
+                loadRankingSummary();
+              }} 
               disabled={refreshingRanks} 
               className="rank-refresh-btn"
             >
@@ -162,7 +165,7 @@ export default function VipSupporters({
             </button>
             <button 
               className={`ranking-type-btn ${rankingType === "alltime" ? "active" : ""}`} 
-              onClick={() => { setRankingType("alltime"); setSelectedYear(getCurrentYearStr()); }}
+              onClick={() => { setRankingType("alltime"); setSelectedYear(""); }}
             >
               ตลอดกาล
             </button>

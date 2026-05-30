@@ -1,4 +1,4 @@
-import React, { useState, useContext, Suspense, lazy } from 'react';
+import React, { useState, useContext, useEffect, Suspense, lazy } from 'react';
 import { HomeContext } from '../../contexts/HomeContext';
 import { ShopContext } from '../../contexts/ShopContext';
 import { API_BASE_URL, USER_FRONTEND_URL } from '../../config/apiConfig';
@@ -56,6 +56,24 @@ export default function DashboardModals() {
   const [copiedImage, setCopiedImage] = useState(false);
   const [copiedRanking, setCopiedRanking] = useState(false);
   const [copiedWheel, setCopiedWheel] = useState(false);
+
+  // Reload perks when opening modal (ensures list matches DB / user-facing data)
+  useEffect(() => {
+    if (!showPerksModal) return;
+    const fetchPerks = async () => {
+      try {
+        const res = await adminFetch(`${API_BASE_URL}/api/config/perks`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success && Array.isArray(data.perks)) {
+          setPerks(data.perks);
+        }
+      } catch (error) {
+        console.error('[DashboardModals] loadPerks failed', error);
+      }
+    };
+    fetchPerks();
+  }, [showPerksModal, setPerks]);
 
   // Perks handlers
   const handleClosePerksModal = () => {

@@ -23,6 +23,12 @@ export default function useDashboardData() {
     setRankingSummary,
     birthdaySpendingRequirement,
     setBirthdaySpendingRequirement,
+    setShopProfile,
+    setPerks,
+    setAllRanks,
+    setAllRanksLoaded,
+    setFetchingAllRanks,
+    setAllRankError,
     showToast
   } = useContext(HomeContext);
 
@@ -54,6 +60,26 @@ export default function useDashboardData() {
   useEffect(() => {
     localStorage.setItem('adminCardVisibility', JSON.stringify(cardVisibility));
   }, [cardVisibility]);
+
+  // Load shop profile (logo + name) for header avatar
+  useEffect(() => {
+    const fetchShopProfile = async () => {
+      try {
+        const res = await adminFetch(`${API_BASE_URL}/api/shop/profile`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success && data.shop) {
+          setShopProfile({
+            name: data.shop.name || 'Admin',
+            logo: data.shop.logo || null,
+          });
+        }
+      } catch (error) {
+        console.warn('[useDashboardData] Failed to load shop profile:', error);
+      }
+    };
+    fetchShopProfile();
+  }, [setShopProfile]);
 
   // ===== Drag & Drop Actions =====
   const handleDragStart = (e, cardId) => {
@@ -102,7 +128,21 @@ export default function useDashboardData() {
   };
 
   // ===== HTTP API Data Requests =====
-  
+
+  // loadPerks: fetch premium member privileges list
+  const loadPerks = useCallback(async () => {
+    try {
+      const res = await adminFetch(`${API_BASE_URL}/api/config/perks`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success) {
+        setPerks(Array.isArray(data.perks) ? data.perks : []);
+      }
+    } catch (error) {
+      console.error('[useDashboardData] loadPerks failed', error);
+    }
+  }, [setPerks]);
+
   // loadTopRanks: fetch top rank users list
   const loadTopRanks = useCallback(async (silent = false) => {
     if (silent) setRefreshingRanks(true);
@@ -169,6 +209,45 @@ export default function useDashboardData() {
     }
   }, [setBirthdaySpendingRequirement]);
 
+  // loadAllRanks: fetch full ranking list for "ดูอันดับทั้งหมด" modal
+  const loadAllRanks = useCallback(async () => {
+    setFetchingAllRanks(true);
+    setAllRankError('');
+    try {
+      const params = new URLSearchParams({
+        limit: String(Math.max(rankLimit, 500)),
+        type: rankingType,
+      });
+      if (rankingType === 'daily' && selectedDate) params.set('date', selectedDate);
+      if (rankingType === 'monthly' && selectedMonth) params.set('month', selectedMonth);
+      if (rankingType === 'alltime' && selectedYear) params.set('year', selectedYear);
+
+      const res = await adminFetch(`${API_BASE_URL}/api/rankings?${params}`);
+      if (!res.ok) throw new Error('FAILED');
+      const data = await res.json();
+      if (!data.success) throw new Error('FAILED');
+
+      setAllRanks(data.ranks || []);
+      setAllRanksLoaded(true);
+    } catch (error) {
+      console.error('[useDashboardData] loadAllRanks failed', error);
+      setAllRankError('ไม่สามารถโหลดข้อมูลอันดับทั้งหมดได้');
+      setAllRanks([]);
+    } finally {
+      setFetchingAllRanks(false);
+    }
+  }, [
+    rankLimit,
+    rankingType,
+    selectedDate,
+    selectedMonth,
+    selectedYear,
+    setAllRanks,
+    setAllRanksLoaded,
+    setFetchingAllRanks,
+    setAllRankError,
+  ]);
+
   // handleSaveBirthdayRequirement: save config to server
   const handleSaveBirthdayRequirement = async () => {
     const requirement = Number(birthdaySpendingRequirement);
@@ -204,8 +283,10 @@ export default function useDashboardData() {
     handleDragOver,
     handleDrop,
     toggleCardVisibility,
+    loadPerks,
     loadTopRanks,
     loadRankingSummary,
+    loadAllRanks,
     loadBirthdayRequirement,
     handleSaveBirthdayRequirement
   };

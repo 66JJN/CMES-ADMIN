@@ -422,10 +422,6 @@ h.admin-home-container {
 }
 
 .admin-header-minimal {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
   padding: 1rem 1.5rem;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
@@ -433,8 +429,14 @@ h.admin-home-container {
   border-radius: 0 0 24px 24px;
   border: 1px solid rgba(255, 255, 255, 0.7);
   animation: slideDown 0.6s ease;
+}
+
+.admin-header-inner {
+  display: grid;
+  grid-template-columns: minmax(140px, auto) 1fr minmax(auto, max-content);
+  align-items: center;
   gap: 1rem;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
 .brand-minimal {
@@ -443,6 +445,7 @@ h.admin-home-container {
   gap: 0.7rem;
   font-size: 1.8rem;
   font-weight: 700;
+  justify-self: start;
 }
 
 .brand-minimal::before {
@@ -501,9 +504,11 @@ h.admin-home-container {
 .nav-minimal {
   display: flex;
   gap: 0.8rem;
-  margin-top: 1rem;
+  margin-top: 0;
   flex-wrap: wrap;
   justify-content: center;
+  justify-self: center;
+  min-width: 0;
 }
 
 .nav-minimal a {
@@ -1434,6 +1439,21 @@ h.admin-home-container {
     border-radius: 0 0 16px 16px;
   }
 
+  .admin-header-inner {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .header-avatar-group {
+    justify-self: center;
+    margin-left: 0;
+  }
+
+  .three-box-container {
+    flex-wrap: wrap;
+  }
+
   .brand-title {
     font-size: 1.2rem;
   }
@@ -1562,6 +1582,12 @@ h.admin-home-container {
   flex: 1;
 }
 
+@media (max-width: 1500px) {
+  .three-box-container {
+    flex-wrap: wrap;
+  }
+}
+
 /* จัดให้ทั้ง 3 กล่องเรียงแนวนอนและอยู่กึ่งกลาง */
 .three-box-container {
   display: flex;
@@ -1569,11 +1595,13 @@ h.admin-home-container {
   align-items: flex-start;
   gap: 48px; /* เพิ่มระยะห่างระหว่างการ์ด (Golden Ratio / Whitespace) */
   margin-top: 48px;
-  flex-wrap: wrap; /* ให้หดลงอย่างสง่างามบนหน้าจอขนาดเล็ก */
+  flex-wrap: nowrap;
+  width: 100%;
   max-width: 1540px;
   margin-left: auto;
   margin-right: auto;
   padding: 0 24px;
+  box-sizing: border-box;
 }
 
 /* ให้ทุกกล่องมีขนาดเท่ากันตาม "ตั้งค่าแพ็กเกจ" */
@@ -2053,6 +2081,16 @@ h.admin-home-container {
   color: #667eea;
 }
 
+/* Override legacy panel classes inside drag wrappers */
+.card-drag-wrapper .functions-panel,
+.card-drag-wrapper .setting-card-minimal {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  flex: none;
+  min-width: 0;
+}
+
 /* Override original card widths to let wrapper control sizing */
 .card-drag-wrapper .feature-card,
 .card-drag-wrapper .package-settings-card,
@@ -2294,8 +2332,8 @@ h.admin-home-container {
 .obs-modal-title {
   background: var(--gradient-primary, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
   -webkit-background-clip: text;
-  background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
   font-size: 24px;
   font-weight: 800;
   letter-spacing: 0.5px;
@@ -2779,6 +2817,9 @@ h.admin-home-container {
   display: flex;
   align-items: center;
   gap: 16px;
+  justify-self: end;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .hidden-file-input {
@@ -2963,8 +3004,8 @@ h.admin-home-container {
 .obs-modal-title {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
-  background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
   font-size: 24px;
   font-weight: 800;
   letter-spacing: 0.5px;
