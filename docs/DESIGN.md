@@ -226,9 +226,12 @@ linear-gradient(135deg, #f0f4ff 0%, #e0e9ff 100%)
   width: 100%;
   height: 40px;
   padding: 12px 24px;
+  height: 40px;
+  padding: 12px 24px;
   border-radius: 12px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
+  font-size: 14px;
   font-size: 14px;
   font-weight: 600;
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
@@ -241,10 +244,13 @@ linear-gradient(135deg, #f0f4ff 0%, #e0e9ff 100%)
 .mode-btn-minimal {
   height: 40px;
   padding: 12px 24px;
+  height: 40px;
+  padding: 12px 24px;
   border-radius: 12px;
   border: 2px solid #e0e0e0;
   background: #f8f9fa;
   color: #667eea;
+  font-size: 14px;
   font-size: 14px;
   font-weight: 600;
 }
@@ -253,6 +259,28 @@ linear-gradient(135deg, #f0f4ff 0%, #e0e9ff 100%)
   color: #fff;
   border: 2px solid transparent;
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+```
+
+#### Danger & Edit Buttons (Class-based, no inline styles)
+```css
+.btn-danger-custom {
+  height: 40px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: var(--danger-500);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+.btn-edit-custom {
+  height: 40px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: var(--primary-600);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
 }
 ```
 
@@ -796,6 +824,7 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 ---
 
 ## 18. Loading States
+## 18. Loading States
 
 ### 17.1 Skeleton Loading
 ```css
@@ -861,6 +890,7 @@ const handleSubmit = async () => {
 ---
 
 ## 19. CSS Naming Convention
+## 19. CSS Naming Convention
 
 ### 18.1 Pattern
 ```
@@ -890,6 +920,7 @@ const handleSubmit = async () => {
 
 ---
 
+## 20. Accessibility Checklist
 ## 20. Accessibility Checklist
 
 | Rule | Detail |

@@ -292,8 +292,21 @@ CMES-ADMIN/
 │   │   ├── contentModeration.js    # SightEngine AI moderation
 │   │   ├── cron-cleanup.js         # Scheduled cleanup
 │   │   └── hashPasswords.js        # Password utilities
+│   ├── server.js                   # ★ Express + Socket.IO + all routes
+│   ├── middleware/                  # requireShopId, requireAdminAuth
+│   ├── models/                     # 10 Mongoose models
+│   ├── utils/                      # ★ Relocated utility scripts
+│   │   ├── contentModeration.js    # SightEngine AI moderation
+│   │   ├── cron-cleanup.js         # Scheduled cleanup
+│   │   └── hashPasswords.js        # Password utilities
 │   └── package.json
 │
+├── docs/                           # ★ Project documentation folder
+│   ├── screenshots/                # Dashboard screenshots
+│   ├── BUGLOG.md                   # Change history & bug tracking
+│   ├── DESIGN.md                   # System design specifications
+│   └── SKILL.md                    # AI coding guidelines
+└── README.md                       # ← You are here
 ├── docs/                           # ★ Project documentation folder
 │   ├── screenshots/                # Dashboard screenshots
 │   ├── BUGLOG.md                   # Change history & bug tracking

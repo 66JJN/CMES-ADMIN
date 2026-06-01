@@ -172,9 +172,9 @@ function HomeContent() {
                 onDragOver={(e) => handleDragOver(e, 'feature')}
                 onDrop={(e) => handleDrop(e, 'feature')}
               >
-                <FeatureSwitches 
-                  isCollapsed={isCollapsed} 
-                  onToggleVisibility={() => toggleCardVisibility('feature')} 
+                <FeatureSwitches
+                  isCollapsed={isCollapsed}
+                  onToggleVisibility={() => toggleCardVisibility('feature')}
                 />
               </div>
             );
@@ -189,9 +189,9 @@ function HomeContent() {
                 onDragOver={(e) => handleDragOver(e, 'package')}
                 onDrop={(e) => handleDrop(e, 'package')}
               >
-                <PackageConfig 
-                  isCollapsed={isCollapsed} 
-                  onToggleVisibility={() => toggleCardVisibility('package')} 
+                <PackageConfig
+                  isCollapsed={isCollapsed}
+                  onToggleVisibility={() => toggleCardVisibility('package')}
                 />
               </div>
             );
@@ -206,9 +206,9 @@ function HomeContent() {
                 onDragOver={(e) => handleDragOver(e, 'vip')}
                 onDrop={(e) => handleDrop(e, 'vip')}
               >
-                <VipSupporters 
-                  isCollapsed={isCollapsed} 
-                  onToggleVisibility={() => toggleCardVisibility('vip')} 
+                <VipSupporters
+                  isCollapsed={isCollapsed}
+                  onToggleVisibility={() => toggleCardVisibility('vip')}
                 />
               </div>
             );

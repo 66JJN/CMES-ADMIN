@@ -89,8 +89,15 @@
 }
 
 @keyframes vip-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.55;
+  }
 }
 
 /* Rank panel */
@@ -103,7 +110,7 @@
   margin-bottom: 0.5rem;
 }
 
-.vip-card .rank-panel-heading > div:first-child {
+.vip-card .rank-panel-heading>div:first-child {
   flex: 1;
   min-width: 0;
 }
@@ -361,9 +368,17 @@
   background: #f8fafc;
 }
 
-.rank-list-item.tier-1 { border-left: 3px solid #facc15; }
-.rank-list-item.tier-2 { border-left: 3px solid #f97316; }
-.rank-list-item.tier-3 { border-left: 3px solid #6366f1; }
+.rank-list-item.tier-1 {
+  border-left: 3px solid #facc15;
+}
+
+.rank-list-item.tier-2 {
+  border-left: 3px solid #f97316;
+}
+
+.rank-list-item.tier-3 {
+  border-left: 3px solid #6366f1;
+}
 
 .rank-index {
   font-weight: 700;
@@ -500,6 +515,7 @@
 }
 
 @media (max-width: 600px) {
+
   .broadcast-buttons,
   .ranking-type-selector {
     grid-template-columns: 1fr;

@@ -109,7 +109,9 @@ CMES-ADMIN/
 │
 ├── backend/
 │   ├── server.js              # ★ Main entry — Express + Socket.IO + ทุก API route (3700+ lines)
+│   ├── server.js              # ★ Main entry — Express + Socket.IO + ทุก API route (3700+ lines)
 │   ├── middleware/
+│   │   └── authMiddleware.js  # requireShopId, requireAdminAuth
 │   │   └── authMiddleware.js  # requireShopId, requireAdminAuth
 │   ├── models/
 │   │   ├── AdminUser.js       # Admin user (shopId + username unique compound)
@@ -125,8 +127,26 @@ CMES-ADMIN/
 │   ├── contentModeration.js   # AI content moderation (Sightengine)
 │   ├── cron-cleanup.js        # Scheduled cleanup (ลบรูปเก่า > 2 วัน)
 │   ├── hashPasswords.js       # Password hashing utilities
+│   │   ├── AdminUser.js       # Admin user (shopId + username unique compound)
+│   │   ├── AdminReport.js     # Reports
+│   │   ├── CheckHistory.js    # ประวัติตรวจสอบ
+│   │   ├── GiftSetting.js     # ตั้งค่าของขวัญ
+│   │   ├── ImageQueue.js      # คิวรูปภาพ
+│   │   ├── Ranking.js         # คะแนนสะสม
+│   │   ├── RankingHistory.js  # ประวัติ ranking ทุกรายการ
+│   │   ├── Setting.js         # System settings
+│   │   ├── ShopSetting.js     # ตั้งค่าร้าน (ชื่อ, โลโก้, QR)
+│   │   └── TimeHistory.js     # ประวัติเวลา
+│   ├── contentModeration.js   # AI content moderation (Sightengine)
+│   ├── cron-cleanup.js        # Scheduled cleanup (ลบรูปเก่า > 2 วัน)
+│   ├── hashPasswords.js       # Password hashing utilities
 │   └── package.json
 │
+├── docs/
+│   ├── DESIGN.md              # ← Design system & visual patterns
+│   ├── SKILL.md               # ← ไฟล์นี้ (Coding rules & architecture)
+│   └── ...
+└── README.md
 ├── docs/
 │   ├── DESIGN.md              # ← Design system & visual patterns
 │   ├── SKILL.md               # ← ไฟล์นี้ (Coding rules & architecture)
@@ -155,6 +175,28 @@ const { shopId, setShopId, socket, isSocketConnected, logout, systemConfig } = u
 | `isSocketConnected` | boolean | สถานะ connection |
 | `logout` | function | Clear ทุกอย่าง + disconnect socket |
 | `systemConfig` | object | Config switches จาก server |
+
+### 4.2 HomeContext (`contexts/HomeContext.js`)
+```javascript
+// ★ Page-level context สำหรับ Dashboard — 40+ state variables + handlers
+import { HomeContext } from '../contexts/HomeContext';
+
+const {
+  systemOn, shopProfile, showQrModal, setShowQrModal,
+  showObsModal, setShowObsModal, qrCodeUrl, setQrCodeUrl,
+  // ... 30+ other states and setters
+} = useContext(HomeContext);
+```
+
+**HomeContext provides:**
+| Value | Type | Description |
+|-------|------|-------------|
+| `systemOn` | boolean | สถานะระบบ (เปิด/ปิด) |
+| `shopProfile` | object | ข้อมูลร้าน (name, logo) |
+| `showQrModal` | boolean | แสดง QR Code dialog |
+| `showObsModal` | boolean | แสดง OBS Links dialog |
+| `qrCodeUrl` | string | URL ของ QR Code |
+| `...30+ states` | various | Feature toggles, configs, modal states |
 
 ### 4.2 HomeContext (`contexts/HomeContext.js`)
 ```javascript
