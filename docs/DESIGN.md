@@ -226,9 +226,12 @@ linear-gradient(135deg, #f0f4ff 0%, #e0e9ff 100%)
   width: 100%;
   height: 40px;
   padding: 12px 24px;
+  height: 40px;
+  padding: 12px 24px;
   border-radius: 12px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
+  font-size: 14px;
   font-size: 14px;
   font-weight: 600;
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
@@ -241,10 +244,13 @@ linear-gradient(135deg, #f0f4ff 0%, #e0e9ff 100%)
 .mode-btn-minimal {
   height: 40px;
   padding: 12px 24px;
+  height: 40px;
+  padding: 12px 24px;
   border-radius: 12px;
   border: 2px solid #e0e0e0;
   background: #f8f9fa;
   color: #667eea;
+  font-size: 14px;
   font-size: 14px;
   font-weight: 600;
 }
@@ -253,6 +259,28 @@ linear-gradient(135deg, #f0f4ff 0%, #e0e9ff 100%)
   color: #fff;
   border: 2px solid transparent;
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+```
+
+#### Danger & Edit Buttons (Class-based, no inline styles)
+```css
+.btn-danger-custom {
+  height: 40px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: var(--danger-500);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+.btn-edit-custom {
+  height: 40px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: var(--primary-600);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
 }
 ```
 
@@ -296,12 +324,12 @@ linear-gradient(135deg, #f0f4ff 0%, #e0e9ff 100%)
 #### Glassmorphism Card (Home Page variant)
 ```css
 .setting-card-minimal {
-  width: 440px;  /* ★ Updated from 380px to 440px for balanced, wider layout */
+  width: 380px;  /* ★ Dashboard column width — อย่ายืดเต็มจอ */
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.5);
-  padding: 36px 32px;  /* ★ Updated from 2.5rem 1.8rem for professional whitespace */
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  padding: 1rem 0.95rem;  /* DESIGN p-4 — compact card */
   border: 1px solid rgba(255, 255, 255, 0.7);
   animation: scaleUp 0.6s ease 0.1s both;
 }
@@ -351,25 +379,39 @@ input:focus {
 }
 ```
 
-### 8.4 Badges / Status Indicators
+### 8.4 System Master Switch (สถานะระบบ)
+
+> ★ ตั้งแต่ refactor v2 — **ไม่มี** แถบสถานะลอยกลางหน้า (`system-status-row` ใน `main`) และ**ไม่มี**ป้ายข้อความ "เปิด"/"ปิด" แยกจากสวิตช์
+
+สถานะระบบอยู่**แถวแรก**ในการ์ด **ฟังก์ชันต่างๆ** (`FeatureSwitches.jsx`) — สวิตช์หลักที่ปิดทั้งระบบ แยกจากฟังก์ชันย่อยด้วยเส้นประ (`.feature-sub-toggles`)
+
 ```css
-/* Status text badges */
-.system-status-text.on {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-weight: 700;
-  text-transform: uppercase;
+/* กล่องสวิตช์หลัก — โทนสีตาม state (ไม่ใช้ badge ข้อความ) */
+.feature-card .system-master-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  border: 2px solid;
 }
 
-.system-status-text.off {
-  background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(244, 67, 54, 0.05));
-  color: #d32f2f;
-  border: 1px solid rgba(244, 67, 54, 0.3);
+.feature-card .system-master-control.is-on {
+  background: linear-gradient(135deg, #ecfdf5, #f8fafc);
+  border-color: rgba(16, 185, 129, 0.45);
 }
+
+.feature-card .system-master-control.is-off {
+  background: linear-gradient(135deg, #fef2f2, #f8fafc);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.feature-card .system-master-title { font-size: 1rem; font-weight: 800; }
+.feature-card .system-master-control.is-on .system-master-title { color: #047857; }
+.feature-card .system-master-control.is-off .system-master-title { color: #b91c1c; }
 ```
+
+Logic: `useSocket().handleToggleSystem` ใน `FeatureSwitches.jsx` (ไม่ใช่ `Home.jsx`)
 
 ### 8.5 Toggle Switch
 ```css
@@ -403,12 +445,14 @@ input:focus {
 
 ### 8.6 Warning / Alert Banners
 ```css
-.system-off-msg {
-  background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(232, 245, 233, 0.1));
-  border-left: 4px solid #e74c3c;
-  color: #d32f2f;
-  padding: 1rem;
-  border-radius: 8px;
+/* แสดงใต้สวิตช์หลักในการ์ดฟังก์ชัน เมื่อ systemOn === false */
+.feature-card .system-off-msg-minimal {
+  background: rgba(254, 242, 242, 0.95);
+  border-left: 4px solid #ef4444;
+  color: #b91c1c;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
   font-weight: 600;
   text-align: center;
 }
@@ -428,7 +472,7 @@ input:focus {
 
 ### 8.8 Header / Navbar
 ```css
-/* Glassmorphism header */
+/* Glassmorphism header — AdminHeader.css */
 .admin-header-minimal {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
@@ -438,7 +482,7 @@ input:focus {
   padding: 1rem 1.5rem;
 }
 
-/* Nav links */
+/* Nav links — รูปแบบเดียวกันทุกรายการ (รวม action ที่ไม่เปลี่ยนหน้า) */
 .nav-minimal a {
   color: #667eea;
   font-weight: 600;
@@ -455,6 +499,16 @@ input:focus {
   border-color: transparent;
 }
 ```
+
+**รายการใน `.nav-minimal` (Home.jsx):**
+| รายการ | ประเภท | พฤติกรรม |
+|--------|--------|----------|
+| ประวัติการตั้งเวลา, ตรวจสอบรูปภาพ, … | `<a href="/...">` | เปลี่ยนหน้า |
+| 🎥 OBS Links | `<a href="#!" onClick>` | เปิด `DashboardModals` → OBS |
+| **ลิงก์ & QR Code** | `<a href="#!" onClick>` | สร้าง QR + เปิด modal ลูกค้า (`generateQRCode` ใน `Home.jsx`) |
+
+> ★ **ห้าม** ใช้ปุ่ม `.btn-qr-link` แยกขวา header — QR ต้องอยู่ใน `nav-minimal` ให้สไตล์เท่ากับเมนูอื่น  
+> ขวาสุดของ header เหลือเฉพาะ **avatar** (`.header-avatar-group` → `/edit-profile`)
 
 ### 8.9 Scrollbar
 ```css
@@ -495,21 +549,58 @@ input:focus {
 ```css
 /* Container max-width varies by page */
 .admin-main          { max-width: 750px; margin: 32px auto; }
-.admin-dashboard-grid { max-width: 1500px; grid-template-columns: 440px 440px 440px; }
+.admin-dashboard-grid { max-width: 1240px; grid-template-columns: 380px 380px 380px; }
 ```
 
 ### 9.3 Dashboard Grid (Home Page)
 ```css
-/* ★ Updated: card widths increased from 380px → 440px for modern proportions */
+/* ★ Home dashboard: 3 × 380px columns, centered (`.three-box-container` in home.css) */
 .admin-dashboard-grid {
   display: grid;
-  grid-template-columns: 440px 440px 440px;
-  gap: 2rem;
-  max-width: 1500px;
+  grid-template-columns: 380px 380px 380px;
+  gap: 1.35rem;
+  max-width: 1240px;
   margin: 0 auto;
   justify-content: center;
 }
 ```
+
+### 9.4 Home Page Information Architecture (v2)
+
+```
+admin-home-minimal
+├── admin-header-minimal          ← AdminHeader.css
+│   ├── brand-minimal (shopId)
+│   ├── nav-minimal               ← เมนูหน้าอื่น + OBS + ลิงก์ & QR Code
+│   └── header-avatar-group       ← โปรไฟล์ร้านเท่านั้น
+└── admin-main-minimal            ← home.css
+    └── three-box-container       ← 3 × 380px, ไม่มี system-status ลอยกลาง
+        ├── FeatureSwitches       ← สถานะระบบ + ฟังก์ชันย่อย
+        ├── PackageConfig         ← แพ็กเกจ + QR ชำระเงิน
+        └── VipSupporters         ← VIP / ranking
+```
+
+**QR สองชนิด (อย่าสับสน):**
+
+| ชนิด | ที่อยู่ | จุดประสงค์ |
+|------|--------|------------|
+| **ลิงก์ & QR Code** (nav) | `Home.jsx` → modal ใน `DashboardModals` | QR ให้ลูกค้าเข้าแอป user (`USER_FRONTEND_URL/?shopId=`) |
+| **QR Code ชำระเงิน** | `PackageConfig.jsx` | อัปโหลดภาพ QR สำหรับหน้าชำระเงิน |
+
+### 9.5 Home CSS File Map
+
+| ไฟล์ | ขอบเขต |
+|------|--------|
+| `01_Home/home.css` | พื้นหลัง gradient, `.admin-main-minimal`, `.three-box-container` |
+| `dashboard/AdminHeader.css` | Header, `.nav-minimal`, avatar |
+| `dashboard/DashboardShared.css` | `.save-btn`, `.switch-minimal`, shared buttons |
+| `dashboard/DashboardCards.css` | `.feature-card`, `.card-drag-*`, ขนาดคอลัมน์ |
+| `dashboard/FeatureSwitches.css` | `.system-master-control`, toggles, birthday input |
+| `dashboard/PackageConfig.css` | แพ็กเกจ, payment QR upload |
+| `dashboard/VipSupporters.css` | VIP, broadcast, ranking UI |
+| `dashboard/DashboardModals.css` | Modals ทุกตัว |
+
+`home.css.backup` = monolith เดิม (อ้างอิงเท่านั้น ไม่ import)
 
 ---
 
@@ -605,7 +696,7 @@ animation: scaleUp 0.6s ease 0.1s both;  /* delay 0.1s */
 - Header (`.admin-header-minimal`)
 - Setting cards (`.setting-card-minimal`)
 - Function panels (`.functions-panel`)
-- System status row (`.system-status-row`)
+- สถานะระบบ — อยู่ในการ์ด **ฟังก์ชันต่างๆ** (`.system-master-control`) โทนสีเขียว/แดงตาม on/off แยกจากแถวฟังก์ชันย่อยด้วยเส้นประ
 
 ---
 
@@ -679,10 +770,10 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 ### 16.1 Dashboard Subcomponents (`src/components/dashboard/`)
 | Component | Responsibility |
 |-----------|----------------|
-| `FeatureSwitches.jsx` | คอลัมน์ซ้าย — switches (image, text, gift, birthday) + birthday threshold input |
-| `PackageConfig.jsx` | คอลัมน์กลาง — timing package, mode selector, inputs, QR code uploader |
+| `FeatureSwitches.jsx` | คอลัมน์ซ้าย — **สวิตช์หลักสถานะระบบ** (`.system-master-control`) + ฟังก์ชันย่อย + ยอดวันเกิด; ใช้ `useSocket().handleToggleSystem` |
+| `PackageConfig.jsx` | คอลัมน์กลาง — timing package, mode selector, inputs, **QR ชำระเงิน** (upload) |
 | `VipSupporters.jsx` | คอลัมน์ขวา — VIP rank lists, date/month/year selectors, summary box |
-| `DashboardModals.jsx` | Modals ทุกตัว (All Ranks, QR Linker, OBS Studio, Premium Perks) |
+| `DashboardModals.jsx` | Modals — All Ranks, **QR ลูกค้า** (จาก nav), OBS, Perks, Income Stats |
 
 ### 16.2 Custom Hooks (`src/hooks/`)
 | Hook | Responsibility |
@@ -696,7 +787,7 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 ### 16.3 Pages (`src/pages/`)
 | Page | Description |
 |------|-------------|
-| `Home.jsx` | Dashboard wrapper — declares `HomeProvider`, assembles header + 3-column layout (~50 lines) |
+| `Home.jsx` | `HomeProvider` + header (`nav-minimal` รวม QR) + `three-box-container`; โหลด perks/ranks ใน `useEffect`; **ไม่** render สถานะระบบใน `main` |
 | `Login.jsx` | Login wrapper — wraps `Register.js` in a clean container |
 
 ### 16.4 Reusable UI Components (`src/components/ui/`)
@@ -705,7 +796,7 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 | `Card.jsx` | Standard panel layout with native Drag & Drop binding |
 | `Button.jsx` | Gradient buttons, outline buttons, danger action styles — zero inline styles |
 | `Switch.jsx` | Toggle switch with glassmorphism styling |
-| `Select.jsx` | Clean dropdown picker for date presets and year selectors |
+| `Select.jsx` | Dropdown — ใช้ `className` ที่ส่งเข้า (เช่น `.vip-year-select`); **ไม่**บังคับ `.income-date-input` (ใช้เฉพาะใน `IncomeStats`) |
 | `ErrorBoundary.jsx` | Error Boundary for lazy-loaded component crash interception |
 
 ---
@@ -732,6 +823,7 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 
 ---
 
+## 18. Loading States
 ## 18. Loading States
 
 ### 17.1 Skeleton Loading
@@ -798,6 +890,7 @@ const handleSubmit = async () => {
 ---
 
 ## 19. CSS Naming Convention
+## 19. CSS Naming Convention
 
 ### 18.1 Pattern
 ```
@@ -811,8 +904,10 @@ const handleSubmit = async () => {
 | `.admin-header-minimal` | header variant | Home |
 | `.setting-card-minimal` | card variant | Home |
 | `.mode-btn-minimal` | button variant | Home |
-| `.nav-minimal` | nav variant | Home |
-| `.system-status-text.on` | modifier via state | Home |
+| `.nav-minimal` | nav variant (รวมลิงก์ QR) | Home |
+| `.system-master-control.is-on` / `.is-off` | สวิตช์หลักทั้งระบบ | FeatureSwitches |
+| `.feature-sub-toggles` | ฟังก์ชันย่อยใต้เส้นประ | FeatureSwitches |
+| `.three-box-container` | grid 3 × 380px | home.css |
 | `.package-item` | item in list | Home |
 | `.gift-card` | card component | Gift |
 | `.report-row` | row in list | Report |
@@ -825,6 +920,7 @@ const handleSubmit = async () => {
 
 ---
 
+## 20. Accessibility Checklist
 ## 20. Accessibility Checklist
 
 | Rule | Detail |
