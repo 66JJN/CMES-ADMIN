@@ -54,7 +54,7 @@ CMES-ADMIN/
 ├── frontend/
 │   ├── src/
 │   │   ├── pages/              # ★ Clean entry points
-│   │   │   ├── Home.jsx        #   Dashboard wrapper (~50 lines)
+│   │   │   ├── Home.jsx        #   Dashboard: header + 3-column grid + data bootstrap
 │   │   │   └── Login.jsx       #   Login wrapper (wraps Register.js)
 │   │   ├── components/
 │   │   │   ├── ui/             # ★ Reusable presentational components
@@ -64,10 +64,17 @@ CMES-ADMIN/
 │   │   │   │   ├── Select.jsx  #   Clean dropdown picker
 │   │   │   │   └── ErrorBoundary.jsx  # Lazy-load crash interceptor
 │   │   │   └── dashboard/      # ★ Dashboard-specific layout sections
-│   │   │       ├── FeatureSwitches.jsx  # Left column (switches + threshold)
-│   │   │       ├── PackageConfig.jsx    # Middle column (timing + QR)
-│   │   │       ├── VipSupporters.jsx    # Right column (VIP + ranking)
-│   │   │       └── DashboardModals.jsx  # All dialog overlays
+│   │   │       ├── FeatureSwitches.jsx  # Left: system master switch + feature toggles
+│   │   │       ├── PackageConfig.jsx    # Middle: package + payment QR upload
+│   │   │       ├── VipSupporters.jsx    # Right: VIP + ranking
+│   │   │       ├── DashboardModals.jsx    # Modals (customer QR, OBS, perks, …)
+│   │   │       ├── AdminHeader.css
+│   │   │       ├── DashboardCards.css
+│   │   │       ├── DashboardShared.css
+│   │   │       ├── FeatureSwitches.css
+│   │   │       ├── PackageConfig.css
+│   │   │       ├── VipSupporters.css
+│   │   │       └── DashboardModals.css
 │   │   ├── hooks/              # ★ Business logic custom hooks
 │   │   │   ├── useSocket.js    #   Socket.IO listeners + cleanup
 │   │   │   ├── useDashboardData.js     #   HTTP fetches, drag-drop, perks CRUD
@@ -82,7 +89,7 @@ CMES-ADMIN/
 │   │   ├── config/
 │   │   │   ├── apiConfig.js   # API_BASE_URL, REALTIME_URL, USER_API_URL, USER_FRONTEND_URL
 │   │   │   └── authFetch.js   # ★ adminFetch() — shared fetch utility
-│   │   ├── 01_Home/           # Dashboard CSS + legacy home.js (deprecated)
+│   │   ├── 01_Home/           # home.css (layout shell only); home.js deprecated; home.css.backup = ref
 │   │   ├── 02_ImageQueue/     # จัดการคิวรูปภาพ
 │   │   ├── 03_CheckHistory/   # ประวัติการตรวจสอบ
 │   │   ├── 04_Gift/           # ตั้งค่าของขวัญ
@@ -298,7 +305,9 @@ const USER_FRONTEND_URL = process.env.REACT_APP_USER_FRONTEND_URL || 'https://cm
 | Feature | Description |
 |---------|-------------|
 | **Image Queue** | จัดการคิวรูปภาพที่ลูกค้าส่งมา → แสดงบน OBS overlay |
-| **System Switches** | เปิด/ปิด features: Image, Text, Gift, Birthday |
+| **System Master Switch** | สถานะระบบทั้งร้าน — อยู่ในการ์ดฟังก์ชันต่างๆ (`FeatureSwitches`, `.system-master-control`) |
+| **Feature Switches** | เปิด/ปิด Image, Text, Gift, Birthday (disabled เมื่อปิดระบบ) |
+| **Nav: ลิงก์ & QR Code** | อยู่ใน `nav-minimal` เหมือนเมนูอื่น → modal QR ลูกค้า (`USER_FRONTEND_URL`) |
 | **Gift Management** | CRUD สินค้าของขวัญ (ชื่อ, ราคา, รูป) |
 | **Ranking Dashboard** | ดูคะแนนผู้สนับสนุน (daily/monthly/all-time) |
 | **Report Management** | ดู/อัปเดตสถานะรายงานปัญหา |
@@ -361,7 +370,8 @@ cd backend && npm start      # production
 - **Thai timezone** ใช้ `getThaiDateStr()` ไม่ใช่ `new Date().toISOString()`
 - **Cloudinary** สำหรับ file upload
 - **อ้างอิง `DESIGN.md`** สำหรับสี, ขนาด, spacing ก่อน hardcode CSS
-- **แยก CSS file** ต่อ page — `home.css`, `gift.css`, etc.
+- **แยก CSS file** ต่อ page — Home: `home.css` + `components/dashboard/*.css` (ดู DESIGN §9.5)
+- **Home layout** — สถานะระบบใน `FeatureSwitches` เท่านั้น; QR ลูกค้าใน `nav-minimal` ไม่ใช่ปุ่ม header แยก
 - **ใช้ `cubic-bezier(0.4, 0, 0.2, 1)`** สำหรับ transition timing (Material standard)
 
 ### DON'T ❌
@@ -376,6 +386,8 @@ cd backend && npm start      # production
 - **อย่า hardcode สี** — ใช้ CSS variables จาก `theme.css` (ดู `DESIGN.md`)
 - **อย่าใช้ `toISOString()`** สำหรับเปรียบเทียบวันที่ — UTC จะคลาดเคลื่อนจากเวลาไทย
 - **อย่า inline style** ที่ซ้ำกับ utility class ใน `theme.css`
+- **อย่าใส่ `system-status-row` กลาง `main`** — ย้ายแล้วเข้าการ์ดฟังก์ชัน (DESIGN §8.4, §9.4)
+- **อย่าใช้ `.btn-qr-link`** ใน header — ใช้ `<a>` ใน `.nav-minimal` แทน
 
 ---
 
@@ -397,6 +409,9 @@ cd backend && npm start      # production
 | FormData header bug | ตั้ง `Content-Type` เอง | `adminFetch` จัดการเอง — อย่า set `Content-Type` สำหรับ FormData |
 | Ranking past date แสดง 0 | frontend อ่าน `dailyPoints` แต่ aggregate ใช้ `points` | ใช้ `entry.dailyPoints ?? entry.points ?? 0` |
 | Monthly ranking ไม่หายหลัง clear DB | ลบแค่ `rankinghistories` แต่ `rankings` ยังอยู่ | ต้องลบทั้ง 2 collection พร้อมกัน |
+| Ranking ว่างหลัง refactor | `selectedYear` default กรองปีผิด | default `selectedYear` เป็น `''` (ทุกปี) ใน `HomeContext` |
+| Perks / ranks ไม่โหลด | ลืม `useEffect` หลังแยก component | `Home.jsx` เรียก `loadPerks`, `loadTopRanks`, `loadShopProfile` ตอน mount |
+| Dropdown ปี VIP สีเพี้ยน | `Select` ใส่ `.income-date-input` (สไตล์ modal มืด) | ใช้ `className="vip-year-select"` + สไตล์ใน `VipSupporters.css` |
 
 ---
 
@@ -483,28 +498,54 @@ export default PageName;
 ```
 
 ### 13.2 Dashboard Component Pattern (Clean Architecture)
+
+**Layout หน้า Home (สรุป):**
+- `Home.jsx` — header (`nav-minimal` รวม **ลิงก์ & QR Code** + OBS) + avatar; `three-box-container` เท่านั้นใน `main`
+- `FeatureSwitches.jsx` — **สถานะระบบ** (`handleToggleSystem` จาก `useSocket`) + ฟังก์ชันย่อย
+- `PackageConfig.jsx` — แพ็กเกจ + **QR ชำระเงิน** (คนละอย่างกับ QR ใน nav)
+
 ```javascript
-// ★ Dashboard subcomponents consume HomeContext directly
+// ★ FeatureSwitches — สวิตช์หลัก + ฟังก์ชันย่อย
 import React, { useContext } from "react";
 import { HomeContext } from "../../contexts/HomeContext";
+import useSocket from "../../hooks/useSocket";
 import Switch from "../ui/Switch";
+import Card from "../ui/Card";
+import "./FeatureSwitches.css";
 
 function FeatureSwitches({ isCollapsed, onToggleVisibility }) {
-  const {
-    imageOn, setImageOn,
-    textOn, setTextOn,
-    giftOn, setGiftOn
-  } = useContext(HomeContext);
+  const { systemOn, enableImage } = useContext(HomeContext);
+  const { handleToggleSystem, handleToggleImage } = useSocket();
 
   return (
-    <div className="setting-card-minimal feature-card">
-      <Switch checked={imageOn} onChange={() => setImageOn(!imageOn)} />
-      {/* ... */}
-    </div>
+    <Card type="panel" className={`feature-card ${isCollapsed ? "card-collapsed" : ""}`}>
+      <div className={`system-master-control ${systemOn ? "is-on" : "is-off"}`}>
+        <div className="system-master-text">
+          <span className="system-master-title">สถานะระบบ</span>
+          <span className="system-master-hint">เปิด–ปิดการใช้งานทั้งหมดของลูกค้า</span>
+        </div>
+        <Switch checked={systemOn} onChange={handleToggleSystem} />
+      </div>
+      <div className="feature-sub-toggles">
+        <div className="toggle-card">
+          <span>ฟังก์ชันส่งรูปภาพ</span>
+          <Switch checked={enableImage} onChange={handleToggleImage} disabled={!systemOn} />
+        </div>
+      </div>
+    </Card>
   );
 }
 
 export default FeatureSwitches;
+```
+
+```javascript
+// ★ Home.jsx — QR ลูกค้าใน nav (ไม่ใช่ปุ่มแยก header)
+<nav className="nav-minimal" aria-label="เมนูหลัก">
+  <a href="/report">รายงาน</a>
+  <a href="#!" onClick={(e) => { e.preventDefault(); setShowObsModal(true); }}>🎥 OBS Links</a>
+  <a href="#!" onClick={(e) => { e.preventDefault(); generateQRCode(); }}>ลิงก์ & QR Code</a>
+</nav>
 ```
 
 ### 13.3 Custom Hook Pattern
@@ -525,11 +566,30 @@ export default function useSocket() {
     return () => socket.off('status', handler);  // ★ Always cleanup
   }, [socket]);
 
-  return { handleToggleSystem };
+  const handleToggleSystem = () => { /* socket emit toggle system */ };
+
+  return { handleToggleSystem, handleToggleImage /* … */ };
 }
 ```
 
-### 13.4 Backend API Route Pattern
+### 13.4 Home.jsx Data Bootstrap
+
+หลัง refactor ต้องโหลดข้อมูลใน `HomeContent` (ไม่พึ่ง monolith `home.js`):
+
+```javascript
+useEffect(() => {
+  loadShopProfile();
+  loadPerks();
+  loadBirthdayRequirement();
+}, [loadShopProfile, loadPerks, loadBirthdayRequirement]);
+
+useEffect(() => {
+  loadTopRanks();
+  loadRankingSummary();
+}, [rankingType, rankLimit, selectedDate, selectedMonth, selectedYear, /* … */]);
+```
+
+### 13.5 Backend API Route Pattern
 ```javascript
 // ★ ทุก route ต้องใช้ middleware + filter shopId
 app.get('/api/resource', requireAdminAuth, async (req, res) => {
@@ -554,7 +614,7 @@ app.post('/api/resource', requireAdminAuth, async (req, res) => {
 });
 ```
 
-### 13.3 Error Handling Pattern
+### 13.6 Error Handling Pattern
 ```javascript
 // Frontend — แสดง error ด้วย UI feedback
 try {

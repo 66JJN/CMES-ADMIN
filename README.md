@@ -239,7 +239,7 @@ CMES-ADMIN/
 ├── frontend/
 │   ├── src/
 │   │   ├── pages/                  # ★ Clean Architecture entry points
-│   │   │   ├── Home.jsx            #   Dashboard wrapper (~50 lines)
+│   │   │   ├── Home.jsx            #   Dashboard: nav (QR+OBS) + 3-column grid
 │   │   │   └── Login.jsx           #   Login wrapper
 │   │   ├── components/
 │   │   │   ├── ui/                 # ★ Reusable presentational components
@@ -248,11 +248,12 @@ CMES-ADMIN/
 │   │   │   │   ├── Switch.jsx      #   Toggle switch (glassmorphism)
 │   │   │   │   ├── Select.jsx      #   Clean dropdown picker
 │   │   │   │   └── ErrorBoundary.jsx  # Lazy-load crash interceptor
-│   │   │   └── dashboard/          # ★ Dashboard layout sections
-│   │   │       ├── FeatureSwitches.jsx  # Left column (switches)
-│   │   │       ├── PackageConfig.jsx    # Middle column (timing + QR)
-│   │   │       ├── VipSupporters.jsx    # Right column (VIP ranking)
-│   │   │       └── DashboardModals.jsx  # All dialog overlays
+│   │   │   └── dashboard/          # ★ Dashboard layout sections + CSS
+│   │   │       ├── FeatureSwitches.jsx  # Left: system master switch + toggles
+│   │   │       ├── PackageConfig.jsx    # Middle: package + payment QR
+│   │   │       ├── VipSupporters.jsx    # Right: VIP ranking
+│   │   │       ├── DashboardModals.jsx  # Modals (customer QR, OBS, perks)
+│   │   │       └── *.css               # AdminHeader, DashboardCards, …
 │   │   ├── hooks/                  # ★ Business logic custom hooks
 │   │   │   ├── useSocket.js        #   Socket.IO listeners + cleanup
 │   │   │   ├── useDashboardData.js #   HTTP fetches, drag-drop, perks CRUD
@@ -267,7 +268,7 @@ CMES-ADMIN/
 │   │   ├── config/
 │   │   │   ├── apiConfig.js        # API URLs
 │   │   │   └── authFetch.js        # ★ Admin fetch utility
-│   │   ├── 01_Home/                # Dashboard CSS + legacy home.js
+│   │   ├── 01_Home/                # home.css (layout shell); home.css.backup = ref
 │   │   ├── 02_ImageQueue/          # Image queue management
 │   │   ├── 03_CheckHistory/        # Verification history
 │   │   ├── 04_Gift/                # Gift settings CRUD
