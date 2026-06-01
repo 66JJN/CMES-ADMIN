@@ -605,7 +605,7 @@ animation: scaleUp 0.6s ease 0.1s both;  /* delay 0.1s */
 - Header (`.admin-header-minimal`)
 - Setting cards (`.setting-card-minimal`)
 - Function panels (`.functions-panel`)
-- System status row (`.system-status-row`)
+- สถานะระบบ — อยู่ในการ์ด **ฟังก์ชันต่างๆ** (`.system-master-control`) โทนสีเขียว/แดงตาม on/off แยกจากแถวฟังก์ชันย่อยด้วยเส้นประ
 
 ---
 
@@ -679,7 +679,7 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 ### 16.1 Dashboard Subcomponents (`src/components/dashboard/`)
 | Component | Responsibility |
 |-----------|----------------|
-| `FeatureSwitches.jsx` | คอลัมน์ซ้าย — switches (image, text, gift, birthday) + birthday threshold input |
+| `FeatureSwitches.jsx` | คอลัมน์ซ้าย — สถานะระบบ + switches (image, text, gift, birthday) + birthday threshold input |
 | `PackageConfig.jsx` | คอลัมน์กลาง — timing package, mode selector, inputs, QR code uploader |
 | `VipSupporters.jsx` | คอลัมน์ขวา — VIP rank lists, date/month/year selectors, summary box |
 | `DashboardModals.jsx` | Modals ทุกตัว (All Ranks, QR Linker, OBS Studio, Premium Perks) |

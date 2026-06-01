@@ -1,5 +1,5 @@
 /**
- * Home page — layout shell only (background, system status, 3-column grid).
+ * Home page — layout shell only (background, 3-column grid).
  * Card/modal styles live in components/dashboard/*.css
  */
 
@@ -27,78 +27,6 @@
   width: 100%;
   padding: 1.5rem 1rem 2.5rem;
   box-sizing: border-box;
-}
-
-.system-status-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding: 1rem 1.5rem;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  max-width: 420px;
-  width: 100%;
-}
-
-.system-label {
-  font-weight: 700;
-  font-size: 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.system-label::before {
-  content: '⚡ ';
-  -webkit-text-fill-color: initial;
-}
-
-.system-status-text {
-  font-weight: 700;
-  font-size: 0.9rem;
-  padding: 0.35rem 0.85rem;
-  border-radius: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.system-status-text.on {
-  background: rgba(16, 185, 129, 0.12);
-  color: #059669;
-  border: 1px solid rgba(16, 185, 129, 0.25);
-}
-
-.system-status-text.off {
-  background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
-  border: 1px solid rgba(239, 68, 68, 0.25);
-}
-
-.system-off-msg-minimal {
-  background: rgba(254, 242, 242, 0.95);
-  border-left: 4px solid #ef4444;
-  color: #b91c1c;
-  font-size: 0.95rem;
-  margin-bottom: 1.25rem;
-  text-align: center;
-  padding: 0.85rem 1.25rem;
-  border-radius: 12px;
-  font-weight: 600;
-  width: 100%;
-  max-width: 900px;
-  box-sizing: border-box;
-}
-
-.system-off-msg-minimal::before {
-  content: '⚠️ ';
-  margin-right: 0.35rem;
 }
 
 /* 3-column dashboard — equal width, top-aligned */
@@ -136,10 +64,5 @@
 @media (max-width: 600px) {
   .admin-main-minimal {
     padding: 1rem 0.75rem 2rem;
-  }
-
-  .system-status-row {
-    flex-direction: column;
-    padding: 1rem;
   }
 }

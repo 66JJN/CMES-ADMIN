@@ -27,6 +27,7 @@ export default function FeatureSwitches({
   } = useContext(HomeContext);
 
   const {
+    handleToggleSystem,
     handleToggleImage,
     handleToggleText,
     handleToggleGift,
@@ -56,6 +57,25 @@ export default function FeatureSwitches({
 
       {!isCollapsed && (
         <div className="function-toggle-column">
+          <div
+            className={`system-master-control ${systemOn ? 'is-on' : 'is-off'}`}
+            role="group"
+            aria-label="สถานะระบบ"
+          >
+            <div className="system-master-text">
+              <span className="system-master-title">สถานะระบบ</span>
+              <span className="system-master-hint">เปิด–ปิดการใช้งานทั้งหมดของลูกค้า</span>
+            </div>
+            <Switch checked={systemOn} onChange={handleToggleSystem} />
+          </div>
+
+          {!systemOn && (
+            <div className="system-off-msg-minimal" role="status">
+              ระบบถูกปิด ฝั่งผู้ใช้จะไม่สามารถใช้งานได้
+            </div>
+          )}
+
+          <div className="feature-sub-toggles">
           <div className="toggle-card">
             <span>ฟังก์ชันส่งรูปภาพ</span>
             <Switch 
@@ -115,6 +135,7 @@ export default function FeatureSwitches({
             <small className="spend-requirement-hint">
               ผู้ใช้ต้องใช้จ่ายครบจำนวนนี้ก่อนจึงจะใช้ฟีเจอร์วันเกิดฟรีได้
             </small>
+          </div>
           </div>
         </div>
       )}
