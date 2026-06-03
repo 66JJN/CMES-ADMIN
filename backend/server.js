@@ -49,6 +49,7 @@ const __dirname = path.dirname(__filename);
 
 // ===== APP & SERVER SETUP =====
 const app = express();
+app.set('trust proxy', 1);
 const server = createServer(app);
 const io = new SocketIOServer(server, { cors: { origin: "*" } });
 
@@ -121,9 +122,11 @@ app.use(cors({
 // ===== SECURITY =====
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' }, contentSecurityPolicy: false }));
 
-const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 500, message: { success: false, message: 'คำขอมากเกินไป กรุณารอสักครู่' }, standardHeaders: true, legacyHeaders: false });
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { success: false, message: 'พยายามเข้าสู่ระบบมากเกินไป กรุณารอ 15 นาที' }, standardHeaders: true, legacyHeaders: false });
-const uploadLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50, message: { success: false, message: 'อัปโหลดมากเกินไป กรุณารอสักครู่' }, standardHeaders: true, legacyHeaders: false });
+const isDev = process.env.NODE_ENV === 'development';
+
+const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: isDev ? 100000 : 10000, message: { success: false, message: 'คำขอมากเกินไป กรุณารอสักครู่' }, standardHeaders: true, legacyHeaders: false });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: isDev ? 1000 : 100, message: { success: false, message: 'พยายามเข้าสู่ระบบมากเกินไป กรุณารอ 15 นาที' }, standardHeaders: true, legacyHeaders: false });
+const uploadLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: isDev ? 1000 : 200, message: { success: false, message: 'อัปโหลดมากเกินไป กรุณารอสักครู่' }, standardHeaders: true, legacyHeaders: false });
 
 app.use('/api/', globalLimiter);
 app.use('/api/login', authLimiter);

@@ -209,8 +209,8 @@
 }
 
 .payment-qr-preview-img {
-  width: 112px;
-  height: 112px;
+  width: 200px;
+  height: 200px;
   object-fit: contain;
   border-radius: 10px;
   border: 1px solid #e2e8f0;
