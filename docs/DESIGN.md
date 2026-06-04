@@ -760,6 +760,8 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 - **อย่าสร้าง utility class ใหม่** ที่ซ้ำกับที่มีใน `theme.css`
 - **อย่าใช้ `box-shadow` แบบ flat** — ใช้ multi-layer shadows จาก design system
 - **อย่าลืม hover state** ให้ interactive elements ทุกตัว
+- **อย่าแอบสร้างไฟล์ Style ย่อยกระจัดกระจายนอกสารบบ** (ใช้สถาปัตยกรรมไฟล์ตาม §9.5 เท่านั้น)
+- **ห้ามปล่อยทิ้งตัวแปรที่ไม่ได้ใช้งาน (Unused variables) โค้ดที่คอมเมนต์ค้างไว้ (Dead code) หรือ `console.log()` ที่ใช้เทสตอนพัฒนา ลงในโค้ดเวอร์ชันสุดท้ายเด็ดขาด**
 
 ---
 

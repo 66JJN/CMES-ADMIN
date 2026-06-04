@@ -108,11 +108,22 @@ CMES-ADMIN/
 │   └── package.json
 │
 ├── backend/
-│   ├── server.js              # ★ Main entry — Express + Socket.IO + ทุก API route (3700+ lines)
-│   ├── server.js              # ★ Main entry — Express + Socket.IO + ทุก API route (3700+ lines)
+│   ├── server.js              # ★ Main entry — Express + Socket.IO + server bootstrap
+│   ├── routes/                # ★ Express routers แยกสำหรับแต่ละฟีเจอร์/สิทธิ์การทำงาน
+│   │   ├── reportRoutes.js
+│   │   ├── shopRoutes.js
+│   │   ├── giftRoutes.js
+│   │   ├── configRoutes.js
+│   │   ├── rankingRoutes.js
+│   │   ├── queueRoutes.js
+│   │   ├── incomeRoutes.js
+│   │   ├── obsRoutes.js
+│   │   └── statusRoutes.js
 │   ├── middleware/
-│   │   └── authMiddleware.js  # requireShopId, requireAdminAuth
-│   │   └── authMiddleware.js  # requireShopId, requireAdminAuth
+│   │   ├── authMiddleware.js  # requireShopId, requireAdminAuth
+│   │   └── securityMiddleware.js
+│   ├── controllers/           # ★ Business controller logic
+│   ├── services/              # ★ Helper services & business processes
 │   ├── models/
 │   │   ├── AdminUser.js       # Admin user (shopId + username unique compound)
 │   │   ├── AdminReport.js     # Reports
@@ -124,22 +135,9 @@ CMES-ADMIN/
 │   │   ├── Setting.js         # System settings
 │   │   ├── ShopSetting.js     # ตั้งค่าร้าน (ชื่อ, โลโก้, QR)
 │   │   └── TimeHistory.js     # ประวัติเวลา
-│   ├── contentModeration.js   # AI content moderation (Sightengine)
-│   ├── cron-cleanup.js        # Scheduled cleanup (ลบรูปเก่า > 2 วัน)
-│   ├── hashPasswords.js       # Password hashing utilities
-│   │   ├── AdminUser.js       # Admin user (shopId + username unique compound)
-│   │   ├── AdminReport.js     # Reports
-│   │   ├── CheckHistory.js    # ประวัติตรวจสอบ
-│   │   ├── GiftSetting.js     # ตั้งค่าของขวัญ
-│   │   ├── ImageQueue.js      # คิวรูปภาพ
-│   │   ├── Ranking.js         # คะแนนสะสม
-│   │   ├── RankingHistory.js  # ประวัติ ranking ทุกรายการ
-│   │   ├── Setting.js         # System settings
-│   │   ├── ShopSetting.js     # ตั้งค่าร้าน (ชื่อ, โลโก้, QR)
-│   │   └── TimeHistory.js     # ประวัติเวลา
-│   ├── contentModeration.js   # AI content moderation (Sightengine)
-│   ├── cron-cleanup.js        # Scheduled cleanup (ลบรูปเก่า > 2 วัน)
-│   ├── hashPasswords.js       # Password hashing utilities
+│   ├── utils/                 # Utilities และ Cron Jobs
+│   │   ├── cron-cleanup.js
+│   │   └── hashPasswords.js
 │   └── package.json
 │
 ├── docs/
@@ -430,6 +428,7 @@ cd backend && npm start      # production
 - **อย่า inline style** ที่ซ้ำกับ utility class ใน `theme.css`
 - **อย่าใส่ `system-status-row` กลาง `main`** — ย้ายแล้วเข้าการ์ดฟังก์ชัน (DESIGN §8.4, §9.4)
 - **อย่าใช้ `.btn-qr-link`** ใน header — ใช้ `<a>` ใน `.nav-minimal` แทน
+- **ห้ามเพิ่ม API route หรือ Logic ใหม่ลงใน `server.js` ตรงๆ** — ในอนาคตหากมีการเพิ่มฟีเจอร์หรือสิทธิ์ API ใหม่ ห้ามยัดลง `server.js` ตรง ๆ แต่ต้องแยกออกเป็น Express Router ไว้ในโฟลเดอร์ `backend/routes/` เสมอเพื่อกระจายน้ำหนักของโค้ด
 
 ---
 
