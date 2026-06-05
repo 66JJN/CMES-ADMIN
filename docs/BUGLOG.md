@@ -36,6 +36,26 @@
 
 ## บันทึก Bug ที่ผ่านมา
 
+### 📅 2026-06-05 | QueueHistoryModal: สีข้อความเพี้ยน / เลเอาท์เพี้ยน / Social Media หาย / สี Social หาย
+- **Symptom (อาการ):** เมื่อกดปุ่ม "ดึงกลับเข้าคิว" ในหน้าประวัติคิว (QueueHistoryModal) พบปัญหา 4 จุด:
+  1. สีข้อความที่ผู้ใช้เลือก (เช่น แดง) ไม่แสดง กลายเป็นสีขาวทั้งหมด
+  2. Layout ที่เลือกเป็น "ซ้าย" ไม่แสดงข้อมูล / แสดงเพี้ยนเป็น "ขวา"
+  3. ชื่อ Social Media (IG/FB/Line/TikTok) หายไปจากการ์ดประวัติ
+  4. สี Social ที่ผู้ใช้เลือกไม่แสดง ไม่มี badge สี
+- **Root Cause (สาเหตุ):** 3 สาเหตุหลัก:
+  1. **Backend**: API `GET /api/check-history` ทำเฉพาะ `...item` spread แต่ไม่ได้แกะ (flatten) ฟิลด์จาก `metadata` (เช่น `metadata.theme`, `metadata.socialColor`, `metadata.textLayout`, `metadata.social.type/name`) ออกมาเป็น top-level fields ทำให้ frontend อ่านไม่เจอ
+  2. **Mongoose Schema Conflict**: ฟิลด์ `metadata.social.type` ชนกับ Mongoose reserved keyword `type` ทำให้ค่าเป็น `null` เสมอแม้ข้อมูลจริงมีอยู่
+  3. **Frontend (QueueHistoryModal)**: `renderSocialOnImage()` ถูกเรียกโดยไม่ส่ง argument ตัวที่ 3 (`socialColor`) / ไม่มีการแสดงสีข้อความ (`textColor`) และ layout info ใน UI
+  4. **Backend (reject handler)**: `rejectItem()` ไม่ได้บันทึก `metadata`, `avatar`, `userId`, `email` ลง CheckHistory ทำให้รายการที่ถูกปฏิเสธไม่มีข้อมูลเหล่านี้
+- **Fix (การแก้ไข):**
+  1. `queueController.js` — เพิ่ม flatten fields: `textColor`, `socialType`, `socialName`, `socialColor`, `textLayout`, `qrCodePath` ใน formatted response ของ `getCheckHistory()`
+  2. `queueController.js` — เพิ่มการบันทึก `metadata` ครบถ้วนใน `rejectItem()` 
+  3. `QueueHistoryModal.jsx` — ใช้ top-level flattened fields แทน `item.metadata?.social?.type` + ส่ง `socialColor` ให้ `renderSocialOnImage()` + เพิ่ม badge แสดง textColor, layout, socialColor
+  4. `ImageQueue.css` — เพิ่ม CSS class `.history-card-meta-badge`, `.history-card-color-dot`, `.history-card-meta-label/value`
+- **Lesson Learned (บทเรียน):** เมื่อ Backend บันทึกข้อมูลลงใน nested structure (`metadata.xxx`) แล้ว API ส่งกลับด้วย spread (`...item`) ต้องระวังว่า Frontend อาจเข้าถึงไม่ถูกเนื่องจาก Mongoose type conflict หรือ nested path — ควร flatten ข้อมูลสำคัญออกมาเป็น top-level fields เสมอ
+
+---
+
 ### 📅 2026-06-05 | Uncaught TypeError: getImageUrl is not a function ใน CheckHistory
 - **Symptom (อาการ):** หน้าจอประวัติการตรวจสอบ (`/check-history`) ค้างเป็นหน้าจอสีขาว (White Screen of Death) และเมื่อเปิด Chrome DevTools Console พบ Error `Uncaught TypeError: getImageUrl is not a function` ที่ `CheckHistory.jsx`
 - **Root Cause (สาเหตุ):** ในระหว่างการทำ Refactor ย้ายฟีเจอร์เดิมจากโครงสร้างเก่า (`src/03_CheckHistory/`) ไปสู่ Clean Architecture โครงสร้างใหม่ มีการแยก Logic การดึงข้อมูลและ State ไปไว้ที่ Custom Hook `useCheckHistory.js` แต่ลืมสร้างฟังก์ชัน `getImageUrl` และส่งออก (return) ออกมาจากตัว Custom Hook ทำให้ฝั่ง Presentational Component (`CheckHistory.jsx`) ที่พยายามดึงฟังก์ชันนี้ออกมาและเรียกใช้งาน เกิด Runtime Exception

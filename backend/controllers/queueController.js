@@ -256,6 +256,23 @@ export const rejectItem = async (req, res) => {
       type: item.type || (item.filePath ? 'image' : 'text'),
       sender: item.sender || 'Unknown', price: item.price || 0, status: 'rejected',
       content: item.text || '', mediaUrl: item.filePath || null,
+      userId: item.userId || null,
+      email: item.email || null,
+      avatar: item.avatar || null,
+      metadata: {
+        duration: item.time,
+        tableNumber: Number(item.giftOrder?.tableNumber) || 0,
+        giftItems: item.giftOrder?.items || [],
+        note: item.giftOrder?.note || '',
+        theme: item.textColor || 'white',
+        socialColor: item.socialColor || '#ffffff',
+        textLayout: item.textLayout || 'right',
+        social: {
+          type: item.socialType || null,
+          name: item.socialName || null
+        },
+        qrCodePath: item.qrCodePath || null
+      },
       receivedAt: item.receivedAt, approvalDate: new Date(), approvedBy: 'admin'
     });
 
@@ -374,7 +391,14 @@ export const getCheckHistory = async (req, res) => {
       checkedAt: item.approvalDate,
       createdAt: item.receivedAt || item.createdAt,
       type: item.type || (item.mediaUrl ? 'image' : 'text'),
-      filePath: item.mediaUrl || item.filePath
+      filePath: item.mediaUrl || item.filePath,
+      // Flatten metadata fields for frontend compatibility
+      textColor: item.metadata?.theme || null,
+      socialType: item.metadata?.social?.type || null,
+      socialName: item.metadata?.social?.name || null,
+      socialColor: item.metadata?.socialColor || '#ffffff',
+      textLayout: item.metadata?.textLayout || 'right',
+      qrCodePath: item.metadata?.qrCodePath || null,
     }));
 
     res.json({
