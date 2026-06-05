@@ -131,6 +131,7 @@
 | **OBS Control** | ควบคุม OBS Studio ผ่าน obs-websocket-js |
 | **Content Moderation** | AI ตรวจรูปไม่เหมาะสม (SightEngine: nudity/weapon/alcohol) |
 | **Shop Profile** | ชื่อร้าน, โลโก้, QR Code ชำระเงิน |
+| **Income Stats** | สถิติรายรับและกิจกรรมแบบ Real-time ซิงค์ผ่าน Socket.IO พร้อมการคำนวณช่วงวันที่แบบไดนามิกตามเวลาไทย (Bangkok timezone) |
 | **Multi-tenant** | shopId isolation, Socket.IO rooms, compound DB indexes |
 | **Cron Jobs** | ลบรูปเก่า > 2 วัน อัตโนมัติ |
 
@@ -141,9 +142,9 @@
 | Layer | Technology |
 |-------|-----------|
 | **Frontend** | React 19, React Router 7, CSS Variables (theme.css), FontAwesome |
-| **Backend** | Node.js, Express 4, ES Modules |
+| **Backend** | Node.js, Express 4 (Modular Routers & Controllers), ES Modules |
 | **Database** | MongoDB Atlas + Mongoose 9 |
-| **Auth** | bcrypt + shopId/adminId headers |
+| **Auth** | bcrypt + shopId/adminId headers + Trust Proxy Rate Limiting |
 | **Realtime** | Socket.IO 4 (room-based multi-tenant) |
 | **Storage** | Cloudinary (gifts, user-uploads, logos, QR codes) |
 | **Moderation** | SightEngine API (nudity, weapon, alcohol) |
@@ -279,36 +280,27 @@ CMES-ADMIN/
 │   │   ├── 09_EditProfile/         # Shop profile editor
 │   │   ├── 10_OBSControl/          # OBS WebSocket control
 │   │   ├── theme.css               # ★ Design system (CSS vars)
-│   │   └── App.js                  # Router + ShopProvider
+│   │   ├── Stat-slip.js            # สถิติสลิป
+│   │   └── App.js                  # Router + ShopProvider wrapper
 │   ├── postcss.config.js           # PostCSS config
 │   ├── tailwind.config.js          # Tailwind config
 │   └── package.json
 │
 ├── backend/
-│   ├── server.js                   # ★ Express + Socket.IO + all routes
-│   ├── middleware/                  # requireShopId, requireAdminAuth
-│   ├── models/                     # 10 Mongoose models
-│   ├── utils/                      # ★ Relocated utility scripts
-│   │   ├── contentModeration.js    # SightEngine AI moderation
-│   │   ├── cron-cleanup.js         # Scheduled cleanup
-│   │   └── hashPasswords.js        # Password utilities
-│   ├── server.js                   # ★ Express + Socket.IO + all routes
-│   ├── middleware/                  # requireShopId, requireAdminAuth
-│   ├── models/                     # 10 Mongoose models
-│   ├── utils/                      # ★ Relocated utility scripts
-│   │   ├── contentModeration.js    # SightEngine AI moderation
-│   │   ├── cron-cleanup.js         # Scheduled cleanup
-│   │   └── hashPasswords.js        # Password utilities
+│   ├── server.js                   # ★ Express + Socket.IO + server bootstrap
+│   ├── controllers/                # ★ Controllers (business logic)
+│   ├── routes/                     # ★ Express routers per feature (multi-tenant filtering)
+│   ├── services/                   # ★ Socket services and helper logic
+│   ├── helpers/                    # Helper scripts / models
+│   ├── middleware/                 # Auth verification, rate limiting middlewares
+│   ├── models/                     # Mongoose schemas (10 multi-tenant models)
+│   ├── public/                     # Static overlay views (OBS HTMLs, etc.)
+│   ├── utils/                      # Utilities (AI moderation, password hashing, cron cleanup)
 │   └── package.json
 │
 ├── docs/                           # ★ Project documentation folder
 │   ├── screenshots/                # Dashboard screenshots
-│   ├── BUGLOG.md                   # Change history & bug tracking
-│   ├── DESIGN.md                   # System design specifications
-│   └── SKILL.md                    # AI coding guidelines
-└── README.md                       # ← You are here
-├── docs/                           # ★ Project documentation folder
-│   ├── screenshots/                # Dashboard screenshots
+│   ├── skills/                     # Developer skills (debug-mantra, post-mortem, etc.)
 │   ├── BUGLOG.md                   # Change history & bug tracking
 │   ├── DESIGN.md                   # System design specifications
 │   └── SKILL.md                    # AI coding guidelines
