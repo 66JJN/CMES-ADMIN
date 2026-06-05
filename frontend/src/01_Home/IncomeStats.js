@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import { API_BASE_URL } from "../config/apiConfig";
 import adminFetch from "../config/authFetch";
+import { ShopContext } from "../contexts/ShopContext";
+import { getTodayStr } from "../utils/dateHelpers";
 import "./IncomeStats.css";
 
 // ฟังก์ชันจัดรูปแบบตัวเลขเป็นสกุลเงินไทย
@@ -12,6 +14,44 @@ const shortDate = (d) => {
   return `${dd}/${m}`;
 };
 
+// ฟังก์ชันแปลง Date เป็น YYYY-MM-DD ในรูปแบบ local time
+const formatDateStr = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+// ฟังก์ชันคำนวณวันเริ่มต้นและสิ้นสุดตามประเภท Preset โดยใช้เวลาไทย (getTodayStr)
+const calculateDatesForPreset = (preset) => {
+  const todayStr = getTodayStr(); // YYYY-MM-DD จาก Asia/Bangkok
+  const [year, month, day] = todayStr.split("-").map(Number);
+  
+  const end = new Date(year, month - 1, day);
+  let start = new Date(year, month - 1, day);
+
+  if (preset === "today") {
+    // start matches end
+  } else if (preset === "this_week") {
+    const dayOfWeek = end.getDay();
+    const diff = end.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // เริ่มจันทร์
+    start = new Date(year, month - 1, diff);
+  } else if (preset === "this_month") {
+    start = new Date(year, month - 1, 1);
+  } else if (preset === "this_year") {
+    start = new Date(year, 0, 1);
+  } else if (preset === "all_time") {
+    start = new Date(year - 5, 0, 1);
+  } else {
+    return null;
+  }
+
+  return {
+    startDate: formatDateStr(start),
+    endDate: formatDateStr(end)
+  };
+};
+
 // สีสำหรับ Top spenders
 const SPENDER_COLORS = ["#4f46e5", "#6d28d9", "#7c3aed", "#8b5cf6", "#a78bfa"];
 const PEAK_COLORS = ["#4f46e5", "#6d28d9", "#7c3aed"];
@@ -21,6 +61,8 @@ const PEAK_COLORS = ["#4f46e5", "#6d28d9", "#7c3aed"];
  * 🔥 ดึงข้อมูลสดจาก MongoDB ทุกครั้งที่เปิด (ไม่ cache)
  */
 function IncomeStats({ show, onClose }) {
+  const { socket } = useContext(ShopContext);
+
   // ===== LocalStorage persistence =====
   const getInitialDates = () => {
     try {
@@ -30,16 +72,18 @@ function IncomeStats({ show, onClose }) {
         // Migrate old presets
         if (parsed.activePreset === '30_days' || parsed.activePreset === '7_days') {
           parsed.activePreset = 'this_week';
+        }
 
-          // Re-calculate dates for this_week
-          const end = new Date();
-          const start = new Date();
-          const day = end.getDay();
-          const diff = end.getDate() - day + (day === 0 ? -6 : 1);
-          start.setDate(diff);
-
-          parsed.startDate = start.toISOString().split("T")[0];
-          parsed.endDate = end.toISOString().split("T")[0];
+        // หากเป็น dynamic preset ให้คำนวณใหม่ทุกครั้งที่เปิด/โหลด เพื่อเลี่ยงข้อมูลค้างจากอดีต
+        if (parsed.activePreset && parsed.activePreset !== 'custom') {
+          const recalculated = calculateDatesForPreset(parsed.activePreset);
+          if (recalculated) {
+            return {
+              startDate: recalculated.startDate,
+              endDate: recalculated.endDate,
+              activePreset: parsed.activePreset
+            };
+          }
         }
         return parsed;
       }
@@ -47,14 +91,10 @@ function IncomeStats({ show, onClose }) {
       console.warn('Failed to parse adminIncomeStats from localStorage');
     }
     // Default to this week
-    const end = new Date();
-    const start = new Date();
-    const day = end.getDay();
-    const diff = end.getDate() - day + (day === 0 ? -6 : 1); // 1 = จันทร์
-    start.setDate(diff);
+    const calculated = calculateDatesForPreset('this_week');
     return {
-      startDate: start.toISOString().split("T")[0],
-      endDate: end.toISOString().split("T")[0],
+      startDate: calculated.startDate,
+      endDate: calculated.endDate,
       activePreset: 'this_week'
     };
   };
@@ -101,6 +141,20 @@ function IncomeStats({ show, onClose }) {
     }
   }, [show, startDate, endDate, fetchStats]);
 
+  // ===== Real-time updates via Socket.IO =====
+  useEffect(() => {
+    if (!socket || !show) return;
+    const handleUpdate = () => {
+      fetchStats();
+    };
+    socket.on("admin-update-queue", handleUpdate);
+    socket.on("ranking-update", handleUpdate);
+    return () => {
+      socket.off("admin-update-queue", handleUpdate);
+      socket.off("ranking-update", handleUpdate);
+    };
+  }, [socket, show, fetchStats]);
+
   if (!show) return null;
 
   // ===== Quick date preset helpers =====
@@ -110,27 +164,12 @@ function IncomeStats({ show, onClose }) {
       return;
     }
 
-    const end = new Date();
-    let start = new Date();
-
-    if (type === 'today') {
-      // วันนี้ (Today) - ใช้ start=end
-    } else if (type === 'this_week') {
-      const day = end.getDay();
-      const diff = end.getDate() - day + (day === 0 ? -6 : 1); // เริ่มวันจันทร์
-      start.setDate(diff);
-    } else if (type === 'this_month') {
-      start = new Date(end.getFullYear(), end.getMonth(), 1);
-    } else if (type === 'this_year') {
-      start = new Date(end.getFullYear(), 0, 1);
-    } else if (type === 'all_time') {
-      // ถอยไป 5 ปี ก็เพียงพอให้ครอบคลุมเวลาเริ่มต้นโปรเจค
-      start = new Date(end.getFullYear() - 5, 0, 1);
+    const calculated = calculateDatesForPreset(type);
+    if (calculated) {
+      setStartDate(calculated.startDate);
+      setEndDate(calculated.endDate);
+      setActivePreset(type);
     }
-
-    setStartDate(start.toISOString().split("T")[0]);
-    setEndDate(end.toISOString().split("T")[0]);
-    setActivePreset(type);
   };
 
   const handleCustomDateChange = (isStart, value) => {
