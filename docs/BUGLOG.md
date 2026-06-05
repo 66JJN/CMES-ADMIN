@@ -36,6 +36,14 @@
 
 ## บันทึก Bug ที่ผ่านมา
 
+### 📅 2026-06-05 | Uncaught TypeError: getImageUrl is not a function ใน CheckHistory
+- **Symptom (อาการ):** หน้าจอประวัติการตรวจสอบ (`/check-history`) ค้างเป็นหน้าจอสีขาว (White Screen of Death) และเมื่อเปิด Chrome DevTools Console พบ Error `Uncaught TypeError: getImageUrl is not a function` ที่ `CheckHistory.jsx`
+- **Root Cause (สาเหตุ):** ในระหว่างการทำ Refactor ย้ายฟีเจอร์เดิมจากโครงสร้างเก่า (`src/03_CheckHistory/`) ไปสู่ Clean Architecture โครงสร้างใหม่ มีการแยก Logic การดึงข้อมูลและ State ไปไว้ที่ Custom Hook `useCheckHistory.js` แต่ลืมสร้างฟังก์ชัน `getImageUrl` และส่งออก (return) ออกมาจากตัว Custom Hook ทำให้ฝั่ง Presentational Component (`CheckHistory.jsx`) ที่พยายามดึงฟังก์ชันนี้ออกมาและเรียกใช้งาน เกิด Runtime Exception
+- **Fix (การแก้ไข):** ทำการเพิ่มฟังก์ชัน `getImageUrl` ใน Custom Hook `useCheckHistory.js` โดยใช้ `useCallback` เพื่อจัดรูปแบบเส้นทาง URL ของรูปภาพ (ทั้งสำหรับ Uploads ภายในเครื่อง และ External URL) ให้สมบูรณ์ และส่งออกฟังก์ชันนี้ใน return value เพื่อให้ `CheckHistory.jsx` ได้รับและเรียกใช้งานรูป Thumbnail/Modal ได้อย่างถูกต้องและปลอดภัย
+- **Lesson Learned (บทเรียน):** เมื่อทำการแยกส่วน (Deconstruct) Logic ออกจาก UI Component ไปยัง Custom Hook ให้ตรวจสอบความสัมพันธ์และการใช้งานฟังก์ชัน Helper/Utility ทั้งหมดบน UI Component เสมอว่ามีการระบุและเชื่อมโยงกลับมาครบถ้วน และก่อนนำขึ้นต้องทดสอบหน้าจอหน้างาน (Manual/Console checking) ก่อนทุกครั้ง
+
+---
+
 ### 🚨 2026-06-03 | HTTP 429 Too Many Requests — ระบบล็อกโควตาคำขอในระบบ WiFi ร้านและ localhost (Post-mortem)
 - **1. Summary:** การตั้งค่า Rate Limiting ทั่วทั้งระบบของ API (`/api/`) ล็อกสูงสุดที่ 500 requests ต่อ 15 นาที ส่งผลให้ระบบล่มแสดงข้อมูลว่างหรือโหลดค้างทั้งฝั่ง Admin และ User เมื่อมีผู้ใช้รีโหลดบ่อยหรือแชร์เครือข่ายเดียวกัน ได้แก้ไขด้วยการเปิดใช้งาน `trust proxy` และปรับโควตาคำขอให้เป็นแบบไดนามิกตามสภาพแวดล้อม (Development / Production)
 - **2. Symptom:** หน้าเว็บ Admin Dashboard และหน้าเว็บ User แสดงผลค้าง โหลดข้อมูล Config หรือตารางอันดับไม่ได้ และมีรายการแจ้งเตือน Error `429 (Too Many Requests)` สีแดงปรากฏเต็มใน Chrome DevTools Console 

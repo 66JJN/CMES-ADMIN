@@ -254,13 +254,19 @@ CMES-ADMIN/
 │   │   │       ├── PackageConfig.jsx    # Middle: package + payment QR
 │   │   │       ├── VipSupporters.jsx    # Right: VIP ranking
 │   │   │       ├── DashboardModals.jsx  # Modals (customer QR, OBS, perks)
+│   │   │       ├── ImageQueue.jsx       # Presentational UI for Image Queue
+│   │   │       ├── ImageQueue.css       # Stylesheet for Image Queue
+│   │   │       ├── CheckHistory.jsx     # Presentational UI for Check History
+│   │   │       ├── CheckHistory.css     # Stylesheet for Check History
 │   │   │       └── *.css               # AdminHeader, DashboardCards, …
 │   │   ├── hooks/                  # ★ Business logic custom hooks
 │   │   │   ├── useSocket.js        #   Socket.IO listeners + cleanup
 │   │   │   ├── useDashboardData.js #   HTTP fetches, drag-drop, perks CRUD
 │   │   │   ├── useDashboardSocket.js  # Legacy socket hook
 │   │   │   ├── useRankingStats.js  #   Ranking API + birthday config
-│   │   │   └── useCardReorder.js   #   Card reordering + localStorage
+│   │   │   ├── useCardReorder.js   #   Card reordering + localStorage
+│   │   │   ├── useImageQueue.js    #   Image queue business logic (Socket.IO + timer)
+│   │   │   └── useCheckHistory.js  #   Check history business logic (search/filter/API)
 │   │   ├── contexts/
 │   │   │   ├── ShopContext.js      # ★ Multi-tenant context (shopId + Socket.IO)
 │   │   │   └── HomeContext.js      # ★ Dashboard local state (40+ config vars)
@@ -270,8 +276,6 @@ CMES-ADMIN/
 │   │   │   ├── apiConfig.js        # API URLs
 │   │   │   └── authFetch.js        # ★ Admin fetch utility
 │   │   ├── 01_Home/                # home.css (layout shell); home.css.backup = ref
-│   │   ├── 02_ImageQueue/          # Image queue management
-│   │   ├── 03_CheckHistory/        # Verification history
 │   │   ├── 04_Gift/                # Gift settings CRUD
 │   │   ├── 05_Report/              # Report management
 │   │   ├── 06_LuckyWheel/          # Lucky wheel config
