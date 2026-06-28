@@ -47,6 +47,31 @@ export const uploadItem = async (req, res) => {
 
     const { type, text, time, price, sender, userId, email, avatar, textColor, socialColor, textLayout, socialType, socialName, composed } = req.body;
 
+    // Fetch shop settings from DB to check if system is closed or feature is disabled
+    const ShopSetting = (await import('../models/ShopSetting.js')).default;
+    const settings = await ShopSetting.findOne({ shopId });
+    const systemConfig = req.app.get('systemConfig') || {};
+    const shopConfig = settings ? { ...systemConfig, ...settings.systemConfig } : systemConfig;
+
+    const systemOn = shopConfig.systemOpen ?? shopConfig.systemOn ?? true;
+    if (!systemOn) {
+      return res.status(403).json({ success: false, error: "ขณะนี้ระบบปิดรับบริการชั่วคราว" });
+    }
+
+    const uploadType = type || "image";
+    if (uploadType === "image" && shopConfig.enableImage === false) {
+      return res.status(403).json({ success: false, error: "ขณะนี้ระบบปิดฟีเจอร์ส่งรูปภาพชั่วคราว" });
+    }
+    if (uploadType === "text" && shopConfig.enableText === false) {
+      return res.status(403).json({ success: false, error: "ขณะนี้ระบบปิดฟีเจอร์ส่งข้อความชั่วคราว" });
+    }
+    if (uploadType === "gift" && shopConfig.enableGift === false) {
+      return res.status(403).json({ success: false, error: "ขณะนี้ระบบปิดฟีเจอร์ส่งของขวัญชั่วคราว" });
+    }
+    if (uploadType === "birthday" && shopConfig.enableBirthday === false) {
+      return res.status(403).json({ success: false, error: "ขณะนี้ระบบปิดฟีเจอร์วันเกิดชั่วคราว" });
+    }
+
     if (!mainFile && !imageUrl && type !== "text" && type !== "gift" && type !== "birthday") {
       return res.status(400).json({ success: false, error: "No file or imageUrl received" });
     }
@@ -59,9 +84,7 @@ export const uploadItem = async (req, res) => {
       const userRanking = await Ranking.findOne({ email, shopId });
       const totalSpent = userRanking ? (userRanking.points || 0) : 0;
       
-      let birthdayRequirement = 100;
-      const systemConfig = req.app.get('systemConfig') || {};
-      birthdayRequirement = systemConfig.birthdaySpendingRequirement || 100;
+      const birthdayRequirement = shopConfig.birthdaySpendingRequirement || 100;
 
       if (totalSpent < birthdayRequirement) {
         return res.status(403).json({
