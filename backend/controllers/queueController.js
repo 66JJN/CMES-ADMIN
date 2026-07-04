@@ -344,15 +344,59 @@ export const restoreHistoryItem = async (req, res) => {
     const historyItem = await CheckHistory.findOne({ _id: id, shopId });
     if (!historyItem) return res.status(404).json({ success: false, message: 'History item not found' });
 
-    const newQueueItem = await ImageQueue.create({
-      shopId: historyItem.shopId, sender: historyItem.sender || 'Unknown',
-      price: historyItem.price || 0, time: historyItem.duration || 10,
-      filePath: historyItem.mediaUrl || null, text: historyItem.content || '',
-      type: historyItem.type || 'image', status: 'pending',
-      receivedAt: new Date()
-    });
+    const isObjectId = (str) => /^[0-9a-fA-F]{24}$/.test(str);
 
+    const insertData = {
+      shopId: historyItem.shopId,
+      sender: historyItem.sender || 'Unknown',
+      price: historyItem.price || 0,
+      time: historyItem.duration || historyItem.metadata?.duration || 10,
+      filePath: historyItem.mediaUrl || null,
+      text: historyItem.content || '',
+      type: historyItem.type || 'image',
+      status: 'pending',
+      receivedAt: new Date(),
+
+      // Restore layout & style settings
+      textColor: historyItem.metadata?.theme || 'white',
+      socialColor: historyItem.metadata?.socialColor || '#ffffff',
+      textLayout: historyItem.metadata?.textLayout || 'right',
+
+      // Restore social media settings
+      socialType: historyItem.metadata?.social?.type || null,
+      socialName: historyItem.metadata?.social?.name || null,
+      qrCodePath: historyItem.metadata?.qrCodePath || null,
+
+      // Restore user details
+      userId: historyItem.userId || null,
+      email: historyItem.email || null,
+      avatar: historyItem.avatar || null,
+
+      // Restore gift order if applicable
+      giftOrder: historyItem.type === 'gift' ? {
+        orderId: historyItem.transactionId,
+        tableNumber: String(historyItem.metadata?.tableNumber || ''),
+        items: historyItem.metadata?.giftItems || [],
+        totalPrice: historyItem.price || 0,
+        note: historyItem.metadata?.note || ''
+      } : undefined
+    };
+
+    // Preserve the original _id for non-gift orders so status lookups by user continue to match
+    if (isObjectId(historyItem.transactionId)) {
+      insertData._id = historyItem.transactionId;
+    }
+
+    const newQueueItem = await ImageQueue.create(insertData);
     await CheckHistory.findByIdAndDelete(id);
+
+    // Notify connected clients via Socket.IO
+    const io = req.app.get('socketio');
+    if (io) {
+      io.to(shopId).emit("admin-update-queue");
+      io.to(shopId).emit("new-upload", newQueueItem);
+    }
+
     res.json({ success: true, data: newQueueItem });
   } catch (error) {
     console.error('[Restore] Error:', error);
