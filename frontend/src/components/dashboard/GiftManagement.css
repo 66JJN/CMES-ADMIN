@@ -491,3 +491,14 @@
     margin-top: 0.5rem;
   }
 }
+
+/* Custom CSS classes to eliminate inline styling on GiftManagement */
+.hero-brand-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.hero-back-btn {
+  margin-top: 0.25rem;
+}

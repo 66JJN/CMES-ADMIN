@@ -9,7 +9,7 @@ import ImageQueue from "./components/dashboard/ImageQueue";
 import TimeHistory from "./08_TimeHistory/TimeHistory.js";
 import CheckHistory from "./components/dashboard/CheckHistory";  // นำเข้า CheckHistory
 import LuckyWheel from "./06_LuckyWheel/LuckyWheel.js";
-import Giftsetting from "./04_Gift/Giftsetting.js";
+import GiftManagement from "./components/dashboard/GiftManagement";
 import EditProfile from "./09_EditProfile/EditProfile.js";
 
 function App() {
@@ -25,7 +25,7 @@ function App() {
           <Route path="/TimeHistory" element={<TimeHistory />} />
           <Route path="/check-history" element={<CheckHistory />} /> {/* เส้นทางใหม่ */}
           <Route path="/lucky-wheel" element={<LuckyWheel />} />
-          <Route path="/gift-setting" element={<Giftsetting />} />
+          <Route path="/gift-setting" element={<GiftManagement />} />
           <Route path="/edit-profile" element={<EditProfile />} />
         </Routes>
       </Router>
