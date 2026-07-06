@@ -769,3 +769,14 @@
     flex-direction: column;
   }
 }
+
+/* Helper CSS classes to eliminate inline styling on AdminReport UI */
+.hero-brand-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.hero-back-btn {
+  margin-top: 0.25rem;
+}

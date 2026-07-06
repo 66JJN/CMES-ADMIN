@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+/**
+ * AdminReport — Presentational Component สำหรับศูนย์ติดตามปัญหา
+ * แยก Logic ออกไปไว้ที่ hooks/useAdminReport.js
+ */
+import React from "react";
 import { Link } from "react-router-dom";
-import { API_BASE_URL, REALTIME_URL } from "../config/apiConfig";
-import adminFetch from "../config/authFetch";
+import useAdminReport from "../../hooks/useAdminReport";
 import "./AdminReport.css";
-
-const API_BASE = API_BASE_URL;
 
 const STATUS_META = {
   new: { label: "ใหม่", badge: "status-new" },
@@ -29,104 +30,40 @@ const statusFilters = [
   { id: "resolved", label: "แก้ไขแล้ว" }
 ];
 
-function AdminReport() {
-  const [reports, setReports] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [search, setSearch] = useState("");
-  const [activeReport, setActiveReport] = useState(null);
-  const [updatingId, setUpdatingId] = useState(null);
-
-  // ===== ข้อมูล Admin สำหรับ Authentication Headers =====
-  const shopId = localStorage.getItem("shopId") || "";
-  const adminId = localStorage.getItem("adminId") || "";
-
-  useEffect(() => {
-    loadReports();
-  }, []);
-
-  const loadReports = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await adminFetch(`${API_BASE}/api/reports`);
-      if (!res.ok) throw new Error("FAILED");
-      const data = await res.json();
-      const sorted = (data || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      setReports(sorted);
-    } catch (err) {
-      console.error("โหลดรายงานไม่สำเร็จ", err);
-      setError("ไม่สามารถโหลดรายการรายงานได้");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredReports = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-    return reports.filter((report) => {
-      const normalizedDetail = (report.detail || "").toLowerCase();
-      const categoryLabel = (CATEGORY_META[report.category]?.label || report.category || "").toLowerCase();
-      const matchStatus = filter === "all" ? report.status !== "resolved" : report.status === filter;
-      const matchKeyword = !keyword || normalizedDetail.includes(keyword) || categoryLabel.includes(keyword);
-      return matchStatus && matchKeyword;
-    });
-  }, [reports, filter, search]);
-
-  const stats = useMemo(() => {
-    const summary = { total: reports.length, new: 0, reading: 0, resolved: 0 };
-    reports.forEach((r) => {
-      summary[r.status] = (summary[r.status] || 0) + 1;
-    });
-    return summary;
-  }, [reports]);
-
-  const handleStatusChange = async (report, status) => {
-    if (report.status === status) return;
-    setUpdatingId(report.id);
-    try {
-      const res = await adminFetch(`${API_BASE}/api/reports/${report.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status })
-      });
-      if (!res.ok) throw new Error("PATCH_FAILED");
-      const data = await res.json();
-      setReports((prev) => prev.map((item) => (item.id === data.report.id ? data.report : item)));
-      if (activeReport && activeReport.id === data.report.id) {
-        setActiveReport(data.report);
-      }
-    } catch (err) {
-      console.error("อัปเดตสถานะไม่สำเร็จ", err);
-      setError("ไม่สามารถอัปเดตสถานะได้");
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const formatDate = (date) => {
-    if (!date) return "-";
-    return new Date(date).toLocaleString("th-TH", {
-      dateStyle: "medium",
-      timeStyle: "short"
-    });
-  };
+export default function AdminReport() {
+  const {
+    loading,
+    error,
+    filter,
+    setFilter,
+    search,
+    setSearch,
+    activeReport,
+    setActiveReport,
+    updatingId,
+    loadReports,
+    handleStatusChange,
+    formatDate,
+    filteredReports,
+    stats,
+    viewDescription
+  } = useAdminReport();
 
   const renderStatusPill = (status) => {
     const meta = STATUS_META[status] || { label: status, badge: "status-new" };
     return <span className={`status-pill ${meta.badge}`}>{meta.label}</span>;
   };
 
-  const viewDescription = filter === "resolved" ? "แสดงเฉพาะงานที่ปิดไปแล้ว" : "แสดงเฉพาะงานที่ยังรอดำเนินการ";
-
   return (
     <div className="admin-report-page">
       <header className="admin-report-header">
-        <div className="header-texts" style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-          <Link to="/home" className="back-nav-btn" title="กลับหน้าหลัก" style={{ marginTop: '0.25rem' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 19l-7-7 7-7" /></svg>
+        <div className="hero-brand-group">
+          <Link to="/home" className="back-nav-btn hero-back-btn" title="กลับหน้าหลัก">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 19l-7-7 7-7" />
+            </svg>
           </Link>
-          <div>
+          <div className="header-texts">
             <p className="eyebrow">ระบบรายงาน</p>
             <h1>ศูนย์ติดตามปัญหา</h1>
             <p className="subtitle">ข้อมูลเชื่อมต่อจากฝั่งผู้ใช้ทันที ปรับสถานะงานได้ตามจริง</p>
@@ -299,5 +236,3 @@ function AdminReport() {
     </div>
   );
 }
-
-export default AdminReport;

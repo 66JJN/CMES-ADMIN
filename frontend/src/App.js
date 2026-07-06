@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ShopProvider } from "./contexts/ShopContext"; // 🔥 Multi-tenant Context
 import Login from "./pages/Login"; // นำเข้า Login page
 import Home from "./pages/Home"; // นำเข้า Home page
-import Report from "./05_Report/AdminReport.js"; // นำเข้า Report
+import Report from "./components/dashboard/AdminReport"; // นำเข้า Report
 import AdminStatSlip from "./Stat-slip"; // ชื่อ component ต้องตรงกับที่ export
 import ImageQueue from "./components/dashboard/ImageQueue";
 import TimeHistory from "./08_TimeHistory/TimeHistory.js";
