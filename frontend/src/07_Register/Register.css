@@ -222,7 +222,7 @@
   box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
 }
 
-button {
+.register-container button {
   width: 100%;
   padding: 1.1rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -239,7 +239,7 @@ button {
   overflow: hidden;
 }
 
-button::before {
+.register-container button::before {
   content: '';
   position: absolute;
   top: 50%;
@@ -252,17 +252,17 @@ button::before {
   transition: width 0.6s, height 0.6s;
 }
 
-button:active::before {
+.register-container button:active::before {
   width: 300px;
   height: 300px;
 }
 
-button:hover {
+.register-container button:hover {
   transform: translateY(-3px);
   box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
 }
 
-button:active {
+.register-container button:active {
   transform: translateY(-1px);
 }
 
