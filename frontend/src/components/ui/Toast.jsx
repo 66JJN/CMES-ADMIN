@@ -9,7 +9,8 @@ const Toast = ({ message, type = 'success', onClose }) => {
       setVisible(true);
       const timer = setTimeout(() => {
         setVisible(false);
-        setTimeout(onClose, 300); // Wait for fade out animation
+        const closeTimer = setTimeout(onClose, 300); // Wait for fade out animation
+        return () => clearTimeout(closeTimer);
       }, 3000);
 
       return () => clearTimeout(timer);

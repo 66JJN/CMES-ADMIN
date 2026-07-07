@@ -8,7 +8,7 @@ import AdminStatSlip from "./Stat-slip"; // ชื่อ component ต้อง�
 import ImageQueue from "./components/dashboard/ImageQueue";
 import TimeHistory from "./08_TimeHistory/TimeHistory.js";
 import CheckHistory from "./components/dashboard/CheckHistory";  // นำเข้า CheckHistory
-import LuckyWheel from "./06_LuckyWheel/LuckyWheel.js";
+import LuckyWheel from "./components/dashboard/LuckyWheel";
 import GiftManagement from "./components/dashboard/GiftManagement";
 import EditProfile from "./09_EditProfile/EditProfile.js";
 

@@ -1,12 +1,4 @@
-/**
- * Home page — layout shell only (background, 3-column grid).
- * Column width: DESIGN §9.3 — 380px fixed columns, centered (slim dashboard).
- */
-
 @keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }

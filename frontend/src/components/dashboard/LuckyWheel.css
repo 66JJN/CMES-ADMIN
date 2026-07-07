@@ -26,6 +26,12 @@
   animation: slideDown 0.6s ease; /* เคลื่อนไหวเลื่อนลง */
 }
 
+.lucky-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 /* หัวข้อหลักในส่วนหัว */
 .header-title {
   font-size: 2rem;
@@ -43,7 +49,7 @@
 
 /* หัวข้อรองในส่วนหัว */
 .header-subtitle {
-  margin: 4px 0 0 0;
+  margin: 0;
   font-size: 0.95rem;
   color: #666;
   font-weight: 500;
@@ -76,9 +82,7 @@
 .lucky-wheel-container {
   max-width: 600px;
   margin: 30px auto 0 auto;
-  /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); Removed redundant gradient */
   border-radius: 20px;
-  /* box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); */
   padding: 32px 24px 40px 24px;
   text-align: center;
 }
@@ -113,7 +117,6 @@
   justify-content: center;
   animation: slideUp 0.6s ease; /* แอนิเมชั่นเลื่อนขึ้น */
   padding: 20px;
-  /* Glass card for wheel area - การ์ดแบบกระจกใสสำหรับวงล้อ */
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px); /* เอฟเฟกต์เบลอพื้นหลัง */
   border-radius: 30px;
@@ -149,17 +152,20 @@
   align-items: stretch;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.7);
-  animation: slideUp 0.6s ease 0.1s both; /* เลื่อนขึ้นหลังส่วนซ้ายเล็กน้อย */
+  animation: slideUp 0.6s ease 0.1s both;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* หัวข้อในแผงควบคุมด้านขวา */
 .lucky-wheel-right h3 {
-  margin-top: 0;
-  margin-bottom: 12px;
-  font-size: 1.2rem;
+  margin: 0;
+  font-size: 1.1rem;
   color: #333;
   font-weight: 700;
-  letter-spacing: 0.5px; /* เพิ่มระยะห่างระหว่างตัวอักษร */
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 /* ==========================
    ส่วนควบคุมวงล้อ
@@ -277,12 +283,27 @@
   z-index: 2; /* อยู่ด้านบนวงล้อ */
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)); /* เงา */
 }
+
+.wheel-pointer-container {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 36px;
+  z-index: 2;
+  pointer-events: none;
+}
+
 /* ตัววงล้อ SVG */
 .wheel-svg {
   position: relative;
   z-index: 1;
   width: 360px;
   height: 360px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: #fff;
   transition: transform 4s cubic-bezier(0.17, 0.67, 0.83, 0.67); /* การหมุนแบบค่อยๆ ช้าลง */
   filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.2)); /* เงา */
 }
@@ -297,9 +318,9 @@
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* การเปลี่ยนแปลงที่นุ่มนวล */
-  margin-top: 16px;
-  padding: 12px 40px;
-  font-size: 18px;
+  margin: 0;
+  padding: 8px 32px;
+  font-size: 20px;
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
   position: relative;
   overflow: hidden; /* ซ่อนส่วนที่เกิน */
@@ -502,9 +523,177 @@
 }
 /* ปุ่มลบทั้งหมด */
 .delete-all-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+  transition: all 0.3s ease;
+}
+
+.delete-all-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+
+.delete-all-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Helper CSS classes to eliminate inline styling on LuckyWheel */
+.wheel-action-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  justify-content: center;
+}
+
+.wheel-config-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.wheel-textarea {
+  width: 100%;
+  border-radius: 10px;
+  border: 2px solid #e0e0e0;
+  padding: 10px;
+  margin-bottom: 8px;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.add-btn {
+  width: 100%;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  width: 200px;
-  height: 30px;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  font-family: inherit;
+  transition: all 0.3s;
+  box-sizing: border-box;
+}
+
+.add-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+}
+
+.add-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.table-range-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.table-range-input {
+  flex: 1 1 80px;
+  min-width: 80px;
+  padding: 8px 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  outline: none;
+  font-family: inherit;
   font-size: 14px;
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+  box-sizing: border-box;
+}
+
+.add-tables-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.add-tables-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+}
+
+.add-tables-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.segment-edit-input {
+  width: 80px;
+  padding: 4px;
+  border: 1px solid #fff;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  outline: none;
+}
+
+.segment-edit-btn {
+  background: rgba(255,255,255,0.3);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.segment-edit-btn:hover {
+  background: rgba(255,255,255,0.5);
+  transform: scale(1.05);
+}
+
+.segment-edit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.popup-btn-group {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.winner-respin-btn {
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  font-size: 18px;
+  padding: 10px 24px;
+  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
 }

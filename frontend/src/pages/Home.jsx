@@ -8,7 +8,7 @@ import VipSupporters from '../components/dashboard/VipSupporters';
 import DashboardModals from '../components/dashboard/DashboardModals';
 import { API_BASE_URL, USER_FRONTEND_URL } from '../config/apiConfig';
 import { useNavigate } from 'react-router-dom';
-import '../01_Home/home.css';
+import './Home.css';
 import '../components/dashboard/AdminHeader.css';
 import '../components/dashboard/DashboardShared.css';
 import '../components/dashboard/DashboardCards.css';
