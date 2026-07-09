@@ -523,9 +523,9 @@
 }
 /* ปุ่มลบทั้งหมด */
 .delete-all-btn {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: #fff;
-  border: none;
+  background: rgba(239, 68, 68, 0.05);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 8px;
   padding: 6px 14px;
   font-size: 12px;
@@ -537,13 +537,15 @@
   justify-content: center;
   white-space: nowrap;
   flex: 0 0 auto;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
   transition: all 0.3s ease;
 }
 
 .delete-all-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.25);
 }
 
 .delete-all-btn:disabled {
