@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import useCheckHistory from "../../hooks/useCheckHistory";
+import "./DashboardShared.css";
 import "./CheckHistory.css";
 
 const TYPE_LABELS = {
@@ -382,7 +383,7 @@ export default function CheckHistory() {
                 </span>
                 รายละเอียด
               </h2>
-              <button className="ch-modal-close" onClick={() => setShowModal(false)}>
+              <button type="button" className="modal-close-btn" onClick={() => setShowModal(false)} aria-label="ปิดหน้าต่าง">
                 ✕
               </button>
             </div>

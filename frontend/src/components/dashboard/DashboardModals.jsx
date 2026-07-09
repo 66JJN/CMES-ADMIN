@@ -5,6 +5,7 @@ import { API_BASE_URL, USER_FRONTEND_URL } from '../../config/apiConfig';
 import adminFetch from '../../config/authFetch';
 import Button from '../ui/Button';
 import ErrorBoundary from '../ui/ErrorBoundary';
+import './DashboardShared.css';
 import './DashboardModals.css';
 
 // Lazy-loaded heavy modules
@@ -162,7 +163,7 @@ export default function DashboardModals() {
                 <h3>ประวัติการใช้จ่ายทั้งหมด</h3>
                 <p>รวม {totalRankers} ผู้ใช้</p>
               </div>
-              <button type="button" className="close-rank-modal" onClick={() => setShowAllRanks(false)}>✕</button>
+              <button type="button" className="modal-close-btn" onClick={() => setShowAllRanks(false)} aria-label="ปิดหน้าต่าง">✕</button>
             </div>
             <div className="rank-modal-body">
               {fetchingAllRanks ? (
@@ -206,7 +207,7 @@ export default function DashboardModals() {
                 <h3>📱 QR Code สำหรับลูกค้า</h3>
                 <p>สแกนเพื่อเข้าสู่ระบบของร้านคุณ</p>
               </div>
-              <button type="button" className="close-rank-modal" onClick={() => setShowQrModal(false)}>✕</button>
+              <button type="button" className="modal-close-btn" onClick={() => setShowQrModal(false)} aria-label="ปิดหน้าต่าง">✕</button>
             </div>
             <div className="rank-modal-body qr-modal-body">
               {qrCodeUrl ? (
@@ -275,7 +276,7 @@ export default function DashboardModals() {
                 </h3>
                 <p className="obs-modal-subtitle">คัดลอกลิงก์ Overlay หรือใช้แผงควบคุมสลับฉาก/คุมเสียงได้ที่นี่</p>
               </div>
-              <button type="button" className="close-rank-modal" onClick={() => setShowObsModal(false)}>✕</button>
+              <button type="button" className="modal-close-btn" onClick={() => setShowObsModal(false)} aria-label="ปิดหน้าต่าง">✕</button>
             </div>
             <div className="rank-modal-body obs-modal-body">
               <div className="obs-links-section">
@@ -358,7 +359,7 @@ export default function DashboardModals() {
                 <h3>⚙️ จัดการสิทธิพิเศษสำหรับสมาชิกพรีเมียม</h3>
                 <p>แก้ไขสิทธิพิเศษที่จะแสดงให้กับสมาชิก Top Rank</p>
               </div>
-              <button type="button" className="close-rank-modal" onClick={handleClosePerksModal}>✕</button>
+              <button type="button" className="modal-close-btn" onClick={handleClosePerksModal} aria-label="ปิดหน้าต่าง">✕</button>
             </div>
 
             <div className="rank-modal-body perks-modal-body">

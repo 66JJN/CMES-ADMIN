@@ -1,5 +1,6 @@
 import React from "react";
 import { USER_API_URL } from "../../config/apiConfig";
+import "./DashboardShared.css";
 
 export default function QueueHistoryModal({
   showHistory,
@@ -31,11 +32,12 @@ export default function QueueHistoryModal({
             </div>
           </div>
           <button
-            className="history-modal-close-btn"
+            type="button"
+            className="modal-close-btn"
             onClick={() => setShowHistory(false)}
             aria-label="ปิดหน้าต่าง"
           >
-            <i className="fas fa-times"></i>
+            ✕
           </button>
         </div>
 

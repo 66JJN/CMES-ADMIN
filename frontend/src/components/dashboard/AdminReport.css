@@ -693,29 +693,6 @@
   flex: 1;
 }
 
-.icon-btn {
-  background: white;
-  border: 1px solid var(--gray-200);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: var(--gray-500);
-  font-size: 1.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
-}
-
-.icon-btn:hover {
-  background: var(--gray-50);
-  color: var(--danger-500);
-  border-color: var(--danger-200);
-  transform: rotate(90deg);
-}
-
 /* Animations */
 @keyframes fadeIn {
   from { opacity: 0; }

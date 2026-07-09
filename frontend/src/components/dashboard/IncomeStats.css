@@ -77,28 +77,6 @@
   font-weight: 500;
 }
 
-.income-close-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-  color: #64748b;
-  font-size: 14px;
-  font-weight: bold;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.income-close-btn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
-  transform: rotate(90deg);
-}
-
 /* Date control row */
 .income-date-row {
   display: flex;

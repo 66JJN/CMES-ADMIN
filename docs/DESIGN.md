@@ -518,6 +518,79 @@ Logic: `useSocket().handleToggleSystem` ใน `FeatureSwitches.jsx` (ไม่�
 ::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
 ```
 
+### 8.10 Modal Close Button (`.modal-close-btn`)
+
+> ★ **ปุ่มปิด modal/drawer ทุกตัวในแอดมินต้องใช้คลาสเดียว** — อยู่ใน `DashboardShared.css`  
+> **ห้าม** สร้างคลาสใหม่แบบ `{page}-close-btn` หรือ `{feature}-modal-close`
+
+#### มาตรฐาน
+```css
+/* DashboardShared.css → .modal-close-btn */
+.modal-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.03);
+  color: #64748b;
+  font-size: 14px;
+  /* hover → พื้นแดงอ่อน + ไอคอนแดง */
+}
+```
+
+#### Markup ที่ถูกต้อง
+```jsx
+<button type="button" className="modal-close-btn" onClick={onClose} aria-label="ปิดหน้าต่าง">
+  ✕
+</button>
+```
+
+| กฎ | รายละเอียด |
+|----|------------|
+| **เนื้อหา** | ใช้ตัวอักษร `✕` เท่านั้น — ไม่ใช้ SVG, FontAwesome, หรือข้อความ "ปิด" ในปุ่มมุมขวา |
+| **ขนาด touch target** | `36×36px` (min-width/min-height กำหนดใน CSS แล้ว) |
+| **Hover** | พื้น `rgba(239,68,68,0.1)` + สี `#ef4444` — **ไม่** rotate |
+| **Focus** | `:focus-visible` ring สี primary |
+| **Import CSS** | `import './DashboardShared.css'` ในทุก component ที่ render ปุ่มนี้ |
+| **Header พื้นหลัง** | ใช้พื้นอ่อน (ขาว / `#f8fafc`) — **ห้าม** gradient สีเข้มใน header เพราะปุ่ม `.modal-close-btn` ออกแบบมาสำหรับพื้นอ่อน (contrast ต่ำบน gradient ม่วง) |
+
+#### Modal Header Pattern (ใช้คู่กับ `.modal-close-btn`)
+```css
+/* มาตรฐานเดียวกับ .rank-modal-header / .history-modal-header */
+.modal-header-light {
+  background: linear-gradient(to bottom, #f8fafc, #ffffff);
+  border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+}
+/* หัวข้อ → gradient text, subtitle → #94a3b8 */
+```
+
+#### Modal ที่ใช้ `.modal-close-btn` (ครบแล้ว)
+| Modal / Drawer | Component | หมายเหตุ |
+|----------------|-----------|----------|
+| อันดับทั้งหมด | `DashboardModals.jsx` | |
+| ลิงก์ & QR Code | `DashboardModals.jsx` | |
+| OBS Links | `DashboardModals.jsx` | |
+| จัดการสิทธิพิเศษ | `DashboardModals.jsx` | |
+| สถิติรายรับ | `IncomeStats.jsx` | |
+| ประวัติคิว | `QueueHistoryModal.jsx` | |
+| รายละเอียดรูป/ข้อความ | `ImageQueue.jsx` | |
+| รายละเอียดประวัติ | `CheckHistory.jsx` | |
+| รายละเอียดรายงาน (drawer) | `AdminReport.jsx` | |
+
+#### ข้อยกเว้น (ไม่ใช่ modal close มุมขวา)
+- `.winner-close-btn` ใน Lucky Wheel — ปุ่ม action ข้อความ "ปิด" / "สุ่มใหม่" ใน popup ผู้ชนะ
+- `.clear-filter-btn` — ล้างตัวกรองวันที่ ไม่ใช่ปิด modal
+- `.segment-edit-btn` — ลบ segment ใน Lucky Wheel
+
+#### Legacy (ห้ามใช้ต่อ)
+| คลาสเก่า | แทนที่ด้วย |
+|----------|------------|
+| `.close-rank-modal` | `.modal-close-btn` |
+| `.income-close-btn` | `.modal-close-btn` |
+| `.history-modal-close-btn` | `.modal-close-btn` |
+| `.ch-modal-close` | `.modal-close-btn` |
+| `.close-button` (modal header) | `.modal-close-btn` |
+
 ---
 
 ## 9. Layout System
@@ -593,7 +666,7 @@ admin-home-minimal
 |------|--------|
 | `01_Home/home.css` | พื้นหลัง gradient, `.admin-main-minimal`, `.three-box-container` |
 | `dashboard/AdminHeader.css` | Header, `.nav-minimal`, avatar |
-| `dashboard/DashboardShared.css` | `.save-btn`, `.switch-minimal`, shared buttons |
+| `dashboard/DashboardShared.css` | `.save-btn`, `.switch-minimal`, **`.modal-close-btn`**, shared buttons |
 | `dashboard/DashboardCards.css` | `.feature-card`, `.card-drag-*`, ขนาดคอลัมน์ |
 | `dashboard/FeatureSwitches.css` | `.system-master-control`, toggles, birthday input |
 | `dashboard/PackageConfig.css` | แพ็กเกจ, payment QR upload |
@@ -750,6 +823,7 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 - เพิ่ม **entry animation** (`fadeIn`, `slideUp`, `scaleUp`) ให้ทุก card/section
 - ใช้ **responsive breakpoints** ที่ `768px` และ `480px`
 - ใช้ **utility classes** จาก `theme.css` ก่อนเขียน CSS ใหม่
+- ใช้ **`.modal-close-btn`** สำหรับปุ่มปิด modal/drawer ทุกตัว (§8.10)
 
 ### DON'T ❌
 - **อย่า hardcode สี** — อ้างอิง variables เสมอ
@@ -762,6 +836,7 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 - **อย่าลืม hover state** ให้ interactive elements ทุกตัว
 - **อย่าแอบสร้างไฟล์ Style ย่อยกระจัดกระจายนอกสารบบ** (ใช้สถาปัตยกรรมไฟล์ตาม §9.5 เท่านั้น)
 - **ห้ามปล่อยทิ้งตัวแปรที่ไม่ได้ใช้งาน (Unused variables) โค้ดที่คอมเมนต์ค้างไว้ (Dead code) หรือ `console.log()` ที่ใช้เทสตอนพัฒนา ลงในโค้ดเวอร์ชันสุดท้ายเด็ดขาด**
+- **อย่าสร้างคลาสปิด modal ใหม่** — ใช้ `.modal-close-btn` จาก `DashboardShared.css` เท่านั้น
 
 ---
 
@@ -826,9 +901,8 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 ---
 
 ## 18. Loading States
-## 18. Loading States
 
-### 17.1 Skeleton Loading
+### 18.1 Skeleton Loading
 ```css
 /* Placeholder ขณะโหลดข้อมูล */
 .skeleton {
@@ -844,7 +918,7 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 }
 ```
 
-### 17.2 Spinner (Button Loading)
+### 18.2 Spinner (Button Loading)
 ```css
 .spinner {
   width: 20px;
@@ -860,7 +934,7 @@ import { faImage, faGift, faCog, faTrash } from "@fortawesome/free-solid-svg-ico
 }
 ```
 
-### 17.3 Disabled State (During API Call)
+### 18.3 Disabled State (During API Call)
 ```css
 .btn:disabled,
 button:disabled {
@@ -871,7 +945,7 @@ button:disabled {
 }
 ```
 
-### 17.4 Loading Pattern (React)
+### 18.4 Loading Pattern (React)
 ```jsx
 const [loading, setLoading] = useState(false);
 
@@ -892,14 +966,13 @@ const handleSubmit = async () => {
 ---
 
 ## 19. CSS Naming Convention
-## 19. CSS Naming Convention
 
-### 18.1 Pattern
+### 19.1 Pattern
 ```
 {page}-{component}-{modifier}
 ```
 
-### 18.2 Examples
+### 19.2 Examples
 | Class | Pattern | Page |
 |-------|---------|------|
 | `.admin-home-minimal` | page container | Home |
@@ -912,9 +985,10 @@ const handleSubmit = async () => {
 | `.three-box-container` | grid 3 × 380px | home.css |
 | `.package-item` | item in list | Home |
 | `.gift-card` | card component | Gift |
+| `.modal-close-btn` | shared modal close | DashboardShared |
 | `.report-row` | row in list | Report |
 
-### 18.3 Rules
+### 19.3 Rules
 - ใช้ **kebab-case** เสมอ (`setting-card` ไม่ใช่ `settingCard`)
 - Page-specific classes ขึ้นต้นด้วยชื่อ page: `admin-`, `gift-`, `report-`
 - State modifiers ใช้ class เสริม: `.on`, `.off`, `.active`, `.disabled`
@@ -922,7 +996,6 @@ const handleSubmit = async () => {
 
 ---
 
-## 20. Accessibility Checklist
 ## 20. Accessibility Checklist
 
 | Rule | Detail |

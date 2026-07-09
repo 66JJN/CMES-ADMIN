@@ -5,6 +5,7 @@
 import React, { useContext } from "react";
 import { ShopContext } from "../../contexts/ShopContext";
 import useIncomeStats from "../../hooks/useIncomeStats";
+import "./DashboardShared.css";
 import "./IncomeStats.css";
 
 // Helper for formatting Thai Baht currency
@@ -55,7 +56,7 @@ export default function IncomeStats({ show, onClose }) {
               </div>
               <p className="income-header-sub">ตรวจสอบยอดรายรับ กิจกรรม และช่วงเวลาที่มีการใช้งานสูงสุด</p>
             </div>
-            <button className="income-close-btn" onClick={onClose}>✕</button>
+            <button type="button" className="modal-close-btn" onClick={onClose} aria-label="ปิดหน้าต่าง">✕</button>
           </div>
 
           {/* Date range inputs */}

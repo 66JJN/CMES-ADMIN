@@ -49,29 +49,6 @@
   font-size: 0.9rem;
 }
 
-.close-rank-modal {
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  background: rgba(0, 0, 0, 0.03);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  cursor: pointer;
-  color: #64748b;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  padding: 0;
-}
-
-.close-rank-modal:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.2);
-}
-
 .rank-modal-body {
   padding: 1.5rem 1.75rem;
   overflow-y: auto;

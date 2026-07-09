@@ -5,6 +5,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import useAdminReport from "../../hooks/useAdminReport";
+import "./DashboardShared.css";
 import "./AdminReport.css";
 
 const STATUS_META = {
@@ -190,7 +191,7 @@ export default function AdminReport() {
                 <p>รายละเอียดรายงาน</p>
                 <h3>{CATEGORY_META[activeReport.category]?.label || "ไม่ทราบ"}</h3>
               </div>
-              <button className="icon-btn" onClick={() => setActiveReport(null)}>✕</button>
+              <button type="button" className="modal-close-btn" onClick={() => setActiveReport(null)} aria-label="ปิดหน้าต่าง">✕</button>
             </div>
             <div className="drawer-body">
               <div className="drawer-section">
