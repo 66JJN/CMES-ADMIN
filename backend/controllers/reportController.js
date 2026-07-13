@@ -69,7 +69,7 @@ export const updateReportStatus = async (req, res) => {
     const updated = await AdminReport.findOneAndUpdate(
       { _id: id, shopId },
       { $set: { status } },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     if (!updated) {

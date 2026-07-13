@@ -8,7 +8,7 @@ export const getBirthdayRequirement = async (req, res) => {
   try {
     const { shopId } = req;
     let settings = await ShopSetting.findOneAndUpdate(
-      { shopId }, {}, { upsert: true, new: true, setDefaultsOnInsert: true }
+      { shopId }, {}, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
     res.json({ success: true, birthdaySpendingRequirement: settings.birthdaySpendingRequirement });
   } catch (error) {
@@ -29,7 +29,7 @@ export const updateBirthdayRequirement = async (req, res) => {
     }
 
     await ShopSetting.findOneAndUpdate(
-      { shopId }, { birthdaySpendingRequirement: requirement }, { upsert: true, new: true }
+      { shopId }, { birthdaySpendingRequirement: requirement }, { upsert: true, returnDocument: 'after' }
     );
 
     console.log(`[Admin][${shopId}] Birthday spending requirement updated to: ${requirement}`);
@@ -49,7 +49,7 @@ export const getPerks = async (req, res) => {
   try {
     const { shopId } = req;
     let settings = await ShopSetting.findOneAndUpdate(
-      { shopId }, {}, { upsert: true, new: true, setDefaultsOnInsert: true }
+      { shopId }, {}, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
     res.json({ success: true, perks: settings.perks });
   } catch (error) {
@@ -74,7 +74,7 @@ export const updatePerks = async (req, res) => {
     }
 
     await ShopSetting.findOneAndUpdate(
-      { shopId }, { perks: validPerks }, { upsert: true, new: true }
+      { shopId }, { perks: validPerks }, { upsert: true, returnDocument: 'after' }
     );
 
     console.log(`[Admin][${shopId}] Perks updated. Total: ${validPerks.length} perks`);
@@ -101,7 +101,7 @@ export const uploadPaymentQr = async (req, res) => {
     console.log(`[PaymentQR][${shopId}] Uploaded payment QR:`, imageUrl);
 
     await ShopSetting.findOneAndUpdate(
-      { shopId }, { paymentQrUrl: imageUrl }, { upsert: true, new: true }
+      { shopId }, { paymentQrUrl: imageUrl }, { upsert: true, returnDocument: 'after' }
     );
 
     res.json({ success: true, paymentQrUrl: imageUrl });

@@ -34,7 +34,7 @@ export const uploadShopLogo = async (req, res) => {
     await ShopSetting.findOneAndUpdate(
       { shopId },
       { $set: { logo: logoUrl } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     console.log(`[ShopLogo] Updated logo for shop ${shopId}: ${logoUrl}`);
@@ -57,7 +57,7 @@ export const updateShopName = async (req, res) => {
     await ShopSetting.findOneAndUpdate(
       { shopId },
       { $set: { name: name.trim() } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     console.log(`[ShopName] Updated name for shop ${shopId}: ${name.trim()}`);

@@ -111,7 +111,7 @@ export const updateGiftItem = async (req, res) => {
         ...(description !== undefined && { description: description.trim() }),
         ...(imageUrl !== undefined && { image: imageUrl })
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!updatedGift) return res.status(404).json({ success: false, message: "ไม่พบรายการ" });
@@ -253,7 +253,7 @@ export const updateGiftOrderItems = async (req, res) => {
     const updated = await ImageQueue.findOneAndUpdate(
       { _id: id, shopId, type: "gift" },
       { "giftOrder.items": items, "giftOrder.totalPrice": totalPrice, price: totalPrice },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!updated) return res.status(404).json({ success: false, message: "ไม่พบรายการ gift นี้" });
@@ -284,7 +284,7 @@ export const checkBirthdayEligibility = async (req, res) => {
     const totalSpent = userRanking ? (userRanking.points || 0) : 0;
 
     let settings = await ShopSetting.findOneAndUpdate(
-      { shopId }, {}, { upsert: true, new: true, setDefaultsOnInsert: true }
+      { shopId }, {}, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
     const birthdayRequirement = settings.birthdaySpendingRequirement;
     const eligible = totalSpent >= birthdayRequirement;

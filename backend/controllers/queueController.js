@@ -201,7 +201,7 @@ export const markAsPlaying = async (req, res) => {
     }
 
     const updated = await ImageQueue.findOneAndUpdate(
-      { _id: id, shopId }, { status: 'playing', playingAt: new Date() }, { new: true }
+      { _id: id, shopId }, { status: 'playing', playingAt: new Date() }, { returnDocument: 'after' }
     );
 
     if (!updated) return res.status(404).json({ success: false, message: 'Item not found' });

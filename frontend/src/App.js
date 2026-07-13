@@ -6,7 +6,7 @@ import Home from "./pages/Home"; // นำเข้า Home page
 import Report from "./components/dashboard/AdminReport"; // นำเข้า Report
 import AdminStatSlip from "./Stat-slip"; // ชื่อ component ต้องตรงกับที่ export
 import ImageQueue from "./components/dashboard/ImageQueue";
-import TimeHistory from "./08_TimeHistory/TimeHistory.js";
+import TimeHistoryPage from "./pages/TimeHistoryPage.jsx";
 import CheckHistory from "./components/dashboard/CheckHistory";  // นำเข้า CheckHistory
 import LuckyWheel from "./components/dashboard/LuckyWheel";
 import GiftManagement from "./components/dashboard/GiftManagement";
@@ -22,7 +22,7 @@ function App() {
           <Route path="/report" element={<Report />} /> {/* หน้า Report */}
           <Route path="/stat-slip" element={<AdminStatSlip />} />
           <Route path="/image-queue" element={<ImageQueue />} />
-          <Route path="/TimeHistory" element={<TimeHistory />} />
+          <Route path="/TimeHistory" element={<TimeHistoryPage />} />
           <Route path="/check-history" element={<CheckHistory />} /> {/* เส้นทางใหม่ */}
           <Route path="/lucky-wheel" element={<LuckyWheel />} />
           <Route path="/gift-setting" element={<GiftManagement />} />

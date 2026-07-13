@@ -58,18 +58,24 @@
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
 }
 
+.th-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .th-minimal-title {
   font-size: 1.75rem;
   font-weight: 800;
   margin: 0;
-  text-align: center;
-  flex: 1;
+  text-align: left;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: -0.5px;
 }
+
 
 .th-minimal-main {
   display: grid;

@@ -122,7 +122,7 @@ export async function playNextItem(shopId, io) {
     const updated = await ImageQueue.findByIdAndUpdate(
       nextItem._id,
       { status: 'playing', playingAt: new Date() },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (updated && io) {

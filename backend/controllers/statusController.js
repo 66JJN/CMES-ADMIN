@@ -70,7 +70,7 @@ export const getSystemStatus = async (req, res) => {
     const systemConfig = req.app.get('systemConfig') || {};
 
     let settings = await ShopSetting.findOneAndUpdate(
-      { shopId }, {}, { upsert: true, new: true, setDefaultsOnInsert: true }
+      { shopId }, {}, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
 
     const config = {
@@ -95,7 +95,7 @@ export const updateSystemConfig = async (req, res) => {
     const systemConfig = req.app.get('systemConfig') || {};
 
     let settings = await ShopSetting.findOneAndUpdate(
-      { shopId }, { systemConfig: updates }, { upsert: true, new: true }
+      { shopId }, { systemConfig: updates }, { upsert: true, returnDocument: 'after' }
     );
 
     console.log(`[Admin][${shopId}] System config updated:`, Object.keys(updates));
