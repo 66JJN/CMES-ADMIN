@@ -1,5 +1,5 @@
 import React from "react";
-import "../../07_Register/Register.css";
+import "./RegisterForm.css";
 
 /**
  * Presentational Form component for Admin Login.

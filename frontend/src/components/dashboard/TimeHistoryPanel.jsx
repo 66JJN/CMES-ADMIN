@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import "../../08_TimeHistory/TimeHistory.css";
+import "./TimeHistoryPanel.css";
 
 /**
  * Presentational Component for displaying Time History list.
