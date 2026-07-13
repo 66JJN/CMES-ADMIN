@@ -10,7 +10,7 @@ import TimeHistoryPage from "./pages/TimeHistoryPage.jsx";
 import CheckHistory from "./components/dashboard/CheckHistory";  // นำเข้า CheckHistory
 import LuckyWheel from "./components/dashboard/LuckyWheel";
 import GiftManagement from "./components/dashboard/GiftManagement";
-import EditProfile from "./09_EditProfile/EditProfile.js";
+import EditProfilePage from "./pages/EditProfilePage.jsx";
 
 function App() {
   return (
@@ -26,7 +26,7 @@ function App() {
           <Route path="/check-history" element={<CheckHistory />} /> {/* เส้นทางใหม่ */}
           <Route path="/lucky-wheel" element={<LuckyWheel />} />
           <Route path="/gift-setting" element={<GiftManagement />} />
-          <Route path="/edit-profile" element={<EditProfile />} />
+          <Route path="/edit-profile" element={<EditProfilePage />} />
         </Routes>
       </Router>
     </ShopProvider>
