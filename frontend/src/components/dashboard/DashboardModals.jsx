@@ -10,7 +10,7 @@ import './DashboardModals.css';
 
 // Lazy-loaded heavy modules
 const LazyIncomeStats = lazy(() => import('./IncomeStats'));
-const LazyOBSControl = lazy(() => import('../../10_OBSControl/OBSControl'));
+const LazyOBSControl = lazy(() => import('../../pages/OBSControlPage'));
 const LazyToast = lazy(() => import('../ui/Toast'));
 
 const formatCurrency = (value) => Number(value || 0).toLocaleString("th-TH");

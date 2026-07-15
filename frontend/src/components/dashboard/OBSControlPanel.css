@@ -1,4 +1,4 @@
-﻿.obs-dashboard {
+.obs-dashboard {
     font-family: 'Prompt', 'Kanit', 'Inter', sans-serif;
     width: 100%;
     margin: 0 auto;
@@ -138,7 +138,7 @@
     background: transparent;
 }
 
-/* ====== Preview container — replaced by interactive canvas, keep animation ====== */
+/* ====== Preview container animations ====== */
 @keyframes pulse-red {
     0% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.05); opacity: 0.8; }
@@ -659,7 +659,7 @@
     color: #dc2626;
 }
 
-/* Log Terminal — keep dark for readability */
+/* Log Terminal */
 .obs-terminal-mini {
     flex: 1;
     background: #0f172a;
@@ -715,6 +715,12 @@
     background: linear-gradient(135deg, #f5f3ff, #ede9fe);
     border-top: 1px solid rgba(102, 126, 234, 0.15);
     color: #64748b;
+}
+
+.obs-not-connected-title {
+    font-size: 18px;
+    margin-bottom: 16px;
+    font-weight: 600;
 }
 
 .obs-instructions {
