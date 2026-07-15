@@ -12,6 +12,7 @@ import lineLogo from "../../data-icon/line-logo.png";
 import tiktokLogo from "../../data-icon/tiktok-logo.png";
 
 import { API_BASE_URL, USER_API_URL } from "../../config/apiConfig";
+import adminFetch from "../../config/authFetch";
 
 // Helper for formatting date
 const formatDate = (dateString) => {
@@ -1597,9 +1598,8 @@ export default function ImageQueue() {
                               setSavingGiftItems(true);
                               try {
                                 const itemId = selectedImage._id || selectedImage.id;
-                                const response = await fetch(`${API_BASE_URL}/api/queue/${itemId}/gift-items`, {
+                                const response = await adminFetch(`${API_BASE_URL}/api/queue/${itemId}/gift-items`, {
                                   method: "PUT",
-                                  headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify({ items: editGiftItems }),
                                 });
                                 if (response.ok) {

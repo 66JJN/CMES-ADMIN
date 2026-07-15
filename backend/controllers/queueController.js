@@ -109,9 +109,10 @@ export const uploadItem = async (req, res) => {
       receivedAt: new Date()
     };
 
-    // AI Content Moderation
+    // AI Content Moderation — เฉพาะรูปที่ผู้ใช้อัปโหลดเอง (image, birthday) ไม่รวม gift (แอดมินเลือกรูปให้)
     const imageUrlToCheck = itemData.filePath;
-    if (imageUrlToCheck && (type === 'image' || !type) && isAIModerationEnabled()) {
+    const shouldModerate = imageUrlToCheck && (type === 'image' || type === 'birthday') && isAIModerationEnabled();
+    if (shouldModerate) {
       try {
         const moderationResult = await moderateImage(imageUrlToCheck);
         itemData.aiModeration = {
