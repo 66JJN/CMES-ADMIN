@@ -92,21 +92,10 @@ CMES-ADMIN/
 │   │   ├── config/
 │   │   │   ├── apiConfig.js   # API_BASE_URL, REALTIME_URL, USER_API_URL, USER_FRONTEND_URL
 │   │   │   └── authFetch.js   # ★ adminFetch() — shared fetch utility
-│   │   ├── 01_Home/           # home.css (layout shell only); home.js deprecated; home.css.backup = ref
-│   │   ├── 02_ImageQueue/     # จัดการคิวรูปภาพ
-│   │   ├── 03_CheckHistory/   # ประวัติการตรวจสอบ
-│   │   ├── 04_Gift/           # ตั้งค่าของขวัญ
-│   │   ├── 05_Report/         # ดูรายงานปัญหา
-│   │   ├── 06_LuckyWheel/     # วงล้อสุ่มรางวัล
-│   │   ├── 07_Register/       # Admin login
-│   │   ├── 08_TimeHistory/    # ประวัติเวลา
-│   │   ├── 09_EditProfile/    # แก้ไขโปรไฟล์ร้าน
-│   │   ├── 10_OBSControl/     # ควบคุม OBS
 │   │   ├── data-icon/         # Static icon assets
 │   │   ├── theme.css          # ★ Design system (CSS variables + utilities)
 │   │   ├── App.js             # Router + ShopProvider wrapper
 │   │   ├── App.css            # Shared component styles (btn, card, input)
-│   │   ├── Stat-slip.js       # สถิติสลิป
 │   │   └── index.js
 │   └── package.json
 │
