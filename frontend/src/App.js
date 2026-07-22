@@ -4,7 +4,7 @@ import { ShopProvider } from "./contexts/ShopContext"; // 🔥 Multi-tenant Cont
 import Login from "./pages/Login"; // นำเข้า Login page
 import Home from "./pages/Home"; // นำเข้า Home page
 import Report from "./components/dashboard/AdminReport"; // นำเข้า Report
-import AdminStatSlip from "./Stat-slip"; // ชื่อ component ต้องตรงกับที่ export
+import AdminStatSlip from "./components/Stat-slip"; // ชื่อ component ต้องตรงกับที่ export
 import ImageQueue from "./components/dashboard/ImageQueue";
 import TimeHistoryPage from "./pages/TimeHistoryPage.jsx";
 import CheckHistory from "./components/dashboard/CheckHistory";  // นำเข้า CheckHistory
