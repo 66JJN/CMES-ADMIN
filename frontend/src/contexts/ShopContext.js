@@ -27,19 +27,13 @@ export const ShopProvider = ({ children }) => {
     console.log("[ShopContext] Initializing socket for shop:", shopId);
 
     const newSocket = io(REALTIME_URL, {
-
       query: { shopId },
-
-      transports: ["polling", "websocket"],
-
+      transports: ["websocket"], // ⚡ Enforce WebSocket only (no polling duplication)
       timeout: 30000,
-
       reconnection: true,
       reconnectionAttempts: 15,
       reconnectionDelay: 2000,
       reconnectionDelayMax: 10000,
-
-      forceNew: true
     });
 
 
