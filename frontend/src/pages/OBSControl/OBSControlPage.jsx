@@ -1,6 +1,6 @@
 import React from "react";
-import useOBSControl from "../hooks/useOBSControl";
-import OBSControlPanel from "../components/dashboard/OBSControlPanel";
+import useOBSControl from "../../hooks/useOBSControl";
+import OBSControlPanel from "../../components/dashboard/OBSControlPanel";
 
 /**
  * OBSControlPage Entry Point Page.
