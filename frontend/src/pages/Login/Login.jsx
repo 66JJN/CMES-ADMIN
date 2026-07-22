@@ -1,6 +1,6 @@
 import React from 'react';
-import useRegister from '../hooks/useRegister';
-import RegisterForm from '../components/dashboard/RegisterForm';
+import useRegister from '../../hooks/useRegister';
+import RegisterForm from '../../components/dashboard/RegisterForm';
 
 /**
  * Clean entry Login page wrapper composing the Register component.
