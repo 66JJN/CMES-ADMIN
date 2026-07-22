@@ -1,17 +1,17 @@
 import React, { useContext, useEffect } from 'react';
-import { ShopContext } from '../contexts/ShopContext';
-import { HomeProvider, HomeContext } from '../contexts/HomeContext';
-import useDashboardData from '../hooks/useDashboardData';
-import FeatureSwitches from '../components/dashboard/FeatureSwitches';
-import PackageConfig from '../components/dashboard/PackageConfig';
-import VipSupporters from '../components/dashboard/VipSupporters';
-import DashboardModals from '../components/dashboard/DashboardModals';
-import { API_BASE_URL, USER_FRONTEND_URL } from '../config/apiConfig';
+import { ShopContext } from '../../contexts/ShopContext';
+import { HomeProvider, HomeContext } from '../../contexts/HomeContext';
+import useDashboardData from '../../hooks/useDashboardData';
+import FeatureSwitches from '../../components/dashboard/FeatureSwitches';
+import PackageConfig from '../../components/dashboard/PackageConfig';
+import VipSupporters from '../../components/dashboard/VipSupporters';
+import DashboardModals from '../../components/dashboard/DashboardModals';
+import { API_BASE_URL, USER_FRONTEND_URL } from '../../config/apiConfig';
 import { useNavigate } from 'react-router-dom';
 import './Home.css';
-import '../components/dashboard/AdminHeader.css';
-import '../components/dashboard/DashboardShared.css';
-import '../components/dashboard/DashboardCards.css';
+import '../../components/dashboard/AdminHeader.css';
+import '../../components/dashboard/DashboardShared.css';
+import '../../components/dashboard/DashboardCards.css';
 
 /**
  * Main Home page wrapper initializing local HomeProvider context contextually.
