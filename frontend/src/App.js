@@ -10,7 +10,7 @@ import TimeHistoryPage from "./pages/TimeHistoryPage.jsx";
 import CheckHistory from "./components/dashboard/CheckHistory";  // นำเข้า CheckHistory
 import LuckyWheel from "./components/dashboard/LuckyWheel";
 import GiftManagement from "./components/dashboard/GiftManagement";
-import EditProfilePage from "./pages/EditProfilePage.jsx";
+import EditProfilePage from "./pages/EditProfile/EditProfilePage.jsx";
 
 function App() {
   return (

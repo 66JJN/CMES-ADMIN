@@ -1,6 +1,6 @@
 import React from "react";
-import useEditProfile from "../hooks/useEditProfile";
-import EditProfileForm from "../components/dashboard/EditProfileForm";
+import useEditProfile from "../../hooks/useEditProfile";
+import EditProfileForm from "../../components/dashboard/EditProfileForm";
 
 /**
  * EditProfilePage Entry Point Page.
