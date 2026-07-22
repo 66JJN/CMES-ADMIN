@@ -53,9 +53,12 @@
 CMES-ADMIN/
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/              # ★ Clean entry points
-│   │   │   ├── Home.jsx        #   Dashboard: header + 3-column grid + data bootstrap
-│   │   │   └── Login.jsx       #   Login wrapper (wraps Register.js)
+│   │   ├── pages/              # ★ Clean entry points (1 Page = 1 Directory)
+│   │   │   ├── Home/           #   Home.jsx + Home.css
+│   │   │   ├── Login/          #   Login.jsx
+│   │   │   ├── EditProfile/    #   EditProfilePage.jsx
+│   │   │   ├── OBSControl/     #   OBSControlPage.jsx
+│   │   │   └── TimeHistory/    #   TimeHistoryPage.jsx
 │   │   ├── components/
 │   │   │   ├── ui/             # ★ Reusable presentational components
 │   │   │   │   ├── Button.jsx  #   Gradient/outline/danger — zero inline styles
