@@ -1,6 +1,6 @@
 import React from "react";
-import useTimeHistory from "../hooks/useTimeHistory";
-import TimeHistoryPanel from "../components/dashboard/TimeHistoryPanel";
+import useTimeHistory from "../../hooks/useTimeHistory";
+import TimeHistoryPanel from "../../components/dashboard/TimeHistoryPanel";
 
 /**
  * TimeHistoryPage Entry Point Page.

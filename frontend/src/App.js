@@ -6,7 +6,7 @@ import Home from "./pages/Home/Home"; // นำเข้า Home page
 import Report from "./components/dashboard/AdminReport"; // นำเข้า Report
 import AdminStatSlip from "./components/Stat-slip"; // ชื่อ component ต้องตรงกับที่ export
 import ImageQueue from "./components/dashboard/ImageQueue";
-import TimeHistoryPage from "./pages/TimeHistoryPage.jsx";
+import TimeHistoryPage from "./pages/TimeHistory/TimeHistoryPage.jsx";
 import CheckHistory from "./components/dashboard/CheckHistory";  // นำเข้า CheckHistory
 import LuckyWheel from "./components/dashboard/LuckyWheel";
 import GiftManagement from "./components/dashboard/GiftManagement";
