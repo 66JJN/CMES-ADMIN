@@ -239,9 +239,12 @@ http://localhost:3000
 CMES-ADMIN/
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/                  # ★ Clean Architecture entry points
-│   │   │   ├── Home.jsx            #   Dashboard: nav (QR+OBS) + 3-column grid
-│   │   │   └── Login.jsx           #   Login wrapper
+│   │   ├── pages/                  # ★ Clean Architecture entry points (1 Page = 1 Directory)
+│   │   │   ├── Home/               #   Home.jsx + Home.css — Dashboard
+│   │   │   ├── Login/              #   Login.jsx — Admin login
+│   │   │   ├── EditProfile/        #   EditProfilePage.jsx — Shop profile editor
+│   │   │   ├── OBSControl/         #   OBSControlPage.jsx — OBS WebSocket control
+│   │   │   └── TimeHistory/        #   TimeHistoryPage.jsx — Time history
 │   │   ├── components/
 │   │   │   ├── ui/                 # ★ Reusable presentational components
 │   │   │   │   ├── Button.jsx      #   Gradient/outline/danger buttons
@@ -249,24 +252,22 @@ CMES-ADMIN/
 │   │   │   │   ├── Switch.jsx      #   Toggle switch (glassmorphism)
 │   │   │   │   ├── Select.jsx      #   Clean dropdown picker
 │   │   │   │   └── ErrorBoundary.jsx  # Lazy-load crash interceptor
-│   │   │   └── dashboard/          # ★ Dashboard layout sections + CSS
-│   │   │       ├── FeatureSwitches.jsx  # Left: system master switch + toggles
-│   │   │       ├── PackageConfig.jsx    # Middle: package + payment QR
-│   │   │       ├── VipSupporters.jsx    # Right: VIP ranking
-│   │   │       ├── DashboardModals.jsx  # Modals (customer QR, OBS, perks)
-│   │   │       ├── ImageQueue.jsx       # Presentational UI for Image Queue
-│   │   │       ├── ImageQueue.css       # Stylesheet for Image Queue
-│   │   │       ├── CheckHistory.jsx     # Presentational UI for Check History
-│   │   │       ├── CheckHistory.css     # Stylesheet for Check History
-│   │   │       └── *.css               # AdminHeader, DashboardCards, …
+│   │   │   ├── dashboard/          # ★ Dashboard layout sections + CSS
+│   │   │   │   ├── FeatureSwitches.jsx  # Left: system master switch + toggles
+│   │   │   │   ├── PackageConfig.jsx    # Middle: package + payment QR
+│   │   │   │   ├── VipSupporters.jsx    # Right: VIP ranking
+│   │   │   │   ├── DashboardModals.jsx  # Modals (customer QR, OBS, perks)
+│   │   │   │   ├── ImageQueue.jsx       # Image Queue UI
+│   │   │   │   ├── CheckHistory.jsx     # Check History UI
+│   │   │   │   └── *.css               # AdminHeader, DashboardCards, …
+│   │   │   └── Stat-slip.js        # สถิติสลิป
 │   │   ├── hooks/                  # ★ Business logic custom hooks
 │   │   │   ├── useSocket.js        #   Socket.IO listeners + cleanup
 │   │   │   ├── useDashboardData.js #   HTTP fetches, drag-drop, perks CRUD
-│   │   │   ├── useDashboardSocket.js  # Legacy socket hook
 │   │   │   ├── useRankingStats.js  #   Ranking API + birthday config
 │   │   │   ├── useCardReorder.js   #   Card reordering + localStorage
-│   │   │   ├── useImageQueue.js    #   Image queue business logic (Socket.IO + timer)
-│   │   │   └── useCheckHistory.js  #   Check history business logic (search/filter/API)
+│   │   │   ├── useImageQueue.js    #   Image queue business logic
+│   │   │   └── useCheckHistory.js  #   Check history business logic
 │   │   ├── contexts/
 │   │   │   ├── ShopContext.js      # ★ Multi-tenant context (shopId + Socket.IO)
 │   │   │   └── HomeContext.js      # ★ Dashboard local state (40+ config vars)
@@ -275,17 +276,11 @@ CMES-ADMIN/
 │   │   ├── config/
 │   │   │   ├── apiConfig.js        # API URLs
 │   │   │   └── authFetch.js        # ★ Admin fetch utility
-│   │   ├── 01_Home/                # home.css (layout shell); home.css.backup = ref
-│   │   ├── 04_Gift/                # Gift settings CRUD
-│   │   ├── 05_Report/              # Report management
-│   │   ├── 06_LuckyWheel/          # Lucky wheel config
-│   │   ├── 07_Register/            # Admin login
-│   │   ├── 08_TimeHistory/         # Time history
-│   │   ├── 09_EditProfile/         # Shop profile editor
-│   │   ├── 10_OBSControl/          # OBS WebSocket control
-│   │   ├── theme.css               # ★ Design system (CSS vars)
-│   │   ├── Stat-slip.js            # สถิติสลิป
-│   │   └── App.js                  # Router + ShopProvider wrapper
+│   │   ├── data-icon/              # Static icon assets
+│   │   ├── theme.css               # ★ Design system (CSS variables + utilities)
+│   │   ├── App.js                  # Router + ShopProvider wrapper
+│   │   ├── App.css                 # Shared component styles (btn, card, input)
+│   │   └── index.js
 │   ├── postcss.config.js           # PostCSS config
 │   ├── tailwind.config.js          # Tailwind config
 │   └── package.json
@@ -304,10 +299,9 @@ CMES-ADMIN/
 │
 ├── docs/                           # ★ Project documentation folder
 │   ├── screenshots/                # Dashboard screenshots
-│   ├── skills/                     # Developer skills (debug-mantra, post-mortem, etc.)
 │   ├── BUGLOG.md                   # Change history & bug tracking
 │   ├── DESIGN.md                   # System design specifications
-│   └── SKILL.md                    # AI coding guidelines
+│   └── SKILL.md                    # Architecture & coding guidelines
 └── README.md                       # ← You are here
 ```
 
