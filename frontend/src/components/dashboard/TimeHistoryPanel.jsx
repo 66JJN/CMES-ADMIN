@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import BackNavLink from "../ui/BackNavLink";
 import "./TimeHistoryPanel.css";
 
 /**
@@ -17,11 +17,7 @@ export default function TimeHistoryPanel({
       {/* Header พร้อมปุ่มย้อนกลับ */}
       <header className="th-minimal-header">
         <div className="th-header-left">
-          <Link to="/home" className="th-minimal-back-btn" title="กลับหน้าหลัก">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
+          <BackNavLink />
           <h1 className="th-minimal-title">ประวัติการตั้งเวลา</h1>
         </div>
       </header>

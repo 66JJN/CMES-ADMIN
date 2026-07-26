@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import BackNavLink from "../ui/BackNavLink";
 import "./EditProfileForm.css";
 
 /**
@@ -63,11 +63,7 @@ export default function EditProfileForm({
       <div className="ep-glass-card">
         {/* Header */}
         <div className="ep-header">
-          <Link to="/home" className="ep-btn-back" title="กลับหน้าหลัก">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
+          <BackNavLink />
           <h2 className="ep-header-title">โปรไฟล์ร้านค้า</h2>
         </div>
 

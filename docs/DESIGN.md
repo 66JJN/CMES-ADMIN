@@ -564,6 +564,28 @@ Logic: `useSocket().handleToggleSystem` ใน `FeatureSwitches.jsx` (ไม่�
 /* หัวข้อ → gradient text, subtitle → #94a3b8 */
 ```
 
+### 8.11 Back Navigation (`BackNavLink` / `.back-nav-btn`)
+
+> ★ ปุ่มกลับหน้าหลักของ Admin เป็น **shared component เดียว**: `components/ui/BackNavLink.jsx` และมี style กลางเพียงแหล่งเดียวใน `index.css` (`.back-nav-btn`)
+
+ใช้ component นี้ทุกหน้าที่กลับไปหน้าหลัก เพื่อให้ไอคอน ขนาด hover และ accessibility เหมือนกัน:
+
+```jsx
+import BackNavLink from "../ui/BackNavLink";
+
+<BackNavLink />
+```
+
+| Rule | Standard |
+|------|----------|
+| Destination | ค่าเริ่มต้น `/home`; เปลี่ยนได้ผ่าน prop `to` เมื่อความหมายของหน้าแตกต่างจริง |
+| Accessible name | component กำหนด `aria-label` และ `title` เป็น “กลับหน้าหลัก” |
+| Touch target | `44px × 44px` ขั้นต่ำ |
+| Visual state | สี neutral บนพื้นขาว, hover เป็น primary gradient, `:focus-visible` มี focus ring |
+| Page-specific CSS | อนุญาตเฉพาะ class เสริมเพื่อจัดตำแหน่ง เช่น `hero-back-btn`; **ห้าม** override รูปลักษณ์ `.back-nav-btn` หรือสร้าง `{page}-back-btn` |
+
+> ปุ่มนี้เป็น navigation ไปหน้า Home ไม่ใช่ browser-history back. หากต้องการย้อน navigation history ให้ใช้ action/label แยกต่างหาก เพื่อไม่ให้พฤติกรรมกับข้อความขัดกัน
+
 #### Modal ที่ใช้ `.modal-close-btn` (ครบแล้ว)
 | Modal / Drawer | Component | หมายเหตุ |
 |----------------|-----------|----------|

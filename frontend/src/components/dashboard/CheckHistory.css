@@ -48,26 +48,6 @@
   background-clip: text;
 }
 
-.back-nav-btn {
-  width: 40px; height: 40px;
-  border-radius: 12px;
-  border: 1px solid var(--gray-200, #e5e7eb);
-  background: #fff;
-  color: var(--gray-500, #6b7280);
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.back-nav-btn:hover {
-  background: var(--primary-600, #4f46e5);
-  color: white;
-  border-color: var(--primary-600, #4f46e5);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
-}
-
 .ch-header-actions {
   display: flex;
   gap: 8px;

@@ -3,7 +3,7 @@
  * แยก Logic ออกไปไว้ที่ hooks/useAdminReport.js
  */
 import React from "react";
-import { Link } from "react-router-dom";
+import BackNavLink from "../ui/BackNavLink";
 import useAdminReport from "../../hooks/useAdminReport";
 import "./DashboardShared.css";
 import "./AdminReport.css";
@@ -59,11 +59,7 @@ export default function AdminReport() {
     <div className="admin-report-page">
       <header className="admin-report-header">
         <div className="hero-brand-group">
-          <Link to="/home" className="back-nav-btn hero-back-btn" title="กลับหน้าหลัก">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
+          <BackNavLink className="hero-back-btn" />
           <div className="header-texts">
             <p className="eyebrow">ระบบรายงาน</p>
             <h1>ศูนย์ติดตามปัญหา</h1>

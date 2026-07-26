@@ -3,7 +3,7 @@
  * แยก Logic ออกไปไว้ที่ hooks/useGiftManagement.js
  */
 import React from "react";
-import { Link } from "react-router-dom";
+import BackNavLink from "../ui/BackNavLink";
 import useGiftManagement from "../../hooks/useGiftManagement";
 import "./GiftManagement.css";
 
@@ -32,11 +32,7 @@ export default function GiftManagement() {
     <div className="giftsetting-shell">
       <header className="giftsetting-hero">
         <div className="hero-brand-group">
-          <Link to="/home" className="back-nav-btn hero-back-btn" title="กลับหน้าหลัก">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
+          <BackNavLink className="hero-back-btn" />
           <div className="hero-info">
             <p className="eyebrow">CMES ADMIN</p>
             <h1>ตั้งค่าส่งของขวัญ</h1>

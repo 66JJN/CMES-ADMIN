@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import BackNavLink from "../ui/BackNavLink";
 import useImageQueue from "../../hooks/useImageQueue";
 import QueueHistoryModal from "./QueueHistoryModal";
 import "./DashboardShared.css";
@@ -270,11 +270,7 @@ export default function ImageQueue() {
     <div className="queue-container">
       <header className="dashboard-header">
         <div className="header-title-group">
-          <Link to="/home" className="back-nav-btn" title="กลับหน้าหลัก">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
+          <BackNavLink />
           <h1 className="header-title">ตรวจสอบเนื้อหา</h1>
         </div>
 

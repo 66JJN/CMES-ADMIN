@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import BackNavLink from "../ui/BackNavLink";
 import useCheckHistory from "../../hooks/useCheckHistory";
 import "./DashboardShared.css";
 import "./CheckHistory.css";
@@ -89,20 +89,7 @@ export default function CheckHistory() {
       {/* Header */}
       <header className="ch-header">
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <Link to="/home" className="back-nav-btn" title="กลับหน้าหลัก">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
+          <BackNavLink />
           <div className="ch-header-center">ประวัติการตรวจสอบ</div>
         </div>
         <div className="ch-header-actions">

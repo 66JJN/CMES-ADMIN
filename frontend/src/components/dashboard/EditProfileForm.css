@@ -131,30 +131,6 @@
     letter-spacing: 0.5px;
 }
 
-.ep-btn-back {
-    background: transparent;
-    border: none;
-    color: #64748b;
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    margin-left: -12px;
-    border-radius: 12px;
-    transition: all 0.2s ease;
-    text-decoration: none;
-}
-
-.ep-btn-back:hover {
-    background: rgba(15, 23, 42, 0.05);
-    color: #0f172a;
-    transform: translateX(-2px);
-}
-
 /* Profile Section */
 .ep-profile-section {
     display: flex;

@@ -42,28 +42,6 @@
   gap: 16px;
 }
 
-.back-nav-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  text-decoration: none;
-}
-.back-nav-btn:hover {
-  background: var(--accent-primary);
-  color: white;
-  border-color: var(--accent-primary);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
-}
-
 .header-title {
   font-size: 24px;
   font-weight: 800;

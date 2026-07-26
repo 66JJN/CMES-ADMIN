@@ -34,30 +34,6 @@
   z-index: 10;
 }
 
-.th-minimal-back-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: transparent;
-  border: 2px solid rgba(102, 126, 234, 0.2);
-  color: #667eea;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0.6rem 1.25rem;
-  border-radius: 10px;
-  transition: all 0.3s ease;
-  text-decoration: none;
-}
-
-.th-minimal-back-btn:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  border-color: transparent;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-}
-
 .th-header-left {
   display: flex;
   align-items: center;
