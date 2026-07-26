@@ -460,11 +460,11 @@ export const getCheckHistory = async (req, res) => {
       ]
     };
 
-    const [history, totalCount, paidCompletedRecords, completedCount, rejectedCount] = await Promise.all([
+    const [history, totalCount, paidCompletedRecords, completedRecords, rejectedCount] = await Promise.all([
       CheckHistory.find(query).sort({ approvalDate: -1 }).skip(skip).limit(limitNum).lean(),
       CheckHistory.countDocuments(query),
       CheckHistory.find(paidCompletedQuery).select('type price').lean(),
-      CheckHistory.countDocuments({ ...query, status: 'completed' }),
+      CheckHistory.find({ ...query, status: 'completed' }).select('type price').lean(),
       CheckHistory.countDocuments({ ...query, status: 'rejected' })
     ]);
 
@@ -472,12 +472,12 @@ export const getCheckHistory = async (req, res) => {
       total: paidCompletedRecords.length,
       totalRevenue: paidCompletedRecords.reduce((sum, r) => sum + (r.price || 0), 0),
       byType: {
-        image: paidCompletedRecords.filter(r => r.type === 'image').length,
-        text: paidCompletedRecords.filter(r => r.type === 'text').length,
-        gift: paidCompletedRecords.filter(r => r.type === 'gift').length,
-        birthday: paidCompletedRecords.filter(r => r.type === 'birthday').length,
+        image: completedRecords.filter(r => r.type === 'image').length,
+        text: completedRecords.filter(r => r.type === 'text').length,
+        gift: completedRecords.filter(r => r.type === 'gift').length,
+        birthday: completedRecords.filter(r => r.type === 'birthday').length,
       },
-      completed: completedCount,
+      completed: completedRecords.length,
       rejected: rejectedCount,
     };
 
