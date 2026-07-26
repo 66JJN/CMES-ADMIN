@@ -5,17 +5,36 @@ import CheckHistory from '../models/CheckHistory.js';
 import ImageQueue from '../models/ImageQueue.js';
 
 const paidRecordsForPeriod = async (shopId, start, end) => {
-  const paidAt = { $gte: start, $lte: end };
+  // Query ที่รองรับทั้ง records ใหม่ (มี paymentStatus/paidAt) และ records เก่า (legacy ที่ไม่มี fields เหล่านี้)
+  const historyQuery = {
+    shopId,
+    $or: [
+      // Records ใหม่: มี paymentStatus = 'paid' และ paidAt อยู่ในช่วงเวลา
+      { paymentStatus: 'paid', paidAt: { $gte: start, $lte: end } },
+      // Records เก่า (legacy): ไม่มี paymentStatus field → ใช้ createdAt เป็น date range
+      { paymentStatus: { $exists: false }, createdAt: { $gte: start, $lte: end } },
+      // Records เก่าที่ paymentStatus เป็น null → ใช้ createdAt เป็น date range
+      { paymentStatus: null, createdAt: { $gte: start, $lte: end } }
+    ]
+  };
+
+  const queueQuery = {
+    shopId,
+    $or: [
+      { paymentStatus: 'paid', paidAt: { $gte: start, $lte: end } },
+      { paymentStatus: { $exists: false }, createdAt: { $gte: start, $lte: end } },
+      { paymentStatus: null, createdAt: { $gte: start, $lte: end } }
+    ]
+  };
+
   const [historyRecords, queueRecords] = await Promise.all([
-    // Completed and rejected items have left the queue. Both remain income when payment succeeded.
-    CheckHistory.find({ shopId, paymentStatus: 'paid', paidAt }).lean(),
-    // Pending, approved, and playing paid items remain in the queue until completion.
-    ImageQueue.find({ shopId, paymentStatus: 'paid', paidAt }).lean()
+    CheckHistory.find(historyQuery).lean(),
+    ImageQueue.find(queueQuery).lean()
   ]);
 
   return [
-    ...historyRecords.map((record) => ({ ...record, _source: 'history', _dateField: record.paidAt })),
-    ...queueRecords.map((record) => ({ ...record, sender: record.sender || 'Unknown', _source: 'queue', _dateField: record.paidAt }))
+    ...historyRecords.map((record) => ({ ...record, _source: 'history', _dateField: record.paidAt || record.createdAt })),
+    ...queueRecords.map((record) => ({ ...record, sender: record.sender || 'Unknown', _source: 'queue', _dateField: record.paidAt || record.createdAt }))
   ];
 };
 

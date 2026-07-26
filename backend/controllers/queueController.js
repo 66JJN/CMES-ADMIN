@@ -449,11 +449,22 @@ export const getCheckHistory = async (req, res) => {
       query.$or = [{ sender: searchRegex }, { content: searchRegex }];
     }
 
-    const paidCompletedQuery = { ...query, status: 'completed', paymentStatus: 'paid' };
-    const [history, totalCount, paidCompletedRecords, rejectedCount] = await Promise.all([
+    // ดึงเฉพาะรายการที่ชำระเงินสำเร็จ (รองรับทั้งระบบใหม่ที่มี paymentStatus='paid' และระบบเก่าที่ไม่มีฟิลด์นี้แต่ price > 0)
+    const paidCompletedQuery = {
+      ...query,
+      status: 'completed',
+      $or: [
+        { paymentStatus: 'paid' },
+        { paymentStatus: { $exists: false }, price: { $gt: 0 } },
+        { paymentStatus: null, price: { $gt: 0 } }
+      ]
+    };
+
+    const [history, totalCount, paidCompletedRecords, completedCount, rejectedCount] = await Promise.all([
       CheckHistory.find(query).sort({ approvalDate: -1 }).skip(skip).limit(limitNum).lean(),
       CheckHistory.countDocuments(query),
       CheckHistory.find(paidCompletedQuery).select('type price').lean(),
+      CheckHistory.countDocuments({ ...query, status: 'completed' }),
       CheckHistory.countDocuments({ ...query, status: 'rejected' })
     ]);
 
@@ -466,7 +477,7 @@ export const getCheckHistory = async (req, res) => {
         gift: paidCompletedRecords.filter(r => r.type === 'gift').length,
         birthday: paidCompletedRecords.filter(r => r.type === 'birthday').length,
       },
-      completed: paidCompletedRecords.length,
+      completed: completedCount,
       rejected: rejectedCount,
     };
 
