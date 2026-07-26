@@ -4,6 +4,21 @@
 import CheckHistory from '../models/CheckHistory.js';
 import ImageQueue from '../models/ImageQueue.js';
 
+const paidRecordsForPeriod = async (shopId, start, end) => {
+  const paidAt = { $gte: start, $lte: end };
+  const [historyRecords, queueRecords] = await Promise.all([
+    // Completed and rejected items have left the queue. Both remain income when payment succeeded.
+    CheckHistory.find({ shopId, paymentStatus: 'paid', paidAt }).lean(),
+    // Pending, approved, and playing paid items remain in the queue until completion.
+    ImageQueue.find({ shopId, paymentStatus: 'paid', paidAt }).lean()
+  ]);
+
+  return [
+    ...historyRecords.map((record) => ({ ...record, _source: 'history', _dateField: record.paidAt })),
+    ...queueRecords.map((record) => ({ ...record, sender: record.sender || 'Unknown', _source: 'queue', _dateField: record.paidAt }))
+  ];
+};
+
 // GET /api/admin/income-stats
 export const getIncomeStats = async (req, res) => {
   try {
@@ -18,19 +33,9 @@ export const getIncomeStats = async (req, res) => {
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
 
-    const [historyRecords, queueRecords] = await Promise.all([
-      CheckHistory.find({
-        shopId, createdAt: { $gte: start, $lte: end }
-      }).lean(),
-      ImageQueue.find({
-        shopId, receivedAt: { $gte: start, $lte: end }
-      }).lean()
-    ]);
-
-    const records = [
-      ...historyRecords.map(r => ({ ...r, _source: 'history', _dateField: r.createdAt })),
-      ...queueRecords.map(r => ({ ...r, sender: r.sender || 'Unknown', _source: 'queue', _dateField: r.receivedAt || r.createdAt }))
-    ];
+    // Financial reporting is based only on successful payments, at paidAt.
+    // A transaction remains in ImageQueue until displayed, then moves to CheckHistory.
+    const records = await paidRecordsForPeriod(shopId, start, end);
 
     let totalIncome = 0;
     let paidOrders = 0;
@@ -47,23 +52,17 @@ export const getIncomeStats = async (req, res) => {
     const TYPE_COLORS = { image: "#6d28d9", text: "#4f46e5", gift: "#7c3aed", birthday: "#a78bfa" };
 
     records.forEach(r => {
-      const price = r.price || 0;
+      const price = Number(r.price) || 0;
+      totalIncome += price;
+      paidOrders++;
 
-      // ===== Income Metrics (เฉพาะ paid orders เท่านั้น) =====
-      if (price > 0) {
-        totalIncome += price;
-        paidOrders++;
+      const uKey = r.userId || (r.sender ? r.sender.toLowerCase().trim() : "unknown");
+      userSet.add(uKey);
 
-        // ใช้ sender name เป็น key หลัก เพื่อไม่ให้คนเดียวกัน (เช่น JJKUBB)
-        // ถูกนับซ้ำเมื่อบาง record มี userId และบาง record มี userId: null (rejected)
-        const uKey = r.sender ? r.sender.toLowerCase().trim() : (r.userId || "unknown");
-        userSet.add(uKey);
+      if (!userAmtMap[uKey]) userAmtMap[uKey] = { name: r.sender || "ผู้ใช้", amount: 0 };
+      userAmtMap[uKey].amount += price;
 
-        if (!userAmtMap[uKey]) userAmtMap[uKey] = { name: r.sender || "ผู้ใช้", amount: 0 };
-        userAmtMap[uKey].amount += price;
-      }
-
-      // ===== Activity Metrics (ทุกรายการ รวมฟรี) =====
+      // ===== Activity Metrics (รายการชำระสำเร็จ) =====
       const t = r.type || (r.filePath ? 'image' : 'other');
       typeMap[t] = (typeMap[t] || 0) + 1;
 
@@ -76,14 +75,11 @@ export const getIncomeStats = async (req, res) => {
         const dow = localTime.getUTCDay();
         dayCounts[dow] = (dayCounts[dow] || 0) + 1;
 
-        // แนวโน้มรายรับ — เฉพาะ paid
-        if (price > 0) {
-          const y = localTime.getUTCFullYear();
-          const m = String(localTime.getUTCMonth() + 1).padStart(2, "0");
-          const d = String(localTime.getUTCDate()).padStart(2, "0");
-          const dateKey = `${y}-${m}-${d}`;
-          dailyMap[dateKey] = (dailyMap[dateKey] || 0) + price;
-        }
+        const y = localTime.getUTCFullYear();
+        const m = String(localTime.getUTCMonth() + 1).padStart(2, "0");
+        const d = String(localTime.getUTCDate()).padStart(2, "0");
+        const dateKey = `${y}-${m}-${d}`;
+        dailyMap[dateKey] = (dailyMap[dateKey] || 0) + price;
       }
     });
 
@@ -123,15 +119,8 @@ export const getIncomeStats = async (req, res) => {
 
     let growthPct = null;
     try {
-      const [prevHistoryRecords, prevQueueRecords] = await Promise.all([
-        CheckHistory.find({
-          shopId, createdAt: { $gte: prevStart, $lte: prevEnd }
-        }).lean(),
-        ImageQueue.find({
-          shopId, receivedAt: { $gte: prevStart, $lte: prevEnd }
-        }).lean()
-      ]);
-      const prevIncome = [...prevHistoryRecords, ...prevQueueRecords].reduce((sum, r) => sum + (r.price || 0), 0);
+      const previousRecords = await paidRecordsForPeriod(shopId, prevStart, prevEnd);
+      const prevIncome = previousRecords.reduce((sum, record) => sum + (Number(record.price) || 0), 0);
       if (prevIncome > 0) {
         growthPct = Math.round(((totalIncome - prevIncome) / prevIncome) * 100 * 10) / 10;
       } else if (totalIncome > 0) {
@@ -151,7 +140,7 @@ export const getIncomeStats = async (req, res) => {
         totalIncome, 
         totalUsers: userSet.size, 
         totalOrders: paidOrders, 
-        freeOrders: records.length - paidOrders,
+        freeOrders: 0,
         totalAllOrders: records.length,
         growthPct, 
         peakHours, 

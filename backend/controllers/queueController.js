@@ -106,7 +106,9 @@ export const uploadItem = async (req, res) => {
       composed: composed === "1" || composed === "true",
       status: req.body.status || "pending",
       userId: userId || null, email: email || null, avatar: avatar || null,
-      receivedAt: new Date()
+      receivedAt: new Date(),
+      paymentStatus: Number(price) > 0 ? 'paid' : 'free',
+      paidAt: Number(price) > 0 ? new Date() : null
     };
 
     // AI Content Moderation — เฉพาะรูปที่ผู้ใช้อัปโหลดเอง (image, birthday) ไม่รวม gift (แอดมินเลือกรูปให้)
@@ -138,8 +140,11 @@ export const uploadItem = async (req, res) => {
     const io = req.app.get('socketio');
     if (io) io.to(shopId).emit("new-upload", queueItem);
 
-    if (userId && userId !== "guest" && userId !== "unknown" && type !== "birthday" && Number(price) > 0) {
-      await addRankingPoint({ userId, name: sender, amount: Number(price) || 0, email, avatar, shopId }, io);
+    if (queueItem.paymentStatus === 'paid' && userId && userId !== "guest" && userId !== "unknown" && type !== "birthday") {
+      await addRankingPoint({
+        userId, name: sender, amount: Number(price) || 0, email, avatar, shopId,
+        transactionId: queueItem._id.toString()
+      }, io);
     }
 
     res.json({ success: true, uploadId: queueItem._id.toString(), aiModeration: queueItem.aiModeration || null });
@@ -172,14 +177,26 @@ export const confirmPayment = async (req, res) => {
 
     const queueItem = await ImageQueue.findOne({ _id: uploadId, shopId });
     if (!queueItem) return res.status(404).json({ success: false, error: "ไม่พบข้อมูลการอัปโหลด" });
-    
-    queueItem.status = "pending";
-    queueItem.confirmedAt = new Date();
-    await queueItem.save();
 
-    if (userId && queueItem.type !== "birthday" && queueItem.price > 0) {
+    if (queueItem.paymentStatus !== 'paid') {
+      queueItem.status = "pending";
+      queueItem.paymentStatus = queueItem.price > 0 ? 'paid' : 'free';
+      queueItem.paidAt = queueItem.price > 0 ? new Date() : null;
+      queueItem.confirmedAt = new Date();
+      if (userId) queueItem.userId = userId;
+      if (email) queueItem.email = email;
+      if (avatar) queueItem.avatar = avatar;
+      await queueItem.save();
+    }
+
+    const rankUserId = userId || queueItem.userId;
+    if (queueItem.paymentStatus === 'paid' && rankUserId && rankUserId !== "guest" && rankUserId !== "unknown" && queueItem.type !== "birthday") {
       const io = req.app.get('socketio');
-      await addRankingPoint({ userId, name: queueItem.sender, amount: queueItem.price, email, avatar, shopId: queueItem.shopId }, io);
+      await addRankingPoint({
+        userId: rankUserId, name: queueItem.sender, amount: queueItem.price,
+        email: email || queueItem.email, avatar: avatar || queueItem.avatar, shopId: queueItem.shopId,
+        transactionId: queueItem._id.toString()
+      }, io);
     }
 
     res.json({ success: true, queueItem });
@@ -278,7 +295,9 @@ export const rejectItem = async (req, res) => {
       shopId: item.shopId,
       transactionId: (item.type === 'gift' && item.giftOrder?.orderId) ? item.giftOrder.orderId : item._id.toString(),
       type: item.type || (item.filePath ? 'image' : 'text'),
-      sender: item.sender || 'Unknown', price: item.price || 0, status: 'rejected',
+      sender: item.sender || 'Unknown', price: item.price || 0,
+      paymentStatus: item.paymentStatus || (item.price > 0 ? 'pending' : 'free'),
+      paidAt: item.paidAt || null, status: 'rejected',
       content: item.text || '', mediaUrl: item.filePath || null,
       userId: item.userId || null,
       email: item.email || null,
@@ -357,6 +376,8 @@ export const restoreHistoryItem = async (req, res) => {
       type: historyItem.type || 'image',
       status: 'pending',
       receivedAt: new Date(),
+      paymentStatus: historyItem.paymentStatus || (historyItem.price > 0 ? 'pending' : 'free'),
+      paidAt: historyItem.paidAt || null,
 
       // Restore layout & style settings
       textColor: historyItem.metadata?.theme || 'white',
@@ -428,23 +449,25 @@ export const getCheckHistory = async (req, res) => {
       query.$or = [{ sender: searchRegex }, { content: searchRegex }];
     }
 
-    const [history, totalCount, allForSummary] = await Promise.all([
+    const paidCompletedQuery = { ...query, status: 'completed', paymentStatus: 'paid' };
+    const [history, totalCount, paidCompletedRecords, rejectedCount] = await Promise.all([
       CheckHistory.find(query).sort({ approvalDate: -1 }).skip(skip).limit(limitNum).lean(),
       CheckHistory.countDocuments(query),
-      CheckHistory.find(query).select('type price status').lean()
+      CheckHistory.find(paidCompletedQuery).select('type price').lean(),
+      CheckHistory.countDocuments({ ...query, status: 'rejected' })
     ]);
 
     const summary = {
-      total: allForSummary.length,
-      totalRevenue: allForSummary.reduce((sum, r) => sum + (r.price || 0), 0),
+      total: paidCompletedRecords.length,
+      totalRevenue: paidCompletedRecords.reduce((sum, r) => sum + (r.price || 0), 0),
       byType: {
-        image: allForSummary.filter(r => r.type === 'image').length,
-        text: allForSummary.filter(r => r.type === 'text').length,
-        gift: allForSummary.filter(r => r.type === 'gift').length,
-        birthday: allForSummary.filter(r => r.type === 'birthday').length,
+        image: paidCompletedRecords.filter(r => r.type === 'image').length,
+        text: paidCompletedRecords.filter(r => r.type === 'text').length,
+        gift: paidCompletedRecords.filter(r => r.type === 'gift').length,
+        birthday: paidCompletedRecords.filter(r => r.type === 'birthday').length,
       },
-      completed: allForSummary.filter(r => r.status === 'completed' || r.status === 'verified').length,
-      rejected: allForSummary.filter(r => r.status === 'rejected').length,
+      completed: paidCompletedRecords.length,
+      rejected: rejectedCount,
     };
 
     // Format data for frontend (ensuring stable ID and backward compatibility with old frontend field names)

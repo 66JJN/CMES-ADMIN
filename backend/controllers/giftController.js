@@ -205,6 +205,8 @@ export const createGiftOrder = async (req, res) => {
       textColor: "#fff", socialType: null, socialName: null, filePath: null,
       composed: true, status: "pending", userId: userId || null,
       email: email || null, avatar: avatar || null, receivedAt: new Date(),
+      paymentStatus: Number(totalPrice) > 0 ? 'paid' : 'free',
+      paidAt: Number(totalPrice) > 0 ? new Date() : null,
       giftOrder: {
         orderId, tableNumber, senderPhone: senderPhone || null,
         items: enrichedItems, totalPrice: Number(totalPrice) || 0, note: note || ""
@@ -223,9 +225,12 @@ export const createGiftOrder = async (req, res) => {
     }
 
     // บันทึก ranking
-    if (userId) {
+    if (queueItem.paymentStatus === 'paid' && userId && userId !== 'guest' && userId !== 'unknown') {
       await addRankingPoint(
-        { userId, name: sender, amount: Number(totalPrice) || 0, email, avatar, shopId },
+        {
+          userId, name: sender, amount: Number(totalPrice) || 0, email, avatar, shopId,
+          transactionId: orderId
+        },
         io
       );
     }

@@ -29,6 +29,11 @@ const rankingHistorySchema = new mongoose.Schema(
             type: String,
             default: null,
         },
+        // Queue/order identifier used to make ranking accrual idempotent.
+        transactionId: {
+            type: String,
+            default: null,
+        },
         // จำนวนเงิน (คะแนน) ของรายการนี้
         amount: {
             type: Number,
@@ -64,6 +69,10 @@ const rankingHistorySchema = new mongoose.Schema(
 rankingHistorySchema.index({ date: 1, userId: 1 });
 rankingHistorySchema.index({ month: 1, userId: 1 });
 rankingHistorySchema.index({ year: 1, userId: 1 });
+rankingHistorySchema.index(
+    { shopId: 1, transactionId: 1 },
+    { unique: true, partialFilterExpression: { transactionId: { $type: "string" } } }
+);
 
 const RankingHistory = mongoose.model("RankingHistory", rankingHistorySchema);
 export default RankingHistory;

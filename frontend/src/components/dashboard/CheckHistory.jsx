@@ -111,7 +111,7 @@ export default function CheckHistory() {
         {/* Summary Bar */}
         <div className="ch-summary-bar">
           <div className="ch-summary-card primary">
-            <div className="ch-summary-label">รายการทั้งหมด</div>
+            <div className="ch-summary-label">จ่ายแล้วและแสดงเสร็จ</div>
             <div className="ch-summary-value">{fmt(summary.total)}</div>
           </div>
           <div className="ch-summary-card revenue">

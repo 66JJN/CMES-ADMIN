@@ -16,9 +16,10 @@ import { getThaiDateStr, getThaiMonthStr, getThaiYearStr } from '../helpers/time
  * @param {string} params.email
  * @param {string} params.avatar
  * @param {string} params.shopId
+ * @param {string} params.transactionId Unique paid queue/order identifier.
  * @param {object} io — Socket.IO instance (จาก req.app.get('socketio'))
  */
-export async function addRankingPoint({ userId, name, amount, email = null, avatar = null, shopId }, io) {
+export async function addRankingPoint({ userId, name, amount, email = null, avatar = null, shopId, transactionId }, io) {
   try {
     console.log(`[Ranking] addRankingPoint called: shopId=${shopId}, userId=${userId}, name=${name}, amount=${amount}, email=${email}`);
 
@@ -30,6 +31,11 @@ export async function addRankingPoint({ userId, name, amount, email = null, avat
 
     if (!shopId) {
       console.log("[Ranking] ข้าม: ไม่มี shopId");
+      return;
+    }
+
+    if (!transactionId) {
+      console.error("[Ranking] ข้าม: ไม่มี transactionId สำหรับป้องกันการบวกคะแนนซ้ำ");
       return;
     }
 
@@ -46,12 +52,17 @@ export async function addRankingPoint({ userId, name, amount, email = null, avat
     // ===== 1. บันทึกประวัติลง RankingHistory (เก็บทุกรายการ) =====
     try {
       await RankingHistory.create({
-        shopId, userId, name: userName, email, avatar,
+        shopId, userId, name: userName, email, avatar, transactionId,
         amount: points, date: today, month: currentMonth, year: currentYear
       });
       console.log(`[Ranking] บันทึกประวัติ: ${userName} +${points} วันที่ ${today}`);
     } catch (histErr) {
+      if (histErr?.code === 11000) {
+        console.log(`[Ranking] ข้ามรายการซ้ำ: transactionId=${transactionId}`);
+        return;
+      }
       console.error("[Ranking] Error saving history:", histErr.message);
+      return;
     }
 
     // ===== 2. อัพเดท Ranking สรุป =====

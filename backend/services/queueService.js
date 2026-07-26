@@ -43,6 +43,8 @@ export async function completeItem(item, io) {
       type: item.type || (item.filePath ? 'image' : 'text'),
       sender: item.sender || 'Unknown',
       price: item.price || 0,
+      paymentStatus: item.paymentStatus || (item.price > 0 ? 'pending' : 'free'),
+      paidAt: item.paidAt || null,
       status: 'completed',
       content: item.text || '',
       mediaUrl: item.filePath || null,

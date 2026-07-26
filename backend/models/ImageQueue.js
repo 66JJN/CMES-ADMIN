@@ -75,6 +75,20 @@ const imageQueueSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'paid', 'free'],
+    default: 'pending',
+    index: true
+  },
+  paidAt: {
+    type: Date,
+    default: null
+  },
+  confirmedAt: {
+    type: Date,
+    default: null
+  },
 
   // Display Settings
   width: {
@@ -171,6 +185,7 @@ const imageQueueSchema = new mongoose.Schema({
 
 // Indexes for better query performance
 imageQueueSchema.index({ shopId: 1, status: 1, receivedAt: 1 });
+imageQueueSchema.index({ shopId: 1, paymentStatus: 1, paidAt: 1 });
 imageQueueSchema.index({ shopId: 1, type: 1, status: 1 });
 imageQueueSchema.index({ shopId: 1, userId: 1 });
 imageQueueSchema.index({ 'giftOrder.orderId': 1 });

@@ -18,6 +18,13 @@ const checkHistorySchema = new mongoose.Schema(
     },
     sender: { type: String, default: "Unknown" },
     price: { type: Number, default: 0 },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "paid", "free"],
+      default: "pending",
+      index: true
+    },
+    paidAt: { type: Date, default: null },
     status: {
       type: String,
       enum: ["rejected", "completed"], // เก็บเฉพาะสถานะสุดท้าย
@@ -75,6 +82,7 @@ checkHistorySchema.index(
 
 // Index for shop-specific queries
 checkHistorySchema.index({ shopId: 1, status: 1, createdAt: -1 });
+checkHistorySchema.index({ shopId: 1, paymentStatus: 1, paidAt: -1 });
 
 const CheckHistory = mongoose.model("CheckHistory", checkHistorySchema);
 
