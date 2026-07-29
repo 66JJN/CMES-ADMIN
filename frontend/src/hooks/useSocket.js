@@ -14,6 +14,7 @@ export default function useSocket() {
     enableGift, setEnableGift,
     enableBirthday, setEnableBirthday,
     freeMode, setFreeMode,
+    queueAccepting, setQueueAccepting,
     setPublicRankingType
   } = useContext(HomeContext);
 
@@ -28,6 +29,7 @@ export default function useSocket() {
       setEnableGift(config.enableGift ?? true);
       setEnableBirthday(config.enableBirthday ?? true);
       setFreeMode(config.freeMode === true);
+      setQueueAccepting(config.queueAccepting !== false);
     };
 
     socket.on("status", handleStatus);
@@ -36,7 +38,7 @@ export default function useSocket() {
     return () => {
       socket.off("status", handleStatus);
     };
-  }, [socket, setSystemOn, setEnableImage, setEnableText, setEnableGift, setEnableBirthday, setFreeMode]);
+  }, [socket, setSystemOn, setEnableImage, setEnableText, setEnableGift, setEnableBirthday, setFreeMode, setQueueAccepting]);
 
   // Sync public ranking layouts updates
   useEffect(() => {
@@ -144,12 +146,23 @@ export default function useSocket() {
     socket.emit('adminUpdateConfig', { freeMode: nextFreeMode });
   };
 
+  // This is intentionally separate from the master system switch. It keeps
+  // all existing queue records and feature choices intact while staff pause
+  // new customer submissions during an operational issue.
+  const handleToggleQueueAccepting = () => {
+    if (!socket) return;
+    const nextQueueAccepting = !queueAccepting;
+    setQueueAccepting(nextQueueAccepting);
+    socket.emit('adminUpdateConfig', { queueAccepting: nextQueueAccepting });
+  };
+
   return {
     handleToggleSystem,
     handleToggleImage,
     handleToggleText,
     handleToggleGift,
     handleToggleBirthday,
-    handleToggleFreeMode
+    handleToggleFreeMode,
+    handleToggleQueueAccepting
   };
 }

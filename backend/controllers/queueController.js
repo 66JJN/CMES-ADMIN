@@ -81,6 +81,12 @@ export const uploadItem = async (req, res) => {
     const shopConfig = settings?.systemConfig || {};
     const isFreeMode = settings?.freeMode === true;
 
+    // Operational fallback: stop accepting new requests without changing or
+    // deleting the queue that is already persisted in MongoDB.
+    if (shopConfig.queueAccepting === false) {
+      return res.status(403).json({ success: false, error: 'ขณะนี้ร้านปิดรับคิวชั่วคราว กรุณาลองใหม่อีกครั้งภายหลัง' });
+    }
+
     const systemOn = shopConfig.systemOpen ?? shopConfig.systemOn ?? true;
     if (!systemOn) {
       return res.status(403).json({ success: false, error: "ขณะนี้ระบบปิดรับบริการชั่วคราว" });

@@ -186,6 +186,10 @@ export const createGiftOrder = async (req, res) => {
     const shopSettings = await ShopSetting.findOne({ shopId }).lean();
     const isFreeMode = shopSettings?.freeMode === true;
 
+    if (shopSettings?.systemConfig?.queueAccepting === false) {
+      return res.status(403).json({ success: false, message: 'ขณะนี้ร้านปิดรับคิวชั่วคราว กรุณาลองใหม่อีกครั้งภายหลัง' });
+    }
+
     if (!orderId || !tableNumber || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: "ข้อมูลคำสั่งซื้อไม่ครบ" });
     }

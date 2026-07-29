@@ -23,6 +23,7 @@ export default function FeatureSwitches({
     enableGift,
     enableBirthday,
     freeMode,
+    queueAccepting,
     birthdaySpendingRequirement,
     setBirthdaySpendingRequirement
   } = useContext(HomeContext);
@@ -33,7 +34,8 @@ export default function FeatureSwitches({
     handleToggleText,
     handleToggleGift,
     handleToggleBirthday,
-    handleToggleFreeMode
+    handleToggleFreeMode,
+    handleToggleQueueAccepting
   } = useSocket();
 
   const {
@@ -78,6 +80,13 @@ export default function FeatureSwitches({
           )}
 
           <div className="feature-sub-toggles">
+            <div className={`toggle-card ${queueAccepting ? '' : 'toggle-card-warning'}`}>
+              <div>
+                <span>รับคิวใหม่</span>
+                <small className="toggle-hint">ปิดชั่วคราวได้โดยคิวที่รอและกำลังเล่นจะไม่หาย</small>
+              </div>
+              <Switch checked={queueAccepting} onChange={handleToggleQueueAccepting} />
+            </div>
             <div className="toggle-card">
               <div>
                 <span>โหมดใช้งานฟรี</span>

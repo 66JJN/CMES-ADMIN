@@ -85,6 +85,7 @@ export const getSystemStatus = async (req, res) => {
       ...systemConfig, ...settings.systemConfig,
       shopId: settings.shopId, displayTime: settings.displayTime,
       autoPlayEnabled: settings.autoPlayEnabled,
+      queueAccepting: settings.systemConfig?.queueAccepting !== false,
       birthdaySpendingRequirement: settings.birthdaySpendingRequirement,
       freeMode: settings.freeMode,
       publicRankingType: settings.publicRankingType || 'alltime',
@@ -125,6 +126,7 @@ export const updateSystemConfig = async (req, res) => {
       ...systemConfig, ...mergedConfig,
       shopId: settings.shopId, displayTime: settings.displayTime,
       autoPlayEnabled: settings.autoPlayEnabled,
+      queueAccepting: mergedConfig.queueAccepting !== false,
       freeMode: settings.freeMode
     };
 

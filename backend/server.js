@@ -223,6 +223,40 @@ app.use('/', statusRoutes);
 // SOCKET.IO CONNECTION HANDLER
 // ==========================================
 const publicRankingTypes = new Map();
+const displaySocketCounts = new Map();
+const displayDisconnectTimers = new Map();
+const DISPLAY_DISCONNECT_GRACE_MS = 8000;
+
+const pauseQueueForDisconnectedDisplay = async (shopId) => {
+  if ((displaySocketCounts.get(shopId) || 0) > 0) return;
+
+  try {
+    const hasActiveQueue = await ImageQueue.exists({ shopId, status: { $in: ['approved', 'playing'] } });
+    if (!hasActiveQueue) return;
+
+    const settings = await ShopSetting.findOne({ shopId }).select('queuePaused').lean();
+    if (settings?.queuePaused) return;
+
+    // First stop the worker, then return any active item to the persisted
+    // approved queue. Staff can resume safely after OBS is back online.
+    const control = await updateQueueControl(shopId, {
+      queuePaused: true,
+      queuePausedAt: new Date(),
+      queuePausedRemainingSeconds: null,
+      queueLastError: {
+        message: 'OBS browser source disconnected; queue paused for recovery',
+        at: new Date(),
+        itemId: null
+      }
+    });
+    await recoverQueue(shopId, io);
+    io.to(shopId).emit('pause-display', { manual: true, reason: 'display_disconnected' });
+    io.to(shopId).emit('queue-control-updated', control);
+    console.warn(`[QueueFallback][${shopId}] OBS disconnected; queue paused for manual resume.`);
+  } catch (error) {
+    console.error(`[QueueFallback][${shopId}] Could not pause queue after OBS disconnect:`, error);
+  }
+};
 
 const getSystemConfigWithSettings = async (shopId) => {
   try {
@@ -239,6 +273,7 @@ const getSystemConfigWithSettings = async (shopId) => {
     }));
     return {
       ...config,
+      queueAccepting: config.queueAccepting !== false,
       freeMode,
       birthdaySpendingRequirement: shopSettings?.birthdaySpendingRequirement ?? config.birthdaySpendingRequirement,
       publicRankingType: shopSettings?.publicRankingType || 'alltime',
@@ -265,6 +300,14 @@ io.on('connection', (socket) => {
   const { shopId, kind } = socket.data.auth;
   socket.shopId = shopId;
   socket.join(shopId);
+  if (kind === 'display') {
+    const pendingTimer = displayDisconnectTimers.get(shopId);
+    if (pendingTimer) {
+      clearTimeout(pendingTimer);
+      displayDisconnectTimers.delete(shopId);
+    }
+    displaySocketCounts.set(shopId, (displaySocketCounts.get(shopId) || 0) + 1);
+  }
   console.log(`[Socket.IO] ${kind} client connected: ${socket.id} (${shopId})`);
   getSystemConfigWithSettings(shopId).then(config => {
     socket.emit('status', config);
@@ -389,7 +432,23 @@ io.on('connection', (socket) => {
     }
   }));
 
-  socket.on('disconnect', () => { console.log('[Socket.IO] Client disconnected:', socket.id); });
+  socket.on('disconnect', () => {
+    console.log('[Socket.IO] Client disconnected:', socket.id);
+    if (kind !== 'display') return;
+
+    const remainingDisplays = Math.max(0, (displaySocketCounts.get(shopId) || 1) - 1);
+    if (remainingDisplays > 0) {
+      displaySocketCounts.set(shopId, remainingDisplays);
+      return;
+    }
+
+    displaySocketCounts.delete(shopId);
+    const timer = setTimeout(() => {
+      displayDisconnectTimers.delete(shopId);
+      pauseQueueForDisconnectedDisplay(shopId);
+    }, DISPLAY_DISCONNECT_GRACE_MS);
+    displayDisconnectTimers.set(shopId, timer);
+  });
 });
 
 // ===== LOAD INITIAL CONFIG =====

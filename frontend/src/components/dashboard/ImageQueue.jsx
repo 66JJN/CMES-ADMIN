@@ -911,6 +911,11 @@ export default function ImageQueue() {
                   </div>
                   {timeLeft === 0 && !isPaused && <div className="time-up-message">หมดเวลาแล้ว!</div>}
                   {queueControl.queuePaused ? <div className="pause-message">เวลาถูกหยุดไว้จนกด Resume</div> : isPaused && pauseTimeLeft > 0 && <div className="pause-message">กำลังเปลี่ยนรูป...</div>}
+                  {queueControl.queueLastError?.message && (
+                    <div className="pause-message" style={{ marginTop: "8px", color: "#b45309" }} role="alert">
+                      {queueControl.queueLastError.message}<br />กด “กู้คิว” แล้วกด “เล่นต่อ” หลัง OBS กลับมา
+                    </div>
+                  )}
                   <button
                     onClick={() => setPlaybackPaused(!queueControl.queuePaused).catch((error) => alert(error.message))}
                     className="refresh-button"
