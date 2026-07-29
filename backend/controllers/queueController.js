@@ -11,6 +11,7 @@ import ShopSetting from '../models/ShopSetting.js';
 import { addRankingPoint } from '../services/rankingService.js';
 import { completeItem, emitNowPlaying, getQueueControl, recoverQueue, updateQueueControl } from '../services/queueService.js';
 import { moderateImage, isAIModerationEnabled } from '../utils/contentModeration.js';
+import { createQueueSubmission } from '../services/submissionService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -46,7 +47,7 @@ export const uploadItem = async (req, res) => {
     const imageUrl = req.body.imageUrl;
     const qrCodeUrl = req.body.qrCodeUrl;
 
-    const { type, text, time, price, sender, userId, email, avatar, textColor, socialColor, textLayout, socialType, socialName, composed } = req.body;
+    const { type, text, time, price, sender, userId, email, avatar, textColor, socialColor, textLayout, socialType, socialName, composed, submissionId } = req.body;
 
     // Fetch shop settings from DB to check if system is closed or feature is disabled
     const ShopSetting = (await import('../models/ShopSetting.js')).default;
@@ -110,7 +111,8 @@ export const uploadItem = async (req, res) => {
       filePath: imageUrl || (mainFile ? mainFile.path : null),
       qrCodePath: qrCodeUrl || (qrFile ? qrFile.path : null),
       composed: composed === "1" || composed === "true",
-      status: req.body.status || "pending",
+      status: "pending",
+      submissionKey: submissionId || null,
       userId: userId || null, email: email || null, avatar: avatar || null,
       receivedAt: new Date(),
       paymentStatus: isFreeMode ? 'free' : (effectivePrice > 0 ? 'paid' : 'free'),
@@ -142,7 +144,15 @@ export const uploadItem = async (req, res) => {
       }
     }
 
-    const queueItem = await ImageQueue.create(itemData);
+    const quotaUserId = userId && !['guest', 'unknown'].includes(userId) ? userId : null;
+    const { item: queueItem, duplicate } = await createQueueSubmission({
+      itemData,
+      quotaField: quotaUserId ? 'userId' : null,
+      quotaValue: quotaUserId,
+    });
+    if (duplicate) {
+      return res.json({ success: true, uploadId: queueItem._id.toString(), duplicate: true, aiModeration: queueItem.aiModeration || null });
+    }
     const io = req.app.get('socketio');
     if (io) io.to(shopId).emit("new-upload", queueItem);
 
@@ -156,7 +166,7 @@ export const uploadItem = async (req, res) => {
     res.json({ success: true, uploadId: queueItem._id.toString(), aiModeration: queueItem.aiModeration || null });
   } catch (e) {
     console.error("[Admin] Error in upload:", e);
-    res.status(500).json({ success: false, error: e.message });
+    res.status(e.status || 500).json({ success: false, error: e.message });
   }
 };
 

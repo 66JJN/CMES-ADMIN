@@ -159,12 +159,22 @@ const userStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: (req, file) => {
     if (file.fieldname === 'qrCode') {
-      return { folder: 'cmes-admin/qr-codes', allowed_formats: ['jpg', 'jpeg', 'png'], public_id: `qr-${Date.now()}-${Math.round(Math.random() * 1e9)}` };
+      return { folder: 'cmes-admin/qr-codes', allowed_formats: ['jpg', 'jpeg', 'png', 'webp'], public_id: `qr-${Date.now()}-${Math.round(Math.random() * 1e9)}` };
     }
-    return { folder: 'cmes-admin/user-uploads', allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4'], public_id: `user-${Date.now()}-${Math.round(Math.random() * 1e9)}` };
+    return { folder: 'cmes-admin/user-uploads', allowed_formats: ['jpg', 'jpeg', 'png', 'webp'], public_id: `user-${Date.now()}-${Math.round(Math.random() * 1e9)}` };
   }
 });
-const uploadUser = multer({ storage: userStorage }).fields([
+const allowedUserImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const uploadUser = multer({
+  storage: userStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    if (allowedUserImageTypes.has(file.mimetype)) return callback(null, true);
+    const error = new Error('Only JPG, PNG, and WebP images are supported');
+    error.status = 415;
+    return callback(error);
+  },
+}).fields([
   { name: 'file', maxCount: 1 }, { name: 'qrCode', maxCount: 1 }
 ]);
 
@@ -188,7 +198,16 @@ app.use('/api/rankings', rankingRoutes);
 app.use('/api/config', configRoutes);
 
 // Queue routes (with multer middleware for /api/upload)
-app.post('/api/upload', requireUserServiceAuth, uploadUser, (req, res, next) => { next(); });
+app.post('/api/upload', requireUserServiceAuth, (req, res, next) => {
+  uploadUser(req, res, (error) => {
+    if (!error) return next();
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ success: false, message: 'ไฟล์รูปต้องมีขนาดไม่เกิน 10 MB' });
+    }
+    if (error.status === 415) return res.status(415).json({ success: false, message: error.message });
+    return next(error);
+  });
+});
 app.use('/api', queueRoutes);
 
 // Income stats: /api/admin/*
@@ -282,7 +301,7 @@ io.on('connection', (socket) => {
     const existing = await ShopSetting.findOne({ shopId }).lean();
     const update = { $set: { systemConfig: { ...(existing?.systemConfig || {}), ...config } } };
     if (typeof freeMode === 'boolean') update.$set.freeMode = freeMode;
-    await ShopSetting.findOneAndUpdate({ shopId }, update, { upsert: true, new: true });
+    await ShopSetting.findOneAndUpdate({ shopId }, update, { upsert: true, returnDocument: 'after' });
     io.to(shopId).emit('status', await getSystemConfigWithSettings(shopId));
   }));
 
@@ -291,7 +310,7 @@ io.on('connection', (socket) => {
     const existing = await ShopSetting.findOne({ shopId }).lean();
     const update = { $set: { systemConfig: { ...(existing?.systemConfig || {}), ...config } } };
     if (typeof freeMode === 'boolean') update.$set.freeMode = freeMode;
-    await ShopSetting.findOneAndUpdate({ shopId }, update, { upsert: true, new: true });
+    await ShopSetting.findOneAndUpdate({ shopId }, update, { upsert: true, returnDocument: 'after' });
     io.to(shopId).emit('configUpdate', await getSystemConfigWithSettings(shopId));
     io.to(shopId).emit('status', await getSystemConfigWithSettings(shopId));
   }));
@@ -355,7 +374,7 @@ io.on('connection', (socket) => {
       await ShopSetting.findOneAndUpdate(
         { shopId },
         { $setOnInsert: { shopId }, $set: { publicRankingType: type } },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
       );
       io.to(shopId).emit('publicRankingTypeUpdated', { type });
       io.to(shopId).emit('status', await getSystemConfigWithSettings(shopId));

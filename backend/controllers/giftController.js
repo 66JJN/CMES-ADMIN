@@ -9,6 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { addRankingPoint } from '../services/rankingService.js';
+import { createQueueSubmission } from '../services/submissionService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -218,7 +219,13 @@ export const createGiftOrder = async (req, res) => {
       }
     };
 
-    const queueItem = await ImageQueue.create(queueData);
+    queueData.submissionKey = `gift:${orderId}`;
+    const { item: queueItem, duplicate } = await createQueueSubmission({
+      itemData: queueData,
+      quotaField: senderPhone ? 'giftOrder.senderPhone' : null,
+      quotaValue: senderPhone || null,
+    });
+    if (duplicate) return res.json({ success: true, queueItem, duplicate: true });
     console.log("[Admin] Queue item created:", queueItem._id);
 
     const io = req.app.get('socketio');
@@ -243,7 +250,7 @@ export const createGiftOrder = async (req, res) => {
     res.json({ success: true, queueItem });
   } catch (error) {
     console.error("Gift order push failed", error);
-    res.status(500).json({ success: false, message: "บันทึกคำสั่งซื้อไม่สำเร็จ" });
+    res.status(error.status || 500).json({ success: false, message: error.message || "บันทึกคำสั่งซื้อไม่สำเร็จ" });
   }
 };
 

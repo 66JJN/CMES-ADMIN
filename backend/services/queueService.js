@@ -5,6 +5,12 @@ import ImageQueue from '../models/ImageQueue.js';
 import CheckHistory from '../models/CheckHistory.js';
 import ShopSetting from '../models/ShopSetting.js';
 
+// The local worker, manual controls, and recovery paths may all ask a single
+// server to start the next item at the same time. Keep that critical section
+// serial per shop; persisted queue state remains the source of truth.
+const shopsStartingNextItem = new Set();
+const shopsProcessingQueue = new Set();
+
 // ==========================================
 // PER-SHOP STATE MANAGEMENT
 // ==========================================
@@ -12,7 +18,7 @@ export async function getQueueControl(shopId) {
   return ShopSetting.findOneAndUpdate(
     { shopId },
     { $setOnInsert: { shopId } },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   ).lean();
 }
 
@@ -20,7 +26,7 @@ export async function updateQueueControl(shopId, updates) {
   return ShopSetting.findOneAndUpdate(
     { shopId },
     { $setOnInsert: { shopId }, $set: updates },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   ).lean();
 }
 
@@ -159,9 +165,15 @@ export async function completeItem(item, io) {
  * @param {object} io — Socket.IO server instance
  */
 export async function playNextItem(shopId, io) {
+  if (shopsStartingNextItem.has(shopId)) return;
+  shopsStartingNextItem.add(shopId);
   try {
     const control = await getQueueControl(shopId);
     if (control.queuePaused) return;
+
+    // Do not advance a second item when another worker/manual control has
+    // already claimed one.
+    if (await ImageQueue.exists({ shopId, status: 'playing' })) return;
 
     const approvedItems = await ImageQueue.find({ status: 'approved', shopId });
 
@@ -193,7 +205,7 @@ export async function playNextItem(shopId, io) {
     const updated = await ImageQueue.findOneAndUpdate(
       { _id: nextItem._id, shopId, status: 'approved' },
       { status: 'playing', playingAt: new Date() },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (updated && io) {
@@ -202,6 +214,8 @@ export async function playNextItem(shopId, io) {
     }
   } catch (err) {
     console.error(`[QueueWorker][${shopId}] Error starting next item:`, err);
+  } finally {
+    shopsStartingNextItem.delete(shopId);
   }
 }
 
@@ -213,6 +227,8 @@ export async function playNextItem(shopId, io) {
  * @param {object} io — Socket.IO server instance
  */
 export async function processAutoQueue(shopId, io) {
+  if (shopsProcessingQueue.has(shopId)) return;
+  shopsProcessingQueue.add(shopId);
   try {
     const control = await getQueueControl(shopId);
     if (control.queuePaused) return;
@@ -257,5 +273,7 @@ export async function processAutoQueue(shopId, io) {
   } catch (err) {
     console.error(`[QueueWorker][${shopId}] Error:`, err);
     await recordQueueError(shopId, err);
+  } finally {
+    shopsProcessingQueue.delete(shopId);
   }
 }
