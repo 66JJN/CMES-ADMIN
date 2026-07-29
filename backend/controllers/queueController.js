@@ -15,6 +15,15 @@ import { createQueueSubmission } from '../services/submissionService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// These constraints mirror the User UI, but are enforced here because every
+// submission must remain safe even when a caller bypasses the browser.
+const ALLOWED_CONTENT_TYPES = new Set(['image', 'text', 'gift', 'birthday']);
+const ALLOWED_SOCIAL_TYPES = new Set(['ig', 'fb', 'line', 'tiktok']);
+const MAX_TEXT_LENGTH = 50;
+const MAX_SOCIAL_NAME_LENGTH = 32;
+const characterCount = (value) => Array.from(value || '').length;
+const cleanString = (value) => typeof value === 'string' ? value.trim() : '';
+
 // ===== Helper: ลบไฟล์รูปภาพ =====
 const deleteImageFile = (imagePath) => {
   if (!imagePath) return;
@@ -48,6 +57,23 @@ export const uploadItem = async (req, res) => {
     const qrCodeUrl = req.body.qrCodeUrl;
 
     const { type, text, time, price, sender, userId, email, avatar, textColor, socialColor, textLayout, socialType, socialName, composed, submissionId } = req.body;
+    const uploadType = cleanString(type) || 'image';
+    const contentText = cleanString(text);
+    const contentSocialType = cleanString(socialType).toLowerCase() || null;
+    const contentSocialName = cleanString(socialName);
+
+    if (!ALLOWED_CONTENT_TYPES.has(uploadType)) {
+      return res.status(400).json({ success: false, error: 'Unsupported content type' });
+    }
+    if (characterCount(contentText) > MAX_TEXT_LENGTH) {
+      return res.status(400).json({ success: false, error: `ข้อความยาวเกิน ${MAX_TEXT_LENGTH} ตัวอักษร` });
+    }
+    if (contentSocialType && !ALLOWED_SOCIAL_TYPES.has(contentSocialType)) {
+      return res.status(400).json({ success: false, error: 'Unsupported social platform' });
+    }
+    if (characterCount(contentSocialName) > MAX_SOCIAL_NAME_LENGTH) {
+      return res.status(400).json({ success: false, error: `ชื่อช่องทางยาวเกิน ${MAX_SOCIAL_NAME_LENGTH} ตัวอักษร` });
+    }
 
     // Fetch shop settings from DB to check if system is closed or feature is disabled
     const ShopSetting = (await import('../models/ShopSetting.js')).default;
@@ -60,7 +86,6 @@ export const uploadItem = async (req, res) => {
       return res.status(403).json({ success: false, error: "ขณะนี้ระบบปิดรับบริการชั่วคราว" });
     }
 
-    const uploadType = type || "image";
     if (uploadType === "image" && shopConfig.enableImage === false) {
       return res.status(403).json({ success: false, error: "ขณะนี้ระบบปิดฟีเจอร์ส่งรูปภาพชั่วคราว" });
     }
@@ -74,12 +99,12 @@ export const uploadItem = async (req, res) => {
       return res.status(403).json({ success: false, error: "ขณะนี้ระบบปิดฟีเจอร์วันเกิดชั่วคราว" });
     }
 
-    if (!mainFile && !imageUrl && type !== "text" && type !== "gift" && type !== "birthday") {
+    if (!mainFile && !imageUrl && uploadType !== "text" && uploadType !== "gift" && uploadType !== "birthday") {
       return res.status(400).json({ success: false, error: "No file or imageUrl received" });
     }
 
     // Birthday spending check (simplified path for requirement)
-    if (type === "birthday") {
+    if (uploadType === "birthday") {
       if (!userId || userId === "guest" || userId === "unknown") {
         return res.status(403).json({ success: false, error: "กรุณาเข้าสู่ระบบเพื่อใช้ฟีเจอร์วันเกิด" });
       }
@@ -89,7 +114,9 @@ export const uploadItem = async (req, res) => {
       const userRanking = await Ranking.findOne({ email, shopId });
       const totalSpent = userRanking ? (userRanking.points || 0) : 0;
       
-      const birthdayRequirement = shopConfig.birthdaySpendingRequirement || 100;
+      const birthdayRequirement = settings?.birthdaySpendingRequirement
+        ?? shopConfig.birthdaySpendingRequirement
+        ?? 100;
 
       if (totalSpent < birthdayRequirement) {
         return res.status(403).json({
@@ -103,11 +130,11 @@ export const uploadItem = async (req, res) => {
 
     const effectivePrice = isFreeMode ? 0 : Math.max(0, Number(price) || 0);
     const itemData = {
-      shopId, type: type || "image", text: text || "",
+      shopId, type: uploadType, text: contentText,
       time: Number(time) || 0, price: effectivePrice,
       sender: sender || "Unknown", textColor: textColor || "#ffffff",
       socialColor: socialColor || "#ffffff", textLayout: textLayout || "right",
-      socialType: socialType || null, socialName: socialName || null,
+      socialType: contentSocialType, socialName: contentSocialName || null,
       filePath: imageUrl || (mainFile ? mainFile.path : null),
       qrCodePath: qrCodeUrl || (qrFile ? qrFile.path : null),
       composed: composed === "1" || composed === "true",
@@ -119,9 +146,17 @@ export const uploadItem = async (req, res) => {
       paidAt: !isFreeMode && effectivePrice > 0 ? new Date() : null
     };
 
+    // The venue policy is deliberately hands-off for text: it joins the
+    // display queue immediately. The limits above still prevent oversized or
+    // unsupported data from being used to disrupt the overlay.
+    if (uploadType === 'text') {
+      itemData.status = 'approved';
+      itemData.approvedAt = new Date();
+    }
+
     // AI Content Moderation — เฉพาะรูปที่ผู้ใช้อัปโหลดเอง (image, birthday) ไม่รวม gift (แอดมินเลือกรูปให้)
     const imageUrlToCheck = itemData.filePath;
-    const shouldModerate = imageUrlToCheck && (type === 'image' || type === 'birthday') && isAIModerationEnabled();
+    const shouldModerate = imageUrlToCheck && (uploadType === 'image' || uploadType === 'birthday') && isAIModerationEnabled();
     if (shouldModerate) {
       try {
         const moderationResult = await moderateImage(imageUrlToCheck);
@@ -156,7 +191,7 @@ export const uploadItem = async (req, res) => {
     const io = req.app.get('socketio');
     if (io) io.to(shopId).emit("new-upload", queueItem);
 
-    if (!isFreeMode && queueItem.paymentStatus === 'paid' && userId && userId !== "guest" && userId !== "unknown" && type !== "birthday") {
+    if (!isFreeMode && queueItem.paymentStatus === 'paid' && userId && userId !== "guest" && userId !== "unknown" && uploadType !== "birthday") {
       await addRankingPoint({
         userId, name: sender, amount: effectivePrice, email, avatar, shopId,
         transactionId: queueItem._id.toString()
