@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import OBSWebSocket from "obs-websocket-js";
+import adminFetch from "../config/authFetch";
 
 /**
  * Custom Hook for handling OBS Studio WebSocket controls.
@@ -71,6 +72,18 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
     }
   }, [addLog]);
 
+  // Browser sources use a read-only display token. The token is deliberately
+  // different from the admin session and is required by the Admin Socket.IO
+  // server, so an automatically created source cannot omit it.
+  const getDisplayToken = useCallback(async () => {
+    const response = await adminFetch(`${API_BASE_URL}/api/obs/display-token`);
+    const data = await response.json();
+    if (!response.ok || !data.success || !data.token) {
+      throw new Error(data.message || "Unable to create OBS display token");
+    }
+    return data.token;
+  }, [API_BASE_URL]);
+
   // Setup auto creation of overlay inputs
   const autoCreateRequiredSources = useCallback(async (obs, sceneName) => {
     try {
@@ -79,52 +92,37 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
       const { sceneItems } = await obs.call("GetSceneItemList", { sceneName });
       const existingSourceNames = sceneItems.map((item) => item.sourceName);
       const targetShopId = shopId || adminId;
+      const displayToken = await getDisplayToken();
+      const displayQuery = `shopId=${encodeURIComponent(targetShopId)}&token=${encodeURIComponent(displayToken)}`;
+
+      const ensureBrowserSource = async (inputName, url) => {
+        if (existingSourceNames.includes(inputName)) {
+          const { inputSettings = {} } = await obs.call("GetInputSettings", { inputName });
+          if (inputSettings.url !== url) {
+            await obs.call("SetInputSettings", {
+              inputName,
+              inputSettings: { url, width: 1920, height: 1080 },
+              overlay: true,
+            });
+            addLog(`🔄 Updated '${inputName}' with a fresh secure display link`, "success");
+          }
+          return;
+        }
+
+        addLog(`⏳ Creating '${inputName}'...`, "warning");
+        await obs.call("CreateInput", {
+          sceneName,
+          inputName,
+          inputKind: "browser_source",
+          inputSettings: { url, width: 1920, height: 1080 },
+        });
+        addLog(`✅ Created '${inputName}'`, "success");
+      };
 
       // 1. Overlay Browser Sources
-      if (!existingSourceNames.includes("Overlay_ImageText")) {
-        addLog(`⏳ กำลังสร้าง 'Overlay_ImageText'...`, "warning");
-        await obs.call("CreateInput", {
-          sceneName: sceneName,
-          inputName: "Overlay_ImageText",
-          inputKind: "browser_source",
-          inputSettings: {
-            url: `${API_BASE_URL}/obs-image-overlay.html?shopId=${targetShopId}`,
-            width: 1920,
-            height: 1080,
-          },
-        });
-        addLog(`✅ สร้าง 'Overlay_ImageText' สำเร็จ!`, "success");
-      }
-
-      if (!existingSourceNames.includes("Overlay_Ranking")) {
-        addLog(`⏳ กำลังสร้าง 'Overlay_Ranking'...`, "warning");
-        await obs.call("CreateInput", {
-          sceneName: sceneName,
-          inputName: "Overlay_Ranking",
-          inputKind: "browser_source",
-          inputSettings: {
-            url: `${API_BASE_URL}/obs-ranking-overlay.html?shopId=${targetShopId}`,
-            width: 1920,
-            height: 1080,
-          },
-        });
-        addLog(`✅ สร้าง 'Overlay_Ranking' สำเร็จ!`, "success");
-      }
-
-      if (!existingSourceNames.includes("Overlay_LuckyWheel")) {
-        addLog(`⏳ กำลังสร้าง 'Overlay_LuckyWheel'...`, "warning");
-        await obs.call("CreateInput", {
-          sceneName: sceneName,
-          inputName: "Overlay_LuckyWheel",
-          inputKind: "browser_source",
-          inputSettings: {
-            url: `${API_BASE_URL}/obs-lucky-wheel.html?shopId=${targetShopId}`,
-            width: 1920,
-            height: 1080,
-          },
-        });
-        addLog(`✅ สร้าง 'Overlay_LuckyWheel' สำเร็จ!`, "success");
-      }
+      await ensureBrowserSource("Overlay_ImageText", `${API_BASE_URL}/obs-image-overlay.html?${displayQuery}`);
+      await ensureBrowserSource("Overlay_Ranking", `${API_BASE_URL}/obs-ranking-overlay.html?${displayQuery}`);
+      await ensureBrowserSource("Overlay_LuckyWheel", `${API_BASE_URL}/obs-lucky-wheel.html?${displayQuery}`);
 
       // 2. Marquee Text Source
       if (!existingSourceNames.includes("MarqueeText")) {
@@ -173,7 +171,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
     } catch (err) {
       addLog(`❌ Auto-Create failed: ${err.message}`, "error");
     }
-  }, [API_BASE_URL, adminId, shopId, addLog]);
+  }, [API_BASE_URL, adminId, shopId, addLog, getDisplayToken]);
 
   // Fetch all startup data from OBS
   const fetchInitialData = useCallback(async () => {

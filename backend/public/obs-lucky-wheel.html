@@ -349,12 +349,13 @@
     // 🔥 อ่าน shopId จาก URL ?shopId=KAIYANG เพื่อเข้า Socket.IO Room เฉพาะร้าน
     const urlParams = new URLSearchParams(window.location.search);
     const shopId = urlParams.get('shopId') || '';
+    const token = urlParams.get('token') || '';
     console.log('[OBS Lucky Wheel] shopId from URL:', shopId);
 
     // 🔥 เชื่อมต่อ socket พร้อมส่ง shopId เพื่อเข้า room เฉพาะร้าน
     const socket = io(REALTIME_URL, {
       transports: ['websocket', 'polling'],
-      query: { shopId }
+      auth: { token }
     });
 
     const wheelOverlay = document.getElementById('wheel-overlay');

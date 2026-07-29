@@ -321,10 +321,11 @@ export default function DashboardModals() {
                   <div className="obs-input-group">
                     <label>2. Ranking</label>
                     <div className="obs-copy-row">
-                      <input type="text" readOnly value={`${API_BASE_URL}/obs-ranking-overlay.html?shopId=${shopId || adminId}`} />
+                      <input type="text" readOnly value={obsDisplayToken ? `${API_BASE_URL}/obs-ranking-overlay.html?shopId=${shopId || adminId}&token=${encodeURIComponent(obsDisplayToken)}` : 'กำลังสร้างลิงก์ OBS…'} />
                       <Button
                         onClick={() => {
-                          navigator.clipboard.writeText(`${API_BASE_URL}/obs-ranking-overlay.html?shopId=${shopId || adminId}`);
+                          if (!obsDisplayToken) return;
+                          navigator.clipboard.writeText(`${API_BASE_URL}/obs-ranking-overlay.html?shopId=${shopId || adminId}&token=${encodeURIComponent(obsDisplayToken)}`);
                           setCopiedRanking(true);
                           setTimeout(() => setCopiedRanking(false), 2000);
                         }}
@@ -338,10 +339,11 @@ export default function DashboardModals() {
                   <div className="obs-input-group">
                     <label>3. Lucky Wheel</label>
                     <div className="obs-copy-row">
-                      <input type="text" readOnly value={`${API_BASE_URL}/obs-lucky-wheel.html?shopId=${shopId || adminId}`} />
+                      <input type="text" readOnly value={obsDisplayToken ? `${API_BASE_URL}/obs-lucky-wheel.html?shopId=${shopId || adminId}&token=${encodeURIComponent(obsDisplayToken)}` : 'กำลังสร้างลิงก์ OBS…'} />
                       <Button
                         onClick={() => {
-                          navigator.clipboard.writeText(`${API_BASE_URL}/obs-lucky-wheel.html?shopId=${shopId || adminId}`);
+                          if (!obsDisplayToken) return;
+                          navigator.clipboard.writeText(`${API_BASE_URL}/obs-lucky-wheel.html?shopId=${shopId || adminId}&token=${encodeURIComponent(obsDisplayToken)}`);
                           setCopiedWheel(true);
                           setTimeout(() => setCopiedWheel(false), 2000);
                         }}

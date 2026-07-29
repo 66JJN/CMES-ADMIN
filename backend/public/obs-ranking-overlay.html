@@ -157,12 +157,13 @@
     // 🔥 อ่าน shopId จาก URL ?shopId=KAIYANG
     const urlParams = new URLSearchParams(window.location.search);
     const shopId = urlParams.get('shopId') || '';
+    const token = urlParams.get('token') || '';
     console.log('[OBS Ranking] shopId from URL:', shopId);
 
     // 🔥 เชื่อมต่อ socket พร้อมส่ง shopId เพื่อเข้า room เฉพาะร้าน
     const socket = io(REALTIME_URL, {
       transports: ['websocket', 'polling'],
-      query: { shopId }
+      auth: { token }
     });
     const listEl = document.getElementById('ranking-list');
 
