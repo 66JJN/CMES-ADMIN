@@ -5,13 +5,17 @@
  * - Redirect กลับหน้า login เมื่อได้รับ 401 Unauthorized
  */
 
+let isRedirectingToLogin = false;
+
 export const handleAdminUnauthorized = () => {
+  if (isRedirectingToLogin) return;
+  isRedirectingToLogin = true;
   console.warn("[Admin] 401 Unauthorized — session expired, redirecting to login");
   localStorage.removeItem("adminId");
   localStorage.removeItem("adminUsername");
   localStorage.removeItem("shopId");
   localStorage.removeItem("adminToken");
-  window.location.href = "/";
+  window.location.replace("/");
 };
 
 const adminFetch = async (url, options = {}) => {

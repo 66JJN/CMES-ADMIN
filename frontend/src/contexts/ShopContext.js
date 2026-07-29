@@ -6,6 +6,7 @@
 import React, { createContext, useState, useEffect, useCallback } from "react";
 import { io } from "socket.io-client";
 import { REALTIME_URL } from "../config/apiConfig";
+import { handleAdminUnauthorized } from "../config/authFetch";
 
 export const ShopContext = createContext();
 
@@ -53,6 +54,14 @@ export const ShopProvider = ({ children }) => {
     newSocket.on("connect_error", (err) => {
       console.error("Socket connection error:", err.message);
       setIsSocketConnected(false);
+
+      const message = String(err?.message || "");
+      if (/authentication required|invalid or expired socket session|invalid socket token|session is no longer valid/i.test(message)) {
+        // Socket.IO does not expose an HTTP 401. Clear a rejected JWT here so
+        // staff never keep using a dashboard that only changes locally.
+        newSocket.disconnect();
+        handleAdminUnauthorized();
+      }
     });
 
 

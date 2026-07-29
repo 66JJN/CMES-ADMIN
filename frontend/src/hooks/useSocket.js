@@ -1,5 +1,7 @@
 import { useContext, useEffect } from 'react';
 import { HomeContext } from '../contexts/HomeContext';
+import { API_BASE_URL } from '../config/apiConfig';
+import adminFetch from '../config/authFetch';
 
 /**
  * Custom hook to manage all socket subscriptions and real-time state synchronizations.
@@ -15,8 +17,34 @@ export default function useSocket() {
     enableBirthday, setEnableBirthday,
     freeMode, setFreeMode,
     queueAccepting, setQueueAccepting,
-    setPublicRankingType
+    setPublicRankingType,
+    showToast
   } = useContext(HomeContext);
+
+  // Persist control changes through the authenticated Admin API. Socket.IO
+  // broadcasts the confirmed result, but must not be the sole write path:
+  // an expired/disconnected socket can otherwise make a switch look saved
+  // even though the server rejected it.
+  const persistConfig = async (updates, rollback) => {
+    try {
+      const response = await adminFetch(`${API_BASE_URL}/api/config/update`, {
+        method: 'POST',
+        body: JSON.stringify(updates),
+      });
+
+      if (response.ok) return true;
+
+      const result = await response.json().catch(() => ({}));
+      rollback?.();
+      showToast(result.message || 'บันทึกการตั้งค่าไม่สำเร็จ กรุณาลองใหม่', 'error');
+      return false;
+    } catch (error) {
+      console.error('[Admin] Unable to save system config:', error);
+      rollback?.();
+      showToast('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ สถานะถูกคืนค่าแล้ว', 'error');
+      return false;
+    }
+  };
 
   // Sync state config on status broadcast
   useEffect(() => {
@@ -56,8 +84,8 @@ export default function useSocket() {
   }, [socket, setPublicRankingType]);
 
   const handleToggleSystem = () => {
-    if (!socket) return;
     const newStatus = !systemOn;
+    const previous = { systemOn, enableImage, enableText, enableGift, enableBirthday };
     setSystemOn(newStatus);
 
     if (!newStatus) {
@@ -65,95 +93,101 @@ export default function useSocket() {
       setEnableText(false);
       setEnableGift(false);
       setEnableBirthday(false);
-      socket.emit("adminUpdateConfig", {
+      persistConfig({
         systemOpen: newStatus,
         enableImage: false,
         enableText: false,
         enableGift: false,
         enableBirthday: false,
+      }, () => {
+        setSystemOn(previous.systemOn);
+        setEnableImage(previous.enableImage);
+        setEnableText(previous.enableText);
+        setEnableGift(previous.enableGift);
+        setEnableBirthday(previous.enableBirthday);
       });
     } else {
       setEnableImage(true);
       setEnableText(true);
       setEnableGift(true);
       setEnableBirthday(true);
-      socket.emit("adminUpdateConfig", {
+      persistConfig({
         systemOpen: newStatus,
         enableImage: true,
         enableText: true,
         enableGift: true,
         enableBirthday: true,
+      }, () => {
+        setSystemOn(previous.systemOn);
+        setEnableImage(previous.enableImage);
+        setEnableText(previous.enableText);
+        setEnableGift(previous.enableGift);
+        setEnableBirthday(previous.enableBirthday);
       });
     }
   };
 
   const handleToggleImage = () => {
-    if (!socket) return;
     const newStatus = !enableImage;
     setEnableImage(newStatus);
-    socket.emit("adminUpdateConfig", {
+    persistConfig({
       enableImage: newStatus,
       systemOpen: systemOn,
       enableText,
       enableGift,
       enableBirthday,
-    });
+    }, () => setEnableImage(enableImage));
   };
 
   const handleToggleText = () => {
-    if (!socket) return;
     const newStatus = !enableText;
     setEnableText(newStatus);
-    socket.emit("adminUpdateConfig", {
+    persistConfig({
       enableText: newStatus,
       systemOpen: systemOn,
       enableImage,
       enableGift,
       enableBirthday,
-    });
+    }, () => setEnableText(enableText));
   };
 
   const handleToggleGift = () => {
-    if (!socket) return;
     const newStatus = !enableGift;
     setEnableGift(newStatus);
-    socket.emit("adminUpdateConfig", {
+    persistConfig({
       enableGift: newStatus,
       systemOpen: systemOn,
       enableImage,
       enableText,
       enableBirthday,
-    });
+    }, () => setEnableGift(enableGift));
   };
 
   const handleToggleBirthday = () => {
-    if (!socket) return;
     const newStatus = !enableBirthday;
     setEnableBirthday(newStatus);
-    socket.emit("adminUpdateConfig", {
+    persistConfig({
       enableBirthday: newStatus,
       systemOpen: systemOn,
       enableImage,
       enableText,
       enableGift,
-    });
+    }, () => setEnableBirthday(enableBirthday));
   };
 
   const handleToggleFreeMode = () => {
-    if (!socket) return;
     const nextFreeMode = !freeMode;
     setFreeMode(nextFreeMode);
-    socket.emit('adminUpdateConfig', { freeMode: nextFreeMode });
+    persistConfig({ freeMode: nextFreeMode }, () => setFreeMode(freeMode));
   };
 
   // This is intentionally separate from the master system switch. It keeps
   // all existing queue records and feature choices intact while staff pause
   // new customer submissions during an operational issue.
   const handleToggleQueueAccepting = () => {
-    if (!socket) return;
     const nextQueueAccepting = !queueAccepting;
     setQueueAccepting(nextQueueAccepting);
-    socket.emit('adminUpdateConfig', { queueAccepting: nextQueueAccepting });
+    persistConfig({ queueAccepting: nextQueueAccepting }, () => setQueueAccepting(queueAccepting));
   };
 
   return {
