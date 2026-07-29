@@ -49,6 +49,12 @@ const shopSettingSchema = new mongoose.Schema({
     at: { type: Date, default: null },
     itemId: { type: String, default: null }
   },
+  // Selected by Admin for the public User leaderboard; persisted per tenant.
+  publicRankingType: {
+    type: String,
+    enum: ['daily', 'monthly', 'alltime'],
+    default: 'alltime'
+  },
   // Birthday Feature Settings
   birthdaySpendingRequirement: {
     type: Number,

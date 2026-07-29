@@ -218,7 +218,12 @@ const getSystemConfigWithSettings = async (shopId) => {
       id: h.id, mode: h.mode, date: h.date, duration: h.duration,
       time: h.time, price: freeMode ? 0 : h.price
     }));
-    return { ...config, freeMode, settings };
+    return {
+      ...config,
+      freeMode,
+      publicRankingType: shopSettings?.publicRankingType || 'alltime',
+      settings
+    };
   } catch (error) {
     console.error('Error fetching settings for status:', error);
     return systemConfig;
@@ -241,8 +246,10 @@ io.on('connection', (socket) => {
   socket.shopId = shopId;
   socket.join(shopId);
   console.log(`[Socket.IO] ${kind} client connected: ${socket.id} (${shopId})`);
-  getSystemConfigWithSettings(shopId).then(config => socket.emit('status', config));
-  socket.emit('publicRankingTypeUpdated', { type: publicRankingTypes.get(shopId) || 'alltime' });
+  getSystemConfigWithSettings(shopId).then(config => {
+    socket.emit('status', config);
+    socket.emit('publicRankingTypeUpdated', { type: config.publicRankingType });
+  });
 
   // A browser source can reconnect after OBS/browser/backend restart. Restore
   // its persisted playback state directly from MongoDB instead of waiting for
@@ -341,11 +348,17 @@ io.on('connection', (socket) => {
     } catch (err) { console.error('[Socket.IO] Error completing:', err); }
   }));
 
-  socket.on('setPublicRankingType', adminOnly((data = {}) => {
+  socket.on('setPublicRankingType', adminOnly(async (data = {}) => {
     const { type } = data;
     if (['daily', 'monthly', 'alltime'].includes(type)) {
       publicRankingTypes.set(shopId, type);
+      await ShopSetting.findOneAndUpdate(
+        { shopId },
+        { $setOnInsert: { shopId }, $set: { publicRankingType: type } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
       io.to(shopId).emit('publicRankingTypeUpdated', { type });
+      io.to(shopId).emit('status', await getSystemConfigWithSettings(shopId));
     }
   }));
 

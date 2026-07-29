@@ -87,6 +87,7 @@ export const getSystemStatus = async (req, res) => {
       autoPlayEnabled: settings.autoPlayEnabled,
       birthdaySpendingRequirement: settings.birthdaySpendingRequirement,
       freeMode: settings.freeMode,
+      publicRankingType: settings.publicRankingType || 'alltime',
       settings: history.map((item) => ({
         id: item.id, mode: item.mode, date: item.date, duration: item.duration,
         time: item.time, price: settings.freeMode ? 0 : item.price
