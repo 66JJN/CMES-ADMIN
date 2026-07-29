@@ -585,6 +585,29 @@
       text-shadow: 0 2px 12px rgba(255, 215, 0, 0.6);
     }
 
+    .gift-countdown {
+      margin: 18px auto 0;
+      width: fit-content;
+      min-width: 112px;
+      padding: 8px 18px;
+      border: 1px solid rgba(0, 255, 255, 0.72);
+      border-radius: 999px;
+      background: rgba(0, 12, 28, 0.82);
+      color: #67e8f9;
+      font-size: 30px;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: 0.05em;
+      text-align: center;
+      text-shadow: 0 0 12px rgba(34, 211, 238, 0.9);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .gift-countdown.show {
+      opacity: 1;
+    }
+
     .gift-total {
       display: flex;
       justify-content: space-between;
@@ -704,6 +727,7 @@
       <div class="gift-note" id="gift-note-section" style="display: none;">
         <p class="gift-note-text" id="gift-note-text"></p>
       </div>
+      <div class="gift-countdown" id="gift-countdown">0:00</div>
     </div>
   </div>
 
@@ -798,6 +822,8 @@
       clearInterval(countdownInterval);
       clearTimeout(hideTimer);
       clearTimeout(giftHideTimer);
+      giftContainer.classList.remove('show');
+      giftCountdown.classList.remove('show');
 
       // รีเซ็ตสถานะการนับถอยหลัง/หยุด
       const timerEl = document.getElementById('countdown-timer');
@@ -1005,6 +1031,8 @@
       // ถ้าเป็นโหมดนับถอยหลังรอคิว (Auto Delay) ให้ซ่อนการแสดงผลทั้งหมด
       if (data && data.isCountingDown) {
         container.classList.remove('show');
+        giftContainer.classList.remove('show');
+        giftCountdown.classList.remove('show');
         if (timerEl) timerEl.classList.remove('show');
       }
       // ถ้าเป็นการหยุด manual (active pause) อาจจะแสดง timer หรือไม่ก็ได้ (ตามเดิมคือไม่แสดงอะไร แค่หยุด)
@@ -1031,6 +1059,7 @@
       clearTimeout(giftHideTimer);
       container.classList.remove('show');
       giftContainer.classList.remove('show');
+      giftCountdown.classList.remove('show');
       const timerEl = document.getElementById('countdown-timer');
       timerEl.classList.remove('show');
       isPaused = false;
@@ -1054,6 +1083,7 @@
     const giftItems = document.getElementById('gift-items');
     const giftNoteSection = document.getElementById('gift-note-section');
     const giftNoteText = document.getElementById('gift-note-text');
+    const giftCountdown = document.getElementById('gift-countdown');
 
     let giftHideTimer = null;
 
@@ -1066,6 +1096,8 @@
       // ซ่อน container เก่า (รูปภาพ/ข้อความ)
       container.classList.remove('show');
       clearTimeout(hideTimer);
+      clearInterval(countdownInterval);
+      clearTimeout(giftHideTimer);
 
       const {
         sender = 'Guest',
@@ -1195,10 +1227,26 @@
       const remaining = Math.max(0, displayTime - elapsed);
       console.log('[Gift] Display time:', displayTime, 'seconds; remaining:', remaining);
 
+      // Gift uses the same persisted playingAt/time source as image and text.
+      // This keeps OBS, Admin, pause/resume, and backend recovery in sync.
+      giftCountdown.classList.add('show');
+      const countdownStartedAt = playingAt ? new Date(playingAt).getTime() : Date.now();
+      const updateGiftCountdown = () => {
+        if (isPaused) return;
+        const leftSeconds = Math.max(0, Math.ceil((countdownStartedAt + displayTime * 1000 - Date.now()) / 1000));
+        const minutes = Math.floor(leftSeconds / 60);
+        const seconds = leftSeconds % 60;
+        giftCountdown.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      };
+      updateGiftCountdown();
+      countdownInterval = setInterval(updateGiftCountdown, 250);
+
       // ซ่อนหลังจากครบระยะเวลา
       clearTimeout(giftHideTimer);
       giftHideTimer = setTimeout(() => {
+        clearInterval(countdownInterval);
         giftContainer.classList.remove('show');
+        giftCountdown.classList.remove('show');
         if (payload.id) {
           socket.emit('complete-playing', payload.id);
         }
