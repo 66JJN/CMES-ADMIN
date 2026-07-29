@@ -240,6 +240,7 @@ const getSystemConfigWithSettings = async (shopId) => {
     return {
       ...config,
       freeMode,
+      birthdaySpendingRequirement: shopSettings?.birthdaySpendingRequirement ?? config.birthdaySpendingRequirement,
       publicRankingType: shopSettings?.publicRankingType || 'alltime',
       settings
     };
