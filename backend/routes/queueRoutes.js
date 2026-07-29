@@ -5,6 +5,7 @@ import express from 'express';
 import { requireShopId, requireAdminAuth, requireUserServiceAuth } from '../middleware/authMiddleware.js';
 import {
   uploadItem,
+  checkSubmissionEligibility,
   getQueue,
   confirmPayment,
   markAsPlaying,
@@ -28,6 +29,7 @@ const router = express.Router();
 
 // NOTE: uploadUser multer middleware is mounted in server.js for /api/upload
 router.post('/upload', requireUserServiceAuth, uploadItem);
+router.post('/queue/eligibility', requireUserServiceAuth, checkSubmissionEligibility);
 
 router.get('/queue', requireAdminAuth, getQueue);
 router.get('/queue/control', requireAdminAuth, getQueueControlStatus);

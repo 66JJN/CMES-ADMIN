@@ -12,7 +12,7 @@ import ShopSetting from '../models/ShopSetting.js';
 import { addRankingPoint } from '../services/rankingService.js';
 import { completeItem, emitNowPlaying, getQueueControl, recoverQueue, updateQueueControl } from '../services/queueService.js';
 import { moderateImage, isAIModerationEnabled } from '../utils/contentModeration.js';
-import { createQueueSubmission } from '../services/submissionService.js';
+import { createQueueSubmission, getSubmissionEligibility } from '../services/submissionService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -24,6 +24,28 @@ const MAX_TEXT_LENGTH = 50;
 const MAX_SOCIAL_NAME_LENGTH = 32;
 const characterCount = (value) => Array.from(value || '').length;
 const cleanString = (value) => typeof value === 'string' ? value.trim() : '';
+
+// Called only by CMES-USER with the service credential before it opens a
+// paid checkout. It prevents a guest from paying for a queue slot that is
+// already full; the upload endpoint still enforces the same limit as a final
+// race-safe guard.
+export const checkSubmissionEligibility = async (req, res) => {
+  try {
+    const userId = cleanString(req.body?.userId);
+    const result = await getSubmissionEligibility({ shopId: req.shopId, userId });
+    if (!result.eligible) {
+      return res.status(429).json({
+        success: false,
+        message: `คุณมีคิวที่กำลังรออยู่ครบ ${result.limit} รายการแล้ว กรุณารอให้คิวเดิมแสดงเสร็จก่อน`,
+        ...result,
+      });
+    }
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[Admin] Queue eligibility check failed:', error);
+    return res.status(500).json({ success: false, message: 'ไม่สามารถตรวจสอบสิทธิ์ส่งคิวได้ กรุณาลองใหม่อีกครั้ง' });
+  }
+};
 
 // Gift orders retain a snapshot for accounting, but their status view should
 // reflect the current item name and image configured by the shop (the same

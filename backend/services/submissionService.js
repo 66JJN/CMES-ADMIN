@@ -3,6 +3,22 @@ import ImageQueue from '../models/ImageQueue.js';
 const activeStatuses = ['pending', 'approved', 'playing'];
 const locks = new Map();
 
+const queueLimit = () => Math.max(1, Number(process.env.MAX_ACTIVE_QUEUE_PER_USER) || 3);
+
+export const getSubmissionEligibility = async ({ shopId, userId }) => {
+  if (!userId || ['guest', 'unknown'].includes(userId)) {
+    return { eligible: true, activeCount: 0, limit: queueLimit() };
+  }
+
+  const activeCount = await ImageQueue.countDocuments({
+    shopId,
+    userId,
+    status: { $in: activeStatuses },
+  });
+  const limit = queueLimit();
+  return { eligible: activeCount < limit, activeCount, limit };
+};
+
 // Serialise only submissions for the same shop/person. This closes the small
 // count-then-create race without slowing down other guests at the venue.
 const withLock = async (key, work) => {
@@ -27,13 +43,10 @@ export const createQueueSubmission = async ({ itemData, quotaField, quotaValue }
     }
 
     if (quotaField && quotaValue) {
-      const activeCount = await ImageQueue.countDocuments({
-        shopId,
-        [quotaField]: quotaValue,
-        status: { $in: activeStatuses },
-      });
-      const limit = Math.max(1, Number(process.env.MAX_ACTIVE_QUEUE_PER_USER) || 3);
-      if (activeCount >= limit) {
+      const { eligible, limit } = quotaField === 'userId'
+        ? await getSubmissionEligibility({ shopId, userId: quotaValue })
+        : { eligible: true, limit: queueLimit() };
+      if (!eligible) {
         const error = new Error(`ส่งคิวได้สูงสุด ${limit} รายการต่อคน กรุณารอให้คิวเดิมแสดงเสร็จก่อน`);
         error.status = 429;
         throw error;
