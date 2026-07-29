@@ -5,12 +5,13 @@ import { API_BASE_URL, USER_FRONTEND_URL } from '../../config/apiConfig';
 import adminFetch from '../../config/authFetch';
 import Button from '../ui/Button';
 import ErrorBoundary from '../ui/ErrorBoundary';
+import useOBSControl from '../../hooks/useOBSControl';
+import OBSControlPanel from './OBSControlPanel';
 import './DashboardShared.css';
 import './DashboardModals.css';
 
 // Lazy-loaded heavy modules
 const LazyIncomeStats = lazy(() => import('./IncomeStats'));
-const LazyOBSControl = lazy(() => import('../../pages/OBSControl/OBSControlPage'));
 const LazyToast = lazy(() => import('../ui/Toast'));
 
 const formatCurrency = (value) => Number(value || 0).toLocaleString("th-TH");
@@ -53,6 +54,13 @@ export default function DashboardModals() {
 
   const adminId = localStorage.getItem("adminId") || "default-admin";
   const adminUsername = localStorage.getItem("adminUsername") || "Admin";
+  // Keep this hook mounted with the dashboard, rather than with the modal.
+  // A connected OBS session must remain active after the modal is closed.
+  const obsControlState = useOBSControl({
+    API_BASE_URL,
+    adminId,
+    shopId: shopId || adminId,
+  });
 
   const [copiedImage, setCopiedImage] = useState(false);
   const [copiedRanking, setCopiedRanking] = useState(false);
@@ -287,21 +295,21 @@ export default function DashboardModals() {
             <div className="rank-modal-header obs-modal-header">
               <div>
                 <h3 className="obs-modal-title">
-                  <span>🎥</span> OBS Studio Control Panel
+                  <span>🎥</span> ศูนย์ควบคุม OBS
                 </h3>
-                <p className="obs-modal-subtitle">คัดลอกลิงก์ Overlay หรือใช้แผงควบคุมสลับฉาก/คุมเสียงได้ที่นี่</p>
+                <p className="obs-modal-subtitle">คัดลอกลิงก์สำหรับจอ หรือใช้แผงควบคุมฉากและเสียงได้ที่นี่</p>
               </div>
               <button type="button" className="modal-close-btn" onClick={() => setShowObsModal(false)} aria-label="ปิดหน้าต่าง">✕</button>
             </div>
             <div className="rank-modal-body obs-modal-body">
               <div className="obs-links-section">
                 <h4 className="obs-section-title">
-                  <span>🔗</span> OBS Browser Source Links 
+                  <span>🔗</span> ลิงก์สำหรับ Source ใน OBS
                   <span className="obs-admin-badge">{adminUsername}</span>
                 </h4>
                 <div className="obs-grid-inputs">
                   <div className="obs-input-group">
-                    <label>1. Image & Text</label>
+                    <label>1. ภาพและข้อความ</label>
                     <div className="obs-copy-row">
                       <input type="text" readOnly value={obsDisplayToken ? `${API_BASE_URL}/obs-image-overlay.html?shopId=${shopId || adminId}&token=${encodeURIComponent(obsDisplayToken)}` : 'กำลังสร้างลิงก์ OBS…'} />
                       <Button
@@ -313,13 +321,13 @@ export default function DashboardModals() {
                         }}
                         className={copiedImage ? "btn-copied" : "btn-copy"}
                       >
-                        {copiedImage ? "✓" : "Copy"}
+                        {copiedImage ? "✓" : "คัดลอก"}
                       </Button>
                     </div>
                   </div>
 
                   <div className="obs-input-group">
-                    <label>2. Ranking</label>
+                    <label>2. อันดับผู้สนับสนุน</label>
                     <div className="obs-copy-row">
                       <input type="text" readOnly value={obsDisplayToken ? `${API_BASE_URL}/obs-ranking-overlay.html?shopId=${shopId || adminId}&token=${encodeURIComponent(obsDisplayToken)}` : 'กำลังสร้างลิงก์ OBS…'} />
                       <Button
@@ -331,13 +339,13 @@ export default function DashboardModals() {
                         }}
                         className={copiedRanking ? "btn-copied" : "btn-copy"}
                       >
-                        {copiedRanking ? "✓" : "Copy"}
+                        {copiedRanking ? "✓" : "คัดลอก"}
                       </Button>
                     </div>
                   </div>
 
                   <div className="obs-input-group">
-                    <label>3. Lucky Wheel</label>
+                    <label>3. วงล้อสุ่มรางวัล</label>
                     <div className="obs-copy-row">
                       <input type="text" readOnly value={obsDisplayToken ? `${API_BASE_URL}/obs-lucky-wheel.html?shopId=${shopId || adminId}&token=${encodeURIComponent(obsDisplayToken)}` : 'กำลังสร้างลิงก์ OBS…'} />
                       <Button
@@ -349,7 +357,7 @@ export default function DashboardModals() {
                         }}
                         className={copiedWheel ? "btn-copied" : "btn-copy"}
                       >
-                        {copiedWheel ? "✓" : "Copy"}
+                        {copiedWheel ? "✓" : "คัดลอก"}
                       </Button>
                     </div>
                   </div>
@@ -358,9 +366,7 @@ export default function DashboardModals() {
 
               <div className="obs-lazy-panel-container">
                 <ErrorBoundary>
-                  <Suspense fallback={<div className="obs-loading-fallback">⏳ กำลังโหลดแผงควบคุม OBS Realtime...</div>}>
-                    <LazyOBSControl API_BASE_URL={API_BASE_URL} adminId={adminId} shopId={shopId || adminId} />
-                  </Suspense>
+                  <OBSControlPanel {...obsControlState} />
                 </ErrorBoundary>
               </div>
             </div>

@@ -2,6 +2,62 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import OBSWebSocket from "obs-websocket-js";
 import adminFetch from "../config/authFetch";
 
+export const DEFAULT_OVERLAY_STYLE = Object.freeze({
+  preset: "balanced",
+  imageFit: "contain",
+  verticalPosition: "bottom",
+  cardScale: 1,
+  imageMaxWidth: 600,
+  textScale: 1,
+  imageBackgroundStyle: "transparent",
+  textBackgroundStyle: "dim",
+  giftBackgroundStyle: "dim",
+});
+
+const BACKGROUND_STYLES = new Set(["transparent", "dim", "blur"]);
+const normalizeOverlayStyle = (value = {}) => {
+  const candidate = value && typeof value === "object" ? value : {};
+  const legacyBackground = BACKGROUND_STYLES.has(candidate.backgroundStyle)
+    ? candidate.backgroundStyle
+    : null;
+  const pickBackground = (key) => BACKGROUND_STYLES.has(candidate[key])
+    ? candidate[key]
+    : (legacyBackground || DEFAULT_OVERLAY_STYLE[key]);
+  return {
+    ...DEFAULT_OVERLAY_STYLE,
+    ...candidate,
+    imageBackgroundStyle: pickBackground("imageBackgroundStyle"),
+    textBackgroundStyle: pickBackground("textBackgroundStyle"),
+    giftBackgroundStyle: pickBackground("giftBackgroundStyle"),
+  };
+};
+
+export const DEFAULT_DISPLAY_PROFILE = Object.freeze({
+  id: "main",
+  name: "จอหลัก",
+  width: 1920,
+  height: 1080,
+  physicalWidthCm: null,
+  viewingDistanceM: null,
+  obsSceneName: "",
+  enabled: true,
+  overlayStyle: DEFAULT_OVERLAY_STYLE,
+});
+
+const normalizeDisplayProfile = (value = {}, index = 0, fallbackStyle = DEFAULT_OVERLAY_STYLE) => ({
+  ...DEFAULT_DISPLAY_PROFILE,
+  ...value,
+  id: String(value.id || (index === 0 ? "main" : `display-${index + 1}`)),
+  name: String(value.name || (index === 0 ? "จอหลัก" : `จอ ${index + 1}`)),
+  overlayStyle: normalizeOverlayStyle(value.overlayStyle || fallbackStyle),
+});
+
+const normalizeDisplayProfiles = (profiles, fallbackStyle) => (
+  Array.isArray(profiles) && profiles.length
+    ? profiles.slice(0, 8).map((profile, index) => normalizeDisplayProfile(profile, index, fallbackStyle))
+    : [normalizeDisplayProfile(DEFAULT_DISPLAY_PROFILE, 0, fallbackStyle)]
+);
+
 /**
  * Custom Hook for handling OBS Studio WebSocket controls.
  * Manages connection, scenes, audio muting, text inputs, dragging positions,
@@ -17,6 +73,10 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
   const [marqueeText, setMarqueeText] = useState("");
   const [bgmMuted, setBgmMuted] = useState(false);
   const [logs, setLogs] = useState([]);
+  const [overlayStyle, setOverlayStyle] = useState(DEFAULT_OVERLAY_STYLE);
+  const [isSavingOverlayStyle, setIsSavingOverlayStyle] = useState(false);
+  const [displayProfiles, setDisplayProfiles] = useState([DEFAULT_DISPLAY_PROFILE]);
+  const [activeDisplayId, setActiveDisplayId] = useState("main");
 
   const obsRef = useRef(null);
   if (!obsRef.current) {
@@ -27,6 +87,10 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
   const canvasRef = useRef(null);
   const draggingRef = useRef(null);
   const timeoutRef = useRef(null); // Ref to track pending connection timers
+  const latestObsHandlersRef = useRef({
+    fetchInitialData: null,
+    fetchSceneItems: null,
+  });
 
   const [overlayItems, setOverlayItems] = useState({});
   const [dragging, setDragging] = useState(null);
@@ -37,6 +101,79 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
       { time: new Date().toLocaleTimeString(), msg, type },
     ]);
   }, []);
+
+  // The template belongs to the shop, not to this browser or OBS instance.
+  // Loading it here also makes the controls useful before OBS is connected.
+  useEffect(() => {
+    if (!shopId) return undefined;
+    let cancelled = false;
+
+    const loadOverlayStyle = async () => {
+      try {
+        const response = await adminFetch(
+          `${API_BASE_URL}/api/status?shopId=${encodeURIComponent(shopId)}`
+        );
+        const config = await response.json();
+        if (!cancelled && response.ok) {
+          const fallbackStyle = normalizeOverlayStyle(config.overlayStyle);
+          const profiles = normalizeDisplayProfiles(config.displayProfiles, fallbackStyle);
+          setDisplayProfiles(profiles);
+          const activeProfile = profiles.find((profile) => profile.id === "main") || profiles[0];
+          setActiveDisplayId(activeProfile.id);
+          setOverlayStyle(activeProfile.overlayStyle);
+        }
+      } catch (error) {
+        if (!cancelled) addLog("Unable to load overlay template; using recommended preset", "warning");
+      }
+    };
+
+    loadOverlayStyle();
+    return () => { cancelled = true; };
+  }, [API_BASE_URL, shopId, addLog]);
+
+  const activeDisplayProfile = displayProfiles.find((profile) => profile.id === activeDisplayId)
+    || displayProfiles[0]
+    || DEFAULT_DISPLAY_PROFILE;
+
+  const selectDisplayProfile = useCallback((displayId) => {
+    const selected = displayProfiles.find((profile) => profile.id === displayId);
+    if (!selected) return;
+    setActiveDisplayId(selected.id);
+    setOverlayStyle(normalizeOverlayStyle(selected.overlayStyle));
+  }, [displayProfiles]);
+
+  const updateActiveDisplayProfile = useCallback((changes) => {
+    const nextOverlayStyle = changes.overlayStyle ? normalizeOverlayStyle(changes.overlayStyle) : null;
+    if (nextOverlayStyle) setOverlayStyle(nextOverlayStyle);
+    setDisplayProfiles((previous) => previous.map((profile) => {
+      if (profile.id !== activeDisplayId) return profile;
+      const next = { ...profile, ...changes };
+      if (nextOverlayStyle) next.overlayStyle = nextOverlayStyle;
+      return next;
+    }));
+  }, [activeDisplayId]);
+
+  const addDisplayProfile = useCallback(() => {
+    if (displayProfiles.length >= 8) return;
+    const id = `display-${Date.now().toString(36)}`;
+    const profile = normalizeDisplayProfile({
+      id,
+      name: `จอ ${displayProfiles.length + 1}`,
+      overlayStyle,
+    }, displayProfiles.length, overlayStyle);
+    setActiveDisplayId(id);
+    setDisplayProfiles((previous) => {
+      return [...previous, profile];
+    });
+  }, [displayProfiles.length, overlayStyle]);
+
+  const removeActiveDisplayProfile = useCallback(() => {
+    if (displayProfiles.length <= 1) return;
+    const remaining = displayProfiles.filter((profile) => profile.id !== activeDisplayId);
+    setDisplayProfiles(remaining);
+    setActiveDisplayId(remaining[0].id);
+    setOverlayStyle(normalizeOverlayStyle(remaining[0].overlayStyle));
+  }, [displayProfiles, activeDisplayId]);
 
   // Auto-scroll logs
   useEffect(() => {
@@ -85,7 +222,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
   }, [API_BASE_URL]);
 
   // Setup auto creation of overlay inputs
-  const autoCreateRequiredSources = useCallback(async (obs, sceneName) => {
+  const autoCreateRequiredSources = useCallback(async (obs, sceneName, displayProfile = DEFAULT_DISPLAY_PROFILE) => {
     try {
       addLog(`🔍 ตรวจสอบโครงสร้างพื้นฐานใน Scene: ${sceneName}...`, "info");
 
@@ -93,15 +230,17 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
       const existingSourceNames = sceneItems.map((item) => item.sourceName);
       const targetShopId = shopId || adminId;
       const displayToken = await getDisplayToken();
-      const displayQuery = `shopId=${encodeURIComponent(targetShopId)}&token=${encodeURIComponent(displayToken)}`;
+      const displayQuery = `shopId=${encodeURIComponent(targetShopId)}&displayId=${encodeURIComponent(displayProfile.id)}&token=${encodeURIComponent(displayToken)}`;
+      const sourceWidth = Number(displayProfile.width) || 1920;
+      const sourceHeight = Number(displayProfile.height) || 1080;
 
-      const ensureBrowserSource = async (inputName, url) => {
+      const ensureBrowserSource = async (inputName, url, width = 1920, height = 1080) => {
         if (existingSourceNames.includes(inputName)) {
           const { inputSettings = {} } = await obs.call("GetInputSettings", { inputName });
           if (inputSettings.url !== url) {
             await obs.call("SetInputSettings", {
               inputName,
-              inputSettings: { url, width: 1920, height: 1080 },
+              inputSettings: { url, width, height },
               overlay: true,
             });
             addLog(`🔄 Updated '${inputName}' with a fresh secure display link`, "success");
@@ -114,18 +253,28 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
           sceneName,
           inputName,
           inputKind: "browser_source",
-          inputSettings: { url, width: 1920, height: 1080 },
+          inputSettings: { url, width, height },
         });
         addLog(`✅ Created '${inputName}'`, "success");
       };
 
-      // 1. Overlay Browser Sources
-      await ensureBrowserSource("Overlay_ImageText", `${API_BASE_URL}/obs-image-overlay.html?${displayQuery}`);
-      await ensureBrowserSource("Overlay_Ranking", `${API_BASE_URL}/obs-ranking-overlay.html?${displayQuery}`);
-      await ensureBrowserSource("Overlay_LuckyWheel", `${API_BASE_URL}/obs-lucky-wheel.html?${displayQuery}`);
+      // 1. Each screen profile owns an image/text Browser Source. Main keeps
+      // the legacy name so existing OBS scenes continue working untouched.
+      const imageSourceName = displayProfile.id === "main"
+        ? "Overlay_ImageText"
+        : `CMES_${displayProfile.id}_ImageText`;
+      await ensureBrowserSource(imageSourceName, `${API_BASE_URL}/obs-image-overlay.html?${displayQuery}`, sourceWidth, sourceHeight);
+
+      // Ranking and lucky wheel remain global presentation sources for now.
+      // They are created only in the main display scene, avoiding duplicated
+      // wheel/ranking panels across every physical output.
+      if (displayProfile.id === "main") {
+        await ensureBrowserSource("Overlay_Ranking", `${API_BASE_URL}/obs-ranking-overlay.html?${displayQuery}`);
+        await ensureBrowserSource("Overlay_LuckyWheel", `${API_BASE_URL}/obs-lucky-wheel.html?${displayQuery}`);
+      }
 
       // 2. Marquee Text Source
-      if (!existingSourceNames.includes("MarqueeText")) {
+      if (displayProfile.id === "main" && !existingSourceNames.includes("MarqueeText")) {
         addLog(`⏳ กำลังสร้าง 'MarqueeText'...`, "warning");
         try {
           await obs.call("CreateInput", {
@@ -153,7 +302,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
       }
 
       // 3. Audio BGM Source
-      if (!existingSourceNames.includes("BGM")) {
+      if (displayProfile.id === "main" && !existingSourceNames.includes("BGM")) {
         addLog(`⏳ กำลังสร้าง 'BGM' (Audio)...`, "warning");
         await obs.call("CreateInput", {
           sceneName: sceneName,
@@ -174,7 +323,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
   }, [API_BASE_URL, adminId, shopId, addLog, getDisplayToken]);
 
   // Fetch all startup data from OBS
-  const fetchInitialData = useCallback(async () => {
+  const fetchInitialData = useCallback(async (profilesOverride) => {
     const obs = obsRef.current;
     try {
       const sceneList = await obs.call("GetSceneList");
@@ -183,7 +332,21 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
       setCurrentScene(currentProgramScene);
 
       if (currentProgramScene) {
-        await autoCreateRequiredSources(obs, currentProgramScene);
+        const sceneNames = new Set(sceneList.scenes.map((scene) => scene.sceneName));
+        const profilesToSync = (profilesOverride || displayProfiles).filter((profile) => profile.enabled !== false);
+        for (const profile of profilesToSync) {
+          // Only the legacy main profile may use the active Scene implicitly.
+          // Extra outputs must be mapped deliberately, otherwise two Browser
+          // Sources would be stacked on the same program output by accident.
+          if (profile.id !== "main" && !profile.obsSceneName) {
+            addLog(`ยังไม่ได้ผูก Scene ให้ ${profile.name} — ยังไม่สร้าง Source`, "warning");
+            continue;
+          }
+          const targetScene = profile.obsSceneName && sceneNames.has(profile.obsSceneName)
+            ? profile.obsSceneName
+            : currentProgramScene;
+          await autoCreateRequiredSources(obs, targetScene, profile);
+        }
         await fetchSceneItems(obs, currentProgramScene);
       }
 
@@ -198,9 +361,17 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
     } catch (err) {
       addLog(`Fetch error: ${err.message}`, "error");
     }
-  }, [autoCreateRequiredSources, fetchSceneItems, addLog]);
+  }, [autoCreateRequiredSources, fetchSceneItems, addLog, displayProfiles]);
 
-  // Setup WS listeners
+  // Keep event listeners for the whole Dashboard lifetime. The OBS panel is a
+  // modal, so closing it must not silently disconnect a live operator session.
+  // Refs let those persistent listeners call the newest profile/scene logic.
+  useEffect(() => {
+    latestObsHandlersRef.current = { fetchInitialData, fetchSceneItems };
+  }, [fetchInitialData, fetchSceneItems]);
+
+  // Setup WS listeners once; disconnect only when the Dashboard itself unmounts
+  // (logout/navigation), never when the control modal is closed or settings change.
   useEffect(() => {
     const obs = obsRef.current;
 
@@ -213,7 +384,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
 
       // Add safety timer to fetch initial settings after web socket initializes
       timeoutRef.current = setTimeout(() => {
-        fetchInitialData();
+        latestObsHandlersRef.current.fetchInitialData?.();
       }, 500);
     };
 
@@ -225,7 +396,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
     const onSceneChanged = (data) => {
       setCurrentScene(data.sceneName);
       addLog(`📺 Scene switched to: ${data.sceneName}`, "info");
-      fetchSceneItems(obs, data.sceneName);
+      latestObsHandlersRef.current.fetchSceneItems?.(obs, data.sceneName);
     };
 
     const onInputMuteStateChanged = (data) => {
@@ -277,7 +448,10 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       obs.disconnect().catch(() => {});
     };
-  }, [fetchInitialData, fetchSceneItems, addLog]);
+  // Profile-aware callbacks are read through refs above, so this effect only
+  // cleans up when the Dashboard itself unmounts.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Connect/Disconnect controls
   const handleConnect = useCallback(async () => {
@@ -362,6 +536,41 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
     }
   }, [addLog]);
 
+  const saveDisplayProfiles = useCallback(async () => {
+    const normalized = normalizeOverlayStyle(activeDisplayProfile.overlayStyle || overlayStyle);
+    const profilesToSave = displayProfiles.map((profile) => (
+      profile.id === activeDisplayProfile.id
+        ? { ...profile, overlayStyle: normalized }
+        : profile
+    ));
+    setOverlayStyle(normalized);
+    setDisplayProfiles(profilesToSave);
+    setIsSavingOverlayStyle(true);
+    try {
+      const response = await adminFetch(`${API_BASE_URL}/api/config/update`, {
+        method: "POST",
+        body: JSON.stringify({ overlayStyle: normalized, displayProfiles: profilesToSave }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Unable to save overlay template");
+      }
+      const savedProfiles = normalizeDisplayProfiles(data.config?.displayProfiles, data.config?.overlayStyle);
+      const savedActive = savedProfiles.find((profile) => profile.id === activeDisplayProfile.id) || savedProfiles[0];
+      setDisplayProfiles(savedProfiles);
+      setActiveDisplayId(savedActive.id);
+      setOverlayStyle(normalizeOverlayStyle(savedActive.overlayStyle));
+      if (isConnected) await fetchInitialData(savedProfiles);
+      addLog("บันทึกโปรไฟล์จอและรูปแบบ Overlay แล้ว", "success");
+      return true;
+    } catch (error) {
+      addLog(`Overlay template was not saved: ${error.message}`, "error");
+      return false;
+    } finally {
+      setIsSavingOverlayStyle(false);
+    }
+  }, [API_BASE_URL, activeDisplayProfile, addLog, displayProfiles, fetchInitialData, isConnected, overlayStyle]);
+
   // Drag and Drop canvas math logic
   const handleCanvasMouseDown = useCallback((e, sourceName) => {
     e.preventDefault();
@@ -436,6 +645,17 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
     setMarqueeText,
     bgmMuted,
     logs,
+    overlayStyle,
+    setOverlayStyle,
+    isSavingOverlayStyle,
+    saveDisplayProfiles,
+    displayProfiles,
+    activeDisplayProfile,
+    activeDisplayId,
+    selectDisplayProfile,
+    updateActiveDisplayProfile,
+    addDisplayProfile,
+    removeActiveDisplayProfile,
     overlayItems,
     dragging,
     canvasRef,

@@ -262,7 +262,8 @@ export default function useImageQueue() {
         await fetchImages();
         setShowHistory(false);
       } else {
-        alert("ไม่สามารถนำกลับเข้าคิวได้");
+        const result = await response.json().catch(() => ({}));
+        alert(result.message || "ไม่สามารถนำกลับเข้าคิวได้ กรุณาลองใหม่อีกครั้ง");
       }
     } catch (error) {
       console.error("Error restoring to queue:", error);

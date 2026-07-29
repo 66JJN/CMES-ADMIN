@@ -17,10 +17,14 @@
     }
 
     #container {
+      --overlay-scale: 1;
+      --overlay-image-max-width: 600px;
+      --overlay-text-scale: 1;
       position: fixed;
       bottom: 10%;
       left: 50%;
-      transform: translateX(-50%) translateY(20px);
+      transform: translateX(-50%) translateY(20px) scale(var(--overlay-scale));
+      transform-origin: center bottom;
       max-width: 95vw;
       opacity: 0;
       transition: opacity 0.35s ease, transform 0.35s ease;
@@ -28,12 +32,19 @@
       gap: 24px;
       align-items: center;
       pointer-events: none;
+      border-radius: 18px;
     }
 
     #container.show {
       opacity: 1;
-      transform: translateX(-50%) translateY(0);
+      transform: translateX(-50%) translateY(0) scale(var(--overlay-scale));
     }
+
+    #container.overlay-position-top { top: 8%; bottom: auto; transform-origin: center top; }
+    #container.overlay-position-middle { top: 50%; bottom: auto; transform: translateX(-50%) translateY(calc(-50% + 20px)) scale(var(--overlay-scale)); }
+    #container.overlay-position-middle.show { transform: translateX(-50%) translateY(-50%) scale(var(--overlay-scale)); }
+    #container.overlay-background-dim { padding: 20px; background: rgba(7, 12, 28, 0.74); box-shadow: 0 18px 58px rgba(0, 0, 0, 0.42); }
+    #container.overlay-background-blur { padding: 20px; background: rgba(15, 23, 42, 0.52); box-shadow: 0 18px 58px rgba(0, 0, 0, 0.35); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
 
     /* Visible only while the browser source is reconnecting. */
     #fallback-status {
@@ -118,17 +129,37 @@
     /* ส่วนรูปภาพ */
     #image-section {
       flex-shrink: 0;
+      width: min(var(--overlay-image-max-width), 70vw);
+      height: min(58vh, 680px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     #thumb {
-      width: auto;
-      height: auto;
-      max-width: 600px;
+      width: 100%;
+      height: 100%;
+      max-width: var(--overlay-image-max-width);
       max-height: 70vh;
       border-radius: 12px;
       object-fit: contain;
       display: block;
     }
+
+    #container.overlay-image-cover #thumb { object-fit: cover; }
+
+    /* Each content type has its own card treatment. A transparent image can
+       therefore sit beside readable text on a dark/blurred card. */
+    #image-section.overlay-image-card-transparent,
+    #info-section.overlay-text-card-transparent { background: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+    #image-section.overlay-image-card-dim,
+    #info-section.overlay-text-card-dim { background: rgba(7, 12, 28, 0.74); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.36); }
+    #image-section.overlay-image-card-blur,
+    #info-section.overlay-text-card-blur { background: rgba(15, 23, 42, 0.52); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.30); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+    #image-section.overlay-image-card-dim,
+    #image-section.overlay-image-card-blur { padding: 16px; border-radius: 18px; }
+    #info-section.overlay-text-card-dim,
+    #info-section.overlay-text-card-blur { border-radius: 18px; }
 
     /* ส่วนข้อความและ QR Code */
     #info-section {
@@ -155,7 +186,7 @@
     }
 
     #social-name {
-      font-size: 28px;
+      font-size: calc(28px * var(--overlay-text-scale));
       font-weight: 700;
       color: #fff;
       text-shadow: 0 3px 10px rgba(0, 0, 0, 0.9);
@@ -163,7 +194,7 @@
 
     /* Text */
     #text {
-      font-size: 24px;
+      font-size: calc(24px * var(--overlay-text-scale));
       font-weight: 400;
       color: #fff;
       text-shadow: 0 3px 10px rgba(0, 0, 0, 0.9);
@@ -196,7 +227,7 @@
     #countdown-timer {
       margin-top: 12px;
       color: #fff;
-      font-size: 18px;
+      font-size: calc(18px * var(--overlay-text-scale));
       font-weight: 700;
       opacity: 0;
       transition: opacity 0.3s ease;
@@ -227,7 +258,7 @@
 
     #gift-container.show {
       opacity: 1;
-      transform: translateX(-50%) translateY(0) scale(0.7);
+      transform: translateX(-50%) translateY(0) scale(calc(0.7 * var(--overlay-gift-scale, 1)));
       transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     }
 
@@ -244,6 +275,10 @@
       overflow: hidden;
       animation: cardPulse 2s ease-in-out infinite;
     }
+
+    .cyberpunk-gift-card.overlay-gift-card-transparent { background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; animation: none; }
+    .cyberpunk-gift-card.overlay-gift-card-dim { background: linear-gradient(135deg, rgba(12, 18, 36, 0.90), rgba(22, 33, 62, 0.90)); }
+    .cyberpunk-gift-card.overlay-gift-card-blur { background: rgba(18, 27, 52, 0.58); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
 
     @keyframes cardPulse {
 
@@ -594,7 +629,7 @@
       border-radius: 999px;
       background: rgba(0, 12, 28, 0.82);
       color: #67e8f9;
-      font-size: 30px;
+      font-size: calc(30px * var(--overlay-gift-scale, 1));
       font-weight: 900;
       line-height: 1;
       letter-spacing: 0.05em;
@@ -739,8 +774,9 @@
     // 🔥 อ่าน shopId จาก URL ?shopId=KAIYANG
     const urlParams = new URLSearchParams(window.location.search);
     const shopId = urlParams.get('shopId') || '';
+    const displayId = urlParams.get('displayId') || 'main';
     const token = urlParams.get('token') || '';
-    console.log('[OBS] shopId from URL:', shopId);
+    console.log('[OBS] shopId/displayId from URL:', shopId, displayId);
 
     // 🔥 เชื่อมต่อ socket พร้อมส่ง shopId เพื่อเข้า room เฉพาะร้าน
     const socket = io(API_BASE_URL, {
@@ -801,7 +837,75 @@
     const qrContainer = document.getElementById('qr-container');
     const qrImage = document.getElementById('qr-image');
 
+    const DEFAULT_OVERLAY_STYLE = {
+      preset: 'balanced', imageFit: 'contain', verticalPosition: 'bottom',
+      cardScale: 1, imageMaxWidth: 600, textScale: 1,
+      imageBackgroundStyle: 'transparent', textBackgroundStyle: 'dim', giftBackgroundStyle: 'dim'
+    };
+    let overlayStyle = { ...DEFAULT_OVERLAY_STYLE };
+
+    function boundedNumber(value, fallback, min, max) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
+    }
+
+    // Keep the browser source resilient even if an older API returns no style,
+    // or a hand-edited database value is invalid.
+    function applyOverlayStyle(nextStyle = {}) {
+      overlayStyle = { ...DEFAULT_OVERLAY_STYLE, ...(nextStyle && typeof nextStyle === 'object' ? nextStyle : {}) };
+      const preset = ['balanced', 'focus', 'cinema'].includes(overlayStyle.preset) ? overlayStyle.preset : 'balanced';
+      const fit = overlayStyle.imageFit === 'cover' ? 'cover' : 'contain';
+      const position = ['top', 'middle', 'bottom'].includes(overlayStyle.verticalPosition) ? overlayStyle.verticalPosition : 'bottom';
+      const validBackground = (value, fallback) => ['transparent', 'dim', 'blur'].includes(value) ? value : fallback;
+      // `backgroundStyle` is kept only as a fallback for older saved profiles.
+      const legacyBackground = validBackground(overlayStyle.backgroundStyle, 'transparent');
+      const imageBackground = validBackground(overlayStyle.imageBackgroundStyle, legacyBackground);
+      const textBackground = validBackground(overlayStyle.textBackgroundStyle, legacyBackground);
+      const giftBackground = validBackground(overlayStyle.giftBackgroundStyle, legacyBackground);
+      const presetScale = preset === 'focus' ? 1.08 : preset === 'cinema' ? 0.94 : 1;
+      const presetImage = preset === 'focus' ? 1.15 : 1;
+      const presetText = preset === 'focus' ? 0.92 : preset === 'cinema' ? 1.06 : 1;
+
+      container.style.setProperty('--overlay-scale', String(boundedNumber(overlayStyle.cardScale, 1, 0.7, 1.3) * presetScale));
+      container.style.setProperty('--overlay-image-max-width', `${Math.round(boundedNumber(overlayStyle.imageMaxWidth, 600, 320, 960) * presetImage)}px`);
+      container.style.setProperty('--overlay-text-scale', String(boundedNumber(overlayStyle.textScale, 1, 0.75, 1.5) * presetText));
+      document.documentElement.style.setProperty('--overlay-gift-scale', String(boundedNumber(overlayStyle.cardScale, 1, 0.7, 1.3) * presetScale));
+
+      const applyCardBackground = (element, background, classPrefix) => {
+        element.classList.remove(`${classPrefix}-transparent`, `${classPrefix}-dim`, `${classPrefix}-blur`);
+        element.classList.add(`${classPrefix}-${background}`);
+      };
+
+      container.classList.remove('overlay-position-top', 'overlay-position-middle', 'overlay-position-bottom', 'overlay-image-cover', 'overlay-background-dim', 'overlay-background-blur');
+      container.classList.add(`overlay-position-${position}`);
+      if (fit === 'cover') container.classList.add('overlay-image-cover');
+      applyCardBackground(imageSection, imageBackground, 'overlay-image-card');
+      applyCardBackground(infoSection, textBackground, 'overlay-text-card');
+      applyCardBackground(document.querySelector('.cyberpunk-gift-card'), giftBackground, 'overlay-gift-card');
+    }
+
+    async function fetchOverlayStyle() {
+      if (!shopId) return;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/status?shopId=${encodeURIComponent(shopId)}`);
+        if (!response.ok) return;
+        const config = await response.json();
+        const profile = Array.isArray(config.displayProfiles)
+          ? config.displayProfiles.find((item) => item?.id === displayId)
+          : null;
+        applyOverlayStyle(profile?.overlayStyle || config.overlayStyle);
+      } catch (error) {
+        console.warn('[OBS] Overlay template could not be loaded; using defaults', error);
+      }
+    }
+
+    applyOverlayStyle();
+    fetchOverlayStyle();
+
     let hideTimer = null;
+    let giftCountdownInterval = null;
+    let giftHideTimer = null;
+    let activeGiftPlaybackId = null;
     let countdownInterval = null; // เก็บ interval สำหรับ countdown
     let isPaused = false; // สถานะหยุดชั่วคราว
     let remainingTime = 0; // เวลาที่เหลืออยู่เมื่อหยุด
@@ -817,9 +921,11 @@
     function show(payload = {}) {
       console.log('[Combined Overlay] Received payload:', payload);
       hideFallback();
+      activeGiftPlaybackId = null;
 
       // ลบข้อมูลก่อนหน้า
       clearInterval(countdownInterval);
+      clearInterval(giftCountdownInterval);
       clearTimeout(hideTimer);
       clearTimeout(giftHideTimer);
       giftContainer.classList.remove('show');
@@ -862,20 +968,13 @@
 
         thumb.src = resolved;
         thumb.style.display = 'block';
-        imageSection.style.display = 'block';
+        imageSection.style.display = 'flex';
 
-        // ปรับขนาดถ้ามี
-        if (width && !isNaN(width)) {
-          thumb.style.width = `${Math.max(50, Math.min(4000, Number(width)))}px`;
-        } else {
-          thumb.style.width = 'auto';
-        }
-
-        if (height && !isNaN(height)) {
-          thumb.style.height = `${Math.max(50, Math.min(4000, Number(height)))}px`;
-        } else {
-          thumb.style.height = 'auto';
-        }
+        // The venue template owns the frame size. Individual upload
+        // dimensions must never override it, otherwise portrait and
+        // landscape submissions make the display jump in size.
+        thumb.style.width = '';
+        thumb.style.height = '';
 
         hasContent = true;
       } else {
@@ -925,7 +1024,7 @@
       }
 
       // ใช้ textLayout เปลี่ยน layout ของ container
-      container.className = '';
+      container.classList.remove('layout-left', 'layout-top', 'layout-bottom', 'layout-center');
       if (textLayout && textLayout !== 'right') {
         container.classList.add('layout-' + textLayout);
       }
@@ -1013,6 +1112,12 @@
     socket.on('disconnect', () => showFallback('ระบบกำลังเชื่อมต่อ', 'กรุณารอสักครู่'));
     socket.on('now-playing-image', show);
     socket.on('now-playing-gift', showGift);
+    socket.on('configUpdate', (config) => {
+      const profile = Array.isArray(config?.displayProfiles)
+        ? config.displayProfiles.find((item) => item?.id === displayId)
+        : null;
+      applyOverlayStyle(profile?.overlayStyle || config?.overlayStyle);
+    });
 
     // รับสัญญาณหยุดชั่วคราว
     socket.on('pause-display', (data) => {
@@ -1021,6 +1126,7 @@
 
       if (data && data.manual) {
         clearInterval(countdownInterval);
+        clearInterval(giftCountdownInterval);
         clearTimeout(hideTimer);
         clearTimeout(giftHideTimer);
       }
@@ -1053,9 +1159,11 @@
     // รับสัญญาณข้ามคิว
     socket.on('skip-current', () => {
       console.log('[OBS] Skip current received');
+      activeGiftPlaybackId = null;
       // ซ่อนการแสดงทันที
       clearTimeout(hideTimer);
       clearInterval(countdownInterval);
+      clearInterval(giftCountdownInterval);
       clearTimeout(giftHideTimer);
       container.classList.remove('show');
       giftContainer.classList.remove('show');
@@ -1085,8 +1193,6 @@
     const giftNoteText = document.getElementById('gift-note-text');
     const giftCountdown = document.getElementById('gift-countdown');
 
-    let giftHideTimer = null;
-
     function showGift(payload = {}) {
       console.log('[Gift Overlay] Received:', payload);
 
@@ -1097,6 +1203,7 @@
       container.classList.remove('show');
       clearTimeout(hideTimer);
       clearInterval(countdownInterval);
+      clearInterval(giftCountdownInterval);
       clearTimeout(giftHideTimer);
 
       const {
@@ -1222,35 +1329,51 @@
       giftContainer.classList.add('show');
 
       // ใช้เวลาจาก payload (30 วินาที)
-      const displayTime = Number(time || duration || 30);
-      const elapsed = playingAt ? Math.max(0, (Date.now() - new Date(playingAt).getTime()) / 1000) : 0;
-      const remaining = Math.max(0, displayTime - elapsed);
-      console.log('[Gift] Display time:', displayTime, 'seconds; remaining:', remaining);
+      // Source of truth คือ `playingAt` ที่ backend บันทึกไว้พร้อมเวลาคิว
+      // จึงนับถูกต้องแม้ Browser Source/OBS โหลดใหม่ระหว่างกำลังแสดงผล.
+      const parsedDuration = Number(time ?? duration ?? 30);
+      const displayTime = Number.isFinite(parsedDuration) && parsedDuration > 0 ? parsedDuration : 30;
+      const parsedPlayingAt = playingAt ? Date.parse(playingAt) : NaN;
+      const startedAt = Number.isFinite(parsedPlayingAt) ? parsedPlayingAt : Date.now();
+      const endsAt = startedAt + (displayTime * 1000);
+      const playbackId = String(payload.id || `${startedAt}-${sender}`);
+      activeGiftPlaybackId = playbackId;
 
-      // Gift uses the same persisted playingAt/time source as image and text.
-      // This keeps OBS, Admin, pause/resume, and backend recovery in sync.
-      giftCountdown.classList.add('show');
-      const countdownStartedAt = playingAt ? new Date(playingAt).getTime() : Date.now();
-      const updateGiftCountdown = () => {
-        if (isPaused) return;
-        const leftSeconds = Math.max(0, Math.ceil((countdownStartedAt + displayTime * 1000 - Date.now()) / 1000));
-        const minutes = Math.floor(leftSeconds / 60);
-        const seconds = leftSeconds % 60;
-        giftCountdown.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      const getRemainingMs = () => Math.max(0, endsAt - Date.now());
+      const formatGiftTime = (milliseconds) => {
+        const totalSeconds = Math.ceil(milliseconds / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
       };
-      updateGiftCountdown();
-      countdownInterval = setInterval(updateGiftCountdown, 250);
-
-      // ซ่อนหลังจากครบระยะเวลา
-      clearTimeout(giftHideTimer);
-      giftHideTimer = setTimeout(() => {
-        clearInterval(countdownInterval);
+      const finishGift = () => {
+        if (activeGiftPlaybackId !== playbackId) return;
+        clearInterval(giftCountdownInterval);
+        giftCountdownInterval = null;
+        activeGiftPlaybackId = null;
         giftContainer.classList.remove('show');
         giftCountdown.classList.remove('show');
-        if (payload.id) {
-          socket.emit('complete-playing', payload.id);
-        }
-      }, remaining * 1000);
+        if (payload.id) socket.emit('complete-playing', payload.id);
+      };
+      const updateGiftCountdown = () => {
+        if (activeGiftPlaybackId !== playbackId || isPaused) return;
+        const remainingMs = getRemainingMs();
+        giftCountdown.textContent = formatGiftTime(remainingMs);
+        if (remainingMs <= 0) finishGift();
+      };
+
+      const remainingMs = getRemainingMs();
+      console.log('[Gift] Playback timing:', { displayTime, playingAt, remainingMs });
+      if (remainingMs <= 0) {
+        // Event ที่มาหลังรายการหมดเวลาแล้ว ไม่ต้องโผล่ 0:01/0:00 ชั่วครู่
+        finishGift();
+        return;
+      }
+
+      giftCountdown.classList.add('show');
+      updateGiftCountdown();
+      giftCountdownInterval = setInterval(updateGiftCountdown, 250);
+      giftHideTimer = setTimeout(finishGift, remainingMs);
     }
   </script>
   <!-- CSS วงล้อโชคดี -->

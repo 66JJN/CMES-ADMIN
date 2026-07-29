@@ -519,16 +519,35 @@ export const restoreHistoryItem = async (req, res) => {
 
     const isObjectId = (str) => /^[0-9a-fA-F]{24}$/.test(str);
 
+    const restoredType = historyItem.type || 'image';
+    const restoredDuration = Math.max(
+      1,
+      Number(historyItem.duration || historyItem.metadata?.duration || (restoredType === 'gift' ? 30 : 10)) || 10
+    );
+    const restoredGiftItems = restoredType === 'gift' && Array.isArray(historyItem.metadata?.giftItems)
+      ? historyItem.metadata.giftItems.map((item) => ({
+        id: item?.id ? String(item.id) : '',
+        name: String(item?.name || 'ของขวัญ'),
+        quantity: Math.max(1, Number(item?.quantity) || 1),
+        price: Math.max(0, Number(item?.price) || 0),
+        // Older history entries may use imageUrl while the live queue uses image.
+        image: String(item?.image || item?.imageUrl || '')
+      }))
+      : [];
+
     const insertData = {
       shopId: historyItem.shopId,
       sender: historyItem.sender || 'Unknown',
       price: historyItem.price || 0,
-      time: historyItem.duration || historyItem.metadata?.duration || 10,
+      time: restoredDuration,
       filePath: historyItem.mediaUrl || null,
       text: historyItem.content || '',
-      type: historyItem.type || 'image',
+      type: restoredType,
       status: 'pending',
       receivedAt: new Date(),
+      // A restored item is a new queue submission. Do not reuse/null this key,
+      // otherwise MongoDB's unique queue index can reject the restore (E11000).
+      submissionKey: `restore:${historyItem._id}:${Date.now()}`,
       paymentStatus: historyItem.paymentStatus || (historyItem.price > 0 ? 'pending' : 'free'),
       paidAt: historyItem.paidAt || null,
 
@@ -548,10 +567,10 @@ export const restoreHistoryItem = async (req, res) => {
       avatar: historyItem.avatar || null,
 
       // Restore gift order if applicable
-      giftOrder: historyItem.type === 'gift' ? {
+      giftOrder: restoredType === 'gift' ? {
         orderId: historyItem.transactionId,
         tableNumber: String(historyItem.metadata?.tableNumber || ''),
-        items: historyItem.metadata?.giftItems || [],
+        items: restoredGiftItems,
         totalPrice: historyItem.price || 0,
         note: historyItem.metadata?.note || ''
       } : undefined
@@ -575,7 +594,10 @@ export const restoreHistoryItem = async (req, res) => {
     res.json({ success: true, data: newQueueItem });
   } catch (error) {
     console.error('[Restore] Error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    if (error?.code === 11000) {
+      return res.status(409).json({ success: false, message: 'รายการนี้ถูกนำกลับเข้าคิวแล้ว หรือมีรายการเดิมอยู่ในคิว' });
+    }
+    res.status(500).json({ success: false, message: 'ไม่สามารถนำรายการกลับเข้าคิวได้ กรุณาลองใหม่อีกครั้ง' });
   }
 };
 
