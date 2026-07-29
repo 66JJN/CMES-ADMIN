@@ -29,6 +29,26 @@ const shopSettingSchema = new mongoose.Schema({
     type: Number,
     default: 15 // seconds between items
   },
+  // Persisted playback state. This must survive an Admin/OBS/backend restart.
+  queuePaused: {
+    type: Boolean,
+    default: false
+  },
+  queueNextPlayAt: {
+    type: Date,
+    default: null
+  },
+  queuePausedAt: { type: Date, default: null },
+  queuePausedRemainingSeconds: { type: Number, default: null },
+  queueOrder: {
+    type: [String],
+    default: []
+  },
+  queueLastError: {
+    message: { type: String, default: null },
+    at: { type: Date, default: null },
+    itemId: { type: String, default: null }
+  },
   // Birthday Feature Settings
   birthdaySpendingRequirement: {
     type: Number,

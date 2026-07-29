@@ -3,23 +3,89 @@
  */
 import ImageQueue from '../models/ImageQueue.js';
 import CheckHistory from '../models/CheckHistory.js';
+import ShopSetting from '../models/ShopSetting.js';
 
 // ==========================================
 // PER-SHOP STATE MANAGEMENT
 // ==========================================
-const shopStates = new Map();
+export async function getQueueControl(shopId) {
+  return ShopSetting.findOneAndUpdate(
+    { shopId },
+    { $setOnInsert: { shopId } },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  ).lean();
+}
+
+export async function updateQueueControl(shopId, updates) {
+  return ShopSetting.findOneAndUpdate(
+    { shopId },
+    { $setOnInsert: { shopId }, $set: updates },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  ).lean();
+}
+
+export async function recordQueueError(shopId, error, itemId = null) {
+  await updateQueueControl(shopId, {
+    queueLastError: { message: error.message || String(error), at: new Date(), itemId: itemId ? String(itemId) : null }
+  });
+}
+
+/** Backend restart recovery: never leave an item locked in `playing`. */
+export async function recoverQueue(shopId, io) {
+  const playing = await ImageQueue.findOne({ shopId, status: 'playing' });
+  if (!playing) return;
+  await ImageQueue.updateOne({ _id: playing._id, shopId }, {
+    $set: { status: 'approved' }, $unset: { playingAt: '' }
+  });
+  await updateQueueControl(shopId, { queueNextPlayAt: null });
+  if (io) io.to(shopId).emit('admin-update-queue');
+  console.log(`[QueueRecovery][${shopId}] Returned ${playing._id} to approved queue after restart.`);
+}
 
 /**
  * Get or initialize state สำหรับ shop
  */
-export function getShopState(shopId) {
-  if (!shopStates.has(shopId)) {
-    shopStates.set(shopId, {
-      nextPlayTime: 0,
-      customQueueOrder: []
+/** Emit the same canonical playback payload to Admin and OBS clients. */
+export function emitNowPlaying(item, emitter) {
+  if (!item || !emitter) return;
+  // Socket.IO server emits to the shop room; a single socket receives only its
+  // own recovery event when a display reconnects.
+  const target = emitter.sockets ? emitter.to(item.shopId) : emitter;
+
+  if (item.type === 'gift' && item.giftOrder) {
+    target.emit('now-playing-gift', {
+      id: item._id?.toString(),
+      sender: item.sender || 'Guest',
+      avatar: item.avatar || null,
+      tableNumber: item.giftOrder.tableNumber || 1,
+      items: item.giftOrder.items || [],
+      note: item.giftOrder.note || '',
+      totalPrice: item.giftOrder.totalPrice || item.price || 0,
+      time: item.time,
+      type: 'gift',
+      playingAt: item.playingAt
     });
+    return;
   }
-  return shopStates.get(shopId);
+
+  target.emit('now-playing-image', {
+    id: item._id.toString(),
+    sender: item.sender,
+    price: item.price,
+    time: item.time,
+    filePath: item.filePath,
+    text: item.text,
+    textColor: item.textColor || '#ffffff',
+    socialColor: item.socialColor || '#ffffff',
+    textLayout: item.textLayout || 'right',
+    socialType: item.socialType,
+    socialName: item.socialName,
+    qrCodePath: item.qrCodePath,
+    width: item.width,
+    height: item.height,
+    type: item.type || (item.filePath ? 'image' : 'text'),
+    playingAt: item.playingAt
+  });
 }
 
 // ==========================================
@@ -94,7 +160,8 @@ export async function completeItem(item, io) {
  */
 export async function playNextItem(shopId, io) {
   try {
-    const state = getShopState(shopId);
+    const control = await getQueueControl(shopId);
+    if (control.queuePaused) return;
 
     const approvedItems = await ImageQueue.find({ status: 'approved', shopId });
 
@@ -108,8 +175,9 @@ export async function playNextItem(shopId, io) {
     approvedItems.sort((a, b) => {
       const idA = a._id.toString();
       const idB = b._id.toString();
-      const indexA = state.customQueueOrder.indexOf(idA);
-      const indexB = state.customQueueOrder.indexOf(idB);
+      const persistedOrder = control.queueOrder || [];
+      const indexA = persistedOrder.indexOf(idA);
+      const indexB = persistedOrder.indexOf(idB);
 
       if (indexA !== -1 && indexB !== -1) return indexA - indexB;
       if (indexA !== -1) return -1;
@@ -121,47 +189,15 @@ export async function playNextItem(shopId, io) {
     const nextItem = approvedItems[0];
     console.log(`[QueueWorker][${shopId}] Starting next item: ${nextItem._id}`);
 
-    const updated = await ImageQueue.findByIdAndUpdate(
-      nextItem._id,
+    // The status condition prevents two worker ticks from claiming the same item.
+    const updated = await ImageQueue.findOneAndUpdate(
+      { _id: nextItem._id, shopId, status: 'approved' },
       { status: 'playing', playingAt: new Date() },
-      { returnDocument: 'after' }
+      { new: true }
     );
 
     if (updated && io) {
-      if (updated.type === "gift" && updated.giftOrder) {
-        io.to(shopId).emit("now-playing-gift", {
-          id: updated._id?.toString(),
-          sender: updated.sender || "Guest",
-          avatar: updated.avatar || null,
-          tableNumber: updated.giftOrder.tableNumber || 1,
-          items: updated.giftOrder.items || [],
-          note: updated.giftOrder.note || "",
-          totalPrice: updated.giftOrder.totalPrice || updated.price || 0,
-          time: updated.time,
-          type: "gift",
-          playingAt: updated.playingAt
-        });
-      } else {
-        io.to(shopId).emit("now-playing-image", {
-          id: updated._id.toString(),
-          sender: updated.sender,
-          price: updated.price,
-          time: updated.time,
-          filePath: updated.filePath,
-          text: updated.text,
-          textColor: updated.textColor || '#ffffff',
-          socialColor: updated.socialColor || '#ffffff',
-          textLayout: updated.textLayout || 'right',
-          socialType: updated.socialType,
-          socialName: updated.socialName,
-          qrCodePath: updated.qrCodePath,
-          width: updated.width,
-          height: updated.height,
-          type: updated.type || (updated.filePath ? "image" : "text"),
-          playingAt: updated.playingAt
-        });
-      }
-
+      emitNowPlaying(updated, io);
       io.to(shopId).emit("admin-update-queue");
     }
   } catch (err) {
@@ -178,11 +214,12 @@ export async function playNextItem(shopId, io) {
  */
 export async function processAutoQueue(shopId, io) {
   try {
-    const state = getShopState(shopId);
+    const control = await getQueueControl(shopId);
+    if (control.queuePaused) return;
 
-    if (Date.now() < state.nextPlayTime) {
+    if (control.queueNextPlayAt && Date.now() < new Date(control.queueNextPlayAt).getTime()) {
       if (io) {
-        const remaining = Math.ceil((state.nextPlayTime - Date.now()) / 1000);
+        const remaining = Math.ceil((new Date(control.queueNextPlayAt).getTime() - Date.now()) / 1000);
         io.to(shopId).emit('pause-display', { remaining, isCountingDown: true });
       }
       return;
@@ -202,8 +239,9 @@ export async function processAutoQueue(shopId, io) {
           await completeItem(playingItem, io);
 
           console.log(`[QueueWorker][${shopId}] Starting 15s delay...`);
-          state.nextPlayTime = Date.now() + 15000;
-          if (io) io.to(shopId).emit('pause-display', { remaining: 15, isCountingDown: true });
+          const delaySeconds = Math.max(0, Number(control.queueDelay) || 15);
+          await updateQueueControl(shopId, { queueNextPlayAt: new Date(Date.now() + delaySeconds * 1000) });
+          if (io) io.to(shopId).emit('pause-display', { remaining: delaySeconds, isCountingDown: true });
         }
       } else {
         console.log(`[QueueWorker][${shopId}] Item ${playingItem._id} has no playingAt. Setting now.`);
@@ -218,5 +256,6 @@ export async function processAutoQueue(shopId, io) {
     }
   } catch (err) {
     console.error(`[QueueWorker][${shopId}] Error:`, err);
+    await recordQueueError(shopId, err);
   }
 }

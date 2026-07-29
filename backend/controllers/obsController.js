@@ -3,12 +3,22 @@
  */
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { signDisplayToken } from '../middleware/authMiddleware.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // GET /obs-image-overlay.html
 export const getObsOverlay = (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'obs-image-overlay.html'));
+};
+
+// Admin creates a short-lived, read-only token for an OBS browser source.
+export const getObsDisplayToken = (req, res) => {
+  try {
+    res.json({ success: true, token: signDisplayToken(req.shopId) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Unable to create OBS token' });
+  }
 };
 
 // POST /api/lucky-wheel/spin

@@ -64,11 +64,14 @@ export default function ImageQueue() {
     timeLeft,
     isPaused,
     pauseTimeLeft,
+    queueControl,
     progressRatio,
     getImageUrl,
     fetchImages,
     fetchHistory,
     handleSkipCurrent,
+    setPlaybackPaused,
+    retryQueue,
     handleRestoreToQueue,
     handleImageClick,
     handleDragStart,
@@ -898,16 +901,23 @@ export default function ImageQueue() {
                 </div>
 
                 <div className="countdown-section">
-                  <div className="countdown-label">{isPaused ? "หน่วงเวลาระหว่างรูป:" : "เวลาที่เหลือ:"}</div>
+                  <div className="countdown-label">{queueControl.queuePaused ? "หยุดคิวชั่วคราว:" : isPaused ? "หน่วงเวลาระหว่างรูป:" : "เวลาที่เหลือ:"}</div>
                   <div
                     className={`countdown-timer ${
                       (timeLeft <= 10 && !isPaused) || (pauseTimeLeft <= 5 && isPaused) ? "warning" : ""
                     }`}
                   >
-                    {isPaused ? formatTime(pauseTimeLeft) : formatTime(timeLeft)}
+                    {queueControl.queuePaused ? formatTime(timeLeft) : isPaused ? formatTime(pauseTimeLeft) : formatTime(timeLeft)}
                   </div>
                   {timeLeft === 0 && !isPaused && <div className="time-up-message">หมดเวลาแล้ว!</div>}
-                  {isPaused && pauseTimeLeft > 0 && <div className="pause-message">กำลังเปลี่ยนรูป...</div>}
+                  {queueControl.queuePaused ? <div className="pause-message">เวลาถูกหยุดไว้จนกด Resume</div> : isPaused && pauseTimeLeft > 0 && <div className="pause-message">กำลังเปลี่ยนรูป...</div>}
+                  <button
+                    onClick={() => setPlaybackPaused(!queueControl.queuePaused).catch((error) => alert(error.message))}
+                    className="refresh-button"
+                    style={{ marginTop: "8px", width: "100%", padding: "10px", background: queueControl.queuePaused ? "#16a34a" : "#f59e0b", color: "white" }}
+                  >
+                    {queueControl.queuePaused ? "▶ Resume queue" : "⏸ Pause queue"}
+                  </button>
                   <button
                     onClick={handleSkipCurrent}
                     className="refresh-button"
@@ -1053,6 +1063,22 @@ export default function ImageQueue() {
                     <span>กดอนุมัติรูปภาพเพื่อแสดง Preview</span>
                   </>
                 )}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", width: "100%", maxWidth: "320px", marginTop: "24px" }}>
+                  <button
+                    onClick={() => setPlaybackPaused(!queueControl.queuePaused).catch((error) => alert(error.message))}
+                    className="refresh-button"
+                    style={{ padding: "10px", background: queueControl.queuePaused ? "#16a34a" : "#f59e0b", color: "white" }}
+                  >
+                    {queueControl.queuePaused ? "▶ เล่นต่อ" : "⏸ หยุดคิว"}
+                  </button>
+                  <button
+                    onClick={() => retryQueue().catch((error) => alert(error.message))}
+                    className="refresh-button"
+                    style={{ padding: "10px", background: "#6366f1", color: "white" }}
+                  >
+                    ↻ กู้คิว
+                  </button>
+                </div>
               </div>
             )}
 

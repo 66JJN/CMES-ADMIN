@@ -57,6 +57,21 @@ export default function DashboardModals() {
   const [copiedImage, setCopiedImage] = useState(false);
   const [copiedRanking, setCopiedRanking] = useState(false);
   const [copiedWheel, setCopiedWheel] = useState(false);
+  const [obsDisplayToken, setObsDisplayToken] = useState('');
+
+  useEffect(() => {
+    if (!showObsModal) return;
+    const loadDisplayToken = async () => {
+      try {
+        const response = await adminFetch(`${API_BASE_URL}/api/obs/display-token`);
+        const data = await response.json();
+        if (response.ok && data.success) setObsDisplayToken(data.token);
+      } catch (error) {
+        console.error('[DashboardModals] OBS token failed', error);
+      }
+    };
+    loadDisplayToken();
+  }, [showObsModal]);
 
   // Reload perks when opening modal (ensures list matches DB / user-facing data)
   useEffect(() => {
@@ -288,10 +303,11 @@ export default function DashboardModals() {
                   <div className="obs-input-group">
                     <label>1. Image & Text</label>
                     <div className="obs-copy-row">
-                      <input type="text" readOnly value={`${API_BASE_URL}/obs-image-overlay.html?shopId=${shopId || adminId}`} />
+                      <input type="text" readOnly value={obsDisplayToken ? `${API_BASE_URL}/obs-image-overlay.html?shopId=${shopId || adminId}&token=${encodeURIComponent(obsDisplayToken)}` : 'กำลังสร้างลิงก์ OBS…'} />
                       <Button
                         onClick={() => {
-                          navigator.clipboard.writeText(`${API_BASE_URL}/obs-image-overlay.html?shopId=${shopId || adminId}`);
+                          if (!obsDisplayToken) return;
+                          navigator.clipboard.writeText(`${API_BASE_URL}/obs-image-overlay.html?shopId=${shopId || adminId}&token=${encodeURIComponent(obsDisplayToken)}`);
                           setCopiedImage(true);
                           setTimeout(() => setCopiedImage(false), 2000);
                         }}

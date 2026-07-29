@@ -9,7 +9,7 @@ import CheckHistory from '../models/CheckHistory.js';
 import Ranking from '../models/Ranking.js';
 import ShopSetting from '../models/ShopSetting.js';
 import { addRankingPoint } from '../services/rankingService.js';
-import { completeItem, getShopState } from '../services/queueService.js';
+import { completeItem, emitNowPlaying, getQueueControl, recoverQueue, updateQueueControl } from '../services/queueService.js';
 import { moderateImage, isAIModerationEnabled } from '../utils/contentModeration.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -234,27 +234,7 @@ export const markAsPlaying = async (req, res) => {
 
     if (!updated) return res.status(404).json({ success: false, message: 'Item not found' });
 
-    if (io) {
-      if (updated.type === "gift" && updated.giftOrder) {
-        io.to(shopId).emit("now-playing-gift", {
-          id: updated._id?.toString(), sender: updated.sender || "Guest",
-          avatar: updated.avatar || null, tableNumber: updated.giftOrder.tableNumber || 1,
-          items: updated.giftOrder.items || [], note: updated.giftOrder.note || "",
-          totalPrice: updated.giftOrder.totalPrice || updated.price || 0,
-          time: updated.time, type: "gift"
-        });
-      } else {
-        io.to(shopId).emit("now-playing-image", {
-          id: updated._id?.toString(), sender: updated.sender, price: updated.price,
-          time: updated.time, filePath: updated.filePath, text: updated.text,
-          textColor: updated.textColor || '#ffffff', socialColor: updated.socialColor || '#ffffff',
-          textLayout: updated.textLayout || 'right', socialType: updated.socialType,
-          socialName: updated.socialName, qrCodePath: updated.qrCodePath,
-          width: updated.width, height: updated.height,
-          type: updated.type || (updated.filePath ? "image" : "text")
-        });
-      }
-    }
+    emitNowPlaying(updated, io);
 
     res.json({ success: true, data: updated });
   } catch (error) {
@@ -354,14 +334,76 @@ export const manualCompleteItem = async (req, res) => {
 
     await completeItem(item, io);
 
-    const state = getShopState(shopId);
-    state.nextPlayTime = Date.now() + 15000;
-    if (io) io.to(shopId).emit('pause-display', { remaining: 15, isCountingDown: true });
+    const control = await getQueueControl(shopId);
+    const delaySeconds = Math.max(0, Number(control.queueDelay) || 15);
+    await updateQueueControl(shopId, { queueNextPlayAt: new Date(Date.now() + delaySeconds * 1000) });
+    if (io) io.to(shopId).emit('pause-display', { remaining: delaySeconds, isCountingDown: true });
 
     res.json({ success: true, message: 'Item completed' });
   } catch (error) {
     console.error('Error completing image:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// GET /api/queue/control
+export const getQueueControlStatus = async (req, res) => {
+  try {
+    const control = await getQueueControl(req.shopId);
+    res.json({ success: true, control });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Unable to load queue control' });
+  }
+};
+
+// POST /api/queue/pause | /resume
+export const setQueuePaused = async (req, res) => {
+  try {
+    const paused = req.params.action === 'pause';
+    let updates = { queuePaused: paused };
+    const playing = await ImageQueue.findOne({ shopId: req.shopId, status: 'playing' });
+    const existing = await getQueueControl(req.shopId);
+    if (paused && !existing.queuePaused && playing) {
+      const elapsed = Math.max(0, (Date.now() - new Date(playing.playingAt || Date.now()).getTime()) / 1000);
+      updates = {
+        ...updates,
+        queuePausedAt: new Date(),
+        queuePausedRemainingSeconds: Math.max(0, (playing.time || 0) - elapsed)
+      };
+    } else if (!paused) {
+      if (playing && existing.queuePausedRemainingSeconds !== null && existing.queuePausedRemainingSeconds !== undefined) {
+        const elapsedBeforePause = Math.max(0, (playing.time || 0) - existing.queuePausedRemainingSeconds);
+        await ImageQueue.updateOne(
+          { _id: playing._id, shopId: req.shopId },
+          { $set: { playingAt: new Date(Date.now() - elapsedBeforePause * 1000) } }
+        );
+      }
+      updates = { ...updates, queuePausedAt: null, queuePausedRemainingSeconds: null };
+    }
+    const control = await updateQueueControl(req.shopId, updates);
+    const io = req.app.get('socketio');
+    if (io) {
+      io.to(req.shopId).emit(paused ? 'pause-display' : 'resume-display', { manual: true });
+      if (!paused && playing) {
+        const resumedItem = await ImageQueue.findOne({ _id: playing._id, shopId: req.shopId, status: 'playing' });
+        emitNowPlaying(resumedItem, io);
+      }
+      io.to(req.shopId).emit('queue-control-updated', control);
+    }
+    res.json({ success: true, control });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Unable to update queue control' });
+  }
+};
+
+// POST /api/queue/retry — safely returns an interrupted playing item to approved.
+export const retryInterruptedQueue = async (req, res) => {
+  try {
+    await recoverQueue(req.shopId, req.app.get('socketio'));
+    const control = await updateQueueControl(req.shopId, { queueLastError: { message: null, at: null, itemId: null } });
+    res.json({ success: true, control });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Unable to retry queue' });
   }
 };
 

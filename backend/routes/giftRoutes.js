@@ -5,7 +5,7 @@ import express from 'express';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import { requireShopId, requireAdminAuth, requireUserServiceAuth } from '../middleware/authMiddleware.js';
+import { requireAdminAuth, requireAdminOrUserServiceAuth, requireDisplayAuth, requireUserServiceAuth } from '../middleware/authMiddleware.js';
 import {
   getGiftSettings, createGiftItem, updateGiftItem, deleteGiftItem,
   updateTableCount, uploadGiftImage, createGiftOrder, updateGiftOrderItems,
@@ -27,7 +27,8 @@ const giftStorage = new CloudinaryStorage({
 const uploadGift = multer({ storage: giftStorage });
 
 // Gift Settings & CRUD
-router.get('/settings', requireShopId, getGiftSettings);
+router.get('/settings', requireAdminOrUserServiceAuth, getGiftSettings);
+router.get('/display-settings', requireDisplayAuth, getGiftSettings);
 router.post('/items', requireAdminAuth, createGiftItem);
 router.put('/items/:id', requireAdminAuth, updateGiftItem);
 router.delete('/items/:id', requireAdminAuth, deleteGiftItem);

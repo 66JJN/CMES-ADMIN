@@ -5,6 +5,7 @@ import express from 'express';
 import { requireAdminAuth } from '../middleware/authMiddleware.js';
 import {
   getObsOverlay,
+  getObsDisplayToken,
   spinLuckyWheel,
   hideLuckyWheel,
   previewLuckyWheel
@@ -14,6 +15,7 @@ const router = express.Router();
 
 // GET /obs-image-overlay.html
 router.get('/obs-image-overlay.html', getObsOverlay);
+router.get('/api/obs/display-token', requireAdminAuth, getObsDisplayToken);
 
 // POST /api/lucky-wheel/spin
 router.post('/api/lucky-wheel/spin', requireAdminAuth, spinLuckyWheel);

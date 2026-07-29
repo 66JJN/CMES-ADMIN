@@ -33,12 +33,14 @@ export default function useImageQueue() {
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [pauseTimeLeft, setPauseTimeLeft] = useState(0);
+  const [queueControl, setQueueControl] = useState({ queuePaused: false, queueLastError: null });
 
   // Refs
   const isCompletingRef = useRef(false);
   const completedIdsRef = useRef(new Set());
   const previewQueueRef = useRef(previewQueue);
   const currentPreviewRef = useRef(currentPreview);
+  const queueControlRef = useRef(queueControl);
 
   // Sync refs to avoid stale closures
   useEffect(() => {
@@ -48,6 +50,10 @@ export default function useImageQueue() {
   useEffect(() => {
     currentPreviewRef.current = currentPreview;
   }, [currentPreview]);
+
+  useEffect(() => {
+    queueControlRef.current = queueControl;
+  }, [queueControl]);
 
   // ===== ฟังก์ชัน Helper: สร้าง URL ของรูปภาพอย่างปลอดภัย =====
   const getImageUrl = useCallback((filePath, baseUrl = API_BASE_URL) => {
@@ -78,7 +84,14 @@ export default function useImageQueue() {
             remaining = Math.max(0, duration - elapsed);
           }
 
-          if (!isActive || !currentPreviewRef.current) {
+          const control = queueControlRef.current;
+          if (control.queuePaused) {
+            setCurrentPreview(playingOnServer);
+            setIsActive(false);
+            setIsPaused(true);
+            setPauseTimeLeft(0);
+            setTimeLeft(Math.max(0, Number(control.queuePausedRemainingSeconds ?? remaining)));
+          } else if (!isActive || !currentPreviewRef.current) {
             setIsPaused(false);
             setPauseTimeLeft(0);
             setCurrentPreview(playingOnServer);
@@ -107,6 +120,35 @@ export default function useImageQueue() {
       setLoading(false);
     }
   }, [isActive]);
+
+  const fetchQueueControl = useCallback(async () => {
+    const response = await adminFetch(`${API_BASE_URL}/api/queue/control`);
+    if (response.ok) {
+      const data = await response.json();
+      setQueueControl(data.control);
+    }
+  }, []);
+
+  const setPlaybackPaused = useCallback(async (paused) => {
+    const response = await adminFetch(`${API_BASE_URL}/api/queue/${paused ? 'pause' : 'resume'}`, { method: 'POST' });
+    if (!response.ok) throw new Error('Unable to update queue');
+    const data = await response.json();
+    setQueueControl(data.control);
+    if (paused) {
+      setIsActive(false);
+      setIsPaused(true);
+      setPauseTimeLeft(0);
+      setTimeLeft(Math.max(0, Number(data.control.queuePausedRemainingSeconds ?? timeLeft)));
+    }
+  }, [timeLeft]);
+
+  const retryQueue = useCallback(async () => {
+    const response = await adminFetch(`${API_BASE_URL}/api/queue/retry`, { method: 'POST' });
+    if (!response.ok) throw new Error('Unable to retry queue');
+    const data = await response.json();
+    setQueueControl(data.control);
+    await fetchImages();
+  }, [fetchImages]);
 
   // ===== ฟังก์ชัน: ดึงประวัติการอนุมัติ/ปฏิเสธ =====
   const fetchHistory = useCallback(async () => {
@@ -333,6 +375,7 @@ export default function useImageQueue() {
   useEffect(() => {
     fetchImages();
     fetchGiftSettings();
+    fetchQueueControl();
 
     if (!socket) return;
 
@@ -341,6 +384,12 @@ export default function useImageQueue() {
     };
 
     const handlePauseDisplay = (data) => {
+      if (data?.manual) {
+        setIsActive(false);
+        setIsPaused(true);
+        setPauseTimeLeft(0);
+        return;
+      }
       if (data && data.remaining !== undefined) {
         setIsActive(false);
         setCurrentPreview(null);
@@ -354,6 +403,7 @@ export default function useImageQueue() {
     const handleResumeDisplay = () => {
       setIsPaused(false);
       setPauseTimeLeft(0);
+      fetchImages();
     };
 
     const handleItemCompleted = (data) => {
@@ -395,6 +445,17 @@ export default function useImageQueue() {
     socket.on('pause-display', handlePauseDisplay);
     socket.on('resume-display', handleResumeDisplay);
     socket.on('item-completed', handleItemCompleted);
+    const handleQueueControlUpdated = (control) => {
+      setQueueControl(control);
+      if (control?.queuePaused) {
+        setIsActive(false);
+        setIsPaused(true);
+        setPauseTimeLeft(0);
+        setTimeLeft(Math.max(0, Number(control.queuePausedRemainingSeconds ?? 0)));
+      }
+    };
+
+    socket.on('queue-control-updated', handleQueueControlUpdated);
 
     return () => {
       socket.off('admin-update-queue', handleQueueUpdate);
@@ -402,8 +463,9 @@ export default function useImageQueue() {
       socket.off('pause-display', handlePauseDisplay);
       socket.off('resume-display', handleResumeDisplay);
       socket.off('item-completed', handleItemCompleted);
+      socket.off('queue-control-updated', handleQueueControlUpdated);
     };
-  }, [socket, fetchImages, fetchGiftSettings, fetchHistory]);
+  }, [socket, fetchImages, fetchGiftSettings, fetchHistory, fetchQueueControl]);
 
   // Polling fallback
   useEffect(() => {
@@ -596,12 +658,15 @@ export default function useImageQueue() {
     isActive,
     isPaused,
     pauseTimeLeft,
+    queueControl,
     totalDuration,
     progressRatio,
     getImageUrl,
     fetchImages,
     fetchHistory,
     handleSkipCurrent,
+    setPlaybackPaused,
+    retryQueue,
     handleRestoreToQueue,
     handleImageClick,
     handleDragStart,

@@ -668,12 +668,13 @@
     // 🔥 อ่าน shopId จาก URL ?shopId=KAIYANG
     const urlParams = new URLSearchParams(window.location.search);
     const shopId = urlParams.get('shopId') || '';
+    const token = urlParams.get('token') || '';
     console.log('[OBS] shopId from URL:', shopId);
 
     // 🔥 เชื่อมต่อ socket พร้อมส่ง shopId เพื่อเข้า room เฉพาะร้าน
     const socket = io(API_BASE_URL, {
       transports: ['websocket', 'polling'],
-      query: { shopId }
+      auth: { token }
     });
 
     // เก็บการตั้งค่ารูปภาพสินค้า
@@ -682,7 +683,7 @@
     // ฟังก์ชันดึงการตั้งค่ารูปภาพ
     async function fetchGiftSettings() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/gifts/settings`, {
+        const response = await fetch(`${API_BASE_URL}/api/gifts/display-settings?token=${encodeURIComponent(token)}`, {
           headers: { 'x-shop-id': shopId }  // 🔥 ส่ง shopId
         });
         if (response.ok) {
@@ -880,6 +881,8 @@
 
         // Update Timer Function
         const updateTimer = () => {
+          // Manual pause is persisted by the server; never age the item locally.
+          if (isPaused) return;
           // ถ้า Server Paused เวลาจะหยุดเดินที่ Server ด้วยหรือไม่?
           // ถ้า Server เป็นคนคุมเวลาและ Aging ตลอด เราไม่ควรหยุด Stop ตาม isPaused
           // แต่ถ้า isPaused หมายถึง "ซ่อนชั่วคราว" ?
@@ -923,6 +926,12 @@
       console.log('[OBS] Pause display received:', data);
       isPaused = true;
 
+      if (data && data.manual) {
+        clearInterval(countdownInterval);
+        clearTimeout(hideTimer);
+        clearTimeout(giftHideTimer);
+      }
+
       // อัปเดตการนับถอยหลัง
       const timerEl = document.getElementById('countdown-timer');
 
@@ -942,8 +951,8 @@
     socket.on('resume-display', (data) => {
       console.log('[OBS] Resume display received:', data);
       isPaused = false;
-      const timerEl = document.getElementById('countdown-timer');
-      if (timerEl) timerEl.classList.remove('show');
+      // The server follows this event with a fresh now-playing payload whose
+      // playingAt was adjusted to the exact persisted remaining duration.
     });
 
     // รับสัญญาณข้ามคิว
@@ -999,7 +1008,8 @@
         note = '',
         totalPrice = 0,
         time = 30,
-        duration = 30
+        duration = 30,
+        playingAt = null
       } = payload;
 
       // บันทึกข้อมูล Debug
@@ -1113,8 +1123,10 @@
       giftContainer.classList.add('show');
 
       // ใช้เวลาจาก payload (30 วินาที)
-      const displayTime = time || duration || 30;
-      console.log('[Gift] Display time:', displayTime, 'seconds');
+      const displayTime = Number(time || duration || 30);
+      const elapsed = playingAt ? Math.max(0, (Date.now() - new Date(playingAt).getTime()) / 1000) : 0;
+      const remaining = Math.max(0, displayTime - elapsed);
+      console.log('[Gift] Display time:', displayTime, 'seconds; remaining:', remaining);
 
       // ซ่อนหลังจากครบระยะเวลา
       clearTimeout(giftHideTimer);
@@ -1123,7 +1135,7 @@
         if (payload.id) {
           socket.emit('complete-playing', payload.id);
         }
-      }, displayTime * 1000);
+      }, remaining * 1000);
     }
   </script>
   <!-- CSS วงล้อโชคดี -->

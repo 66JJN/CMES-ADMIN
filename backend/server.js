@@ -30,7 +30,7 @@ import { startCleanupJob } from "./utils/cron-cleanup.js";
 import { mongoSanitize } from './middleware/securityMiddleware.js';
 
 // Services
-import { processAutoQueue, completeItem, getShopState, playNextItem } from './services/queueService.js';
+import { processAutoQueue, completeItem, emitNowPlaying, playNextItem, recoverQueue, updateQueueControl } from './services/queueService.js';
 
 // Route modules
 import reportRoutes from './routes/reportRoutes.js';
@@ -244,6 +244,22 @@ io.on('connection', (socket) => {
   getSystemConfigWithSettings(shopId).then(config => socket.emit('status', config));
   socket.emit('publicRankingTypeUpdated', { type: publicRankingTypes.get(shopId) || 'alltime' });
 
+  // A browser source can reconnect after OBS/browser/backend restart. Restore
+  // its persisted playback state directly from MongoDB instead of waiting for
+  // a future queue event.
+  Promise.all([
+    ImageQueue.findOne({ shopId, status: 'playing' }).lean(),
+    ShopSetting.findOne({ shopId }).select('queuePaused queuePausedRemainingSeconds queueNextPlayAt').lean()
+  ]).then(([playingItem, control]) => {
+    if (playingItem) emitNowPlaying(playingItem, socket);
+    if (control?.queuePaused) {
+      socket.emit('pause-display', { manual: true, remaining: control.queuePausedRemainingSeconds ?? null });
+    } else if (control?.queueNextPlayAt && new Date(control.queueNextPlayAt).getTime() > Date.now()) {
+      const remaining = Math.ceil((new Date(control.queueNextPlayAt).getTime() - Date.now()) / 1000);
+      socket.emit('pause-display', { isCountingDown: true, remaining });
+    }
+  }).catch(error => console.error('[Socket.IO] Failed to restore queue state:', error));
+
   const adminOnly = (handler) => async (...args) => {
     if (kind !== 'admin') return socket.emit('authorizationError', { message: 'Admin authorization required' });
     return handler(...args);
@@ -310,7 +326,7 @@ io.on('connection', (socket) => {
     try {
       const result = await ImageQueue.updateMany({ shopId, status: 'playing' }, { $set: { status: 'approved' }, $unset: { playingAt: '' } });
       if (result.modifiedCount > 0) io.to(shopId).emit('admin-update-queue');
-      getShopState(shopId).nextPlayTime = 0;
+      await updateQueueControl(shopId, { queueNextPlayAt: null });
     } catch (err) { console.error('[Socket.IO] Error resetting playing items:', err); }
   }));
 
@@ -319,8 +335,7 @@ io.on('connection', (socket) => {
       const item = await ImageQueue.findOne({ _id: imageId, shopId });
       if (item) {
         await completeItem(item, io);
-        const state = getShopState(shopId);
-        state.nextPlayTime = Date.now() + 15000;
+        await updateQueueControl(shopId, { queueNextPlayAt: new Date(Date.now() + 15000) });
         io.to(shopId).emit('pause-display', { remaining: 15, isCountingDown: true });
       }
     } catch (err) { console.error('[Socket.IO] Error completing:', err); }
@@ -334,10 +349,9 @@ io.on('connection', (socket) => {
     }
   }));
 
-  socket.on('admin-reorder-queue', adminOnly((orderIds) => {
+  socket.on('admin-reorder-queue', adminOnly(async (orderIds) => {
     if (Array.isArray(orderIds)) {
-      const state = getShopState(shopId);
-      state.customQueueOrder = orderIds;
+      await updateQueueControl(shopId, { queueOrder: orderIds.map(String) });
       io.to(shopId).emit('queue-reordered', { orderIds });
     }
   }));
@@ -360,6 +374,8 @@ mongoose.connection.once('open', async () => {
       }
     }
     console.log("[Realtime] Config loaded successfully");
+    const shopsWithActiveQueue = await ImageQueue.distinct('shopId', { status: { $in: ['approved', 'playing'] } });
+    for (const shopId of shopsWithActiveQueue) await recoverQueue(shopId, io);
   } catch (error) { console.error("[Realtime] Error loading config:", error); }
 });
 

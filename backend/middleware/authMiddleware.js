@@ -105,6 +105,22 @@ export const requireAdminAuth = async (req, res, next) => {
   }
 };
 
+/** Read-only authorization for an OBS/browser display token. */
+export const requireDisplayAuth = (req, res, next) => {
+  try {
+    const token = bearerToken(req) || req.query.token;
+    const claims = verifyAdminToken(token);
+    if (claims.type !== 'display' || !claims.shopId || !SHOP_ID_PATTERN.test(claims.shopId)) {
+      return unauthorized(res, 'Invalid display token');
+    }
+    req.shopId = claims.shopId;
+    req.auth = { shopId: claims.shopId, type: 'display' };
+    return next();
+  } catch {
+    return unauthorized(res, 'Invalid or expired display token');
+  }
+};
+
 /**
  * Calls received from CMES-USER backend. The shared secret must never reach a browser.
  */

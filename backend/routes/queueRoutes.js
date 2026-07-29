@@ -18,7 +18,10 @@ import {
   getBriefHistory,
   getOrderStatus,
   userDeleteOrder,
-  adminDeleteQueueItem
+  adminDeleteQueueItem,
+  getQueueControlStatus,
+  setQueuePaused,
+  retryInterruptedQueue
 } from '../controllers/queueController.js';
 
 const router = express.Router();
@@ -27,6 +30,10 @@ const router = express.Router();
 router.post('/upload', requireUserServiceAuth, uploadItem);
 
 router.get('/queue', requireAdminAuth, getQueue);
+router.get('/queue/control', requireAdminAuth, getQueueControlStatus);
+router.post('/queue/pause', requireAdminAuth, (req, res, next) => { req.params.action = 'pause'; return setQueuePaused(req, res, next); });
+router.post('/queue/resume', requireAdminAuth, (req, res, next) => { req.params.action = 'resume'; return setQueuePaused(req, res, next); });
+router.post('/queue/retry', requireAdminAuth, retryInterruptedQueue);
 
 router.post('/confirm-payment/:uploadId', requireAdminAuth, confirmPayment);
 
