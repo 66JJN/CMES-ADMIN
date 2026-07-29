@@ -6,6 +6,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import ImageQueue from '../models/ImageQueue.js';
 import CheckHistory from '../models/CheckHistory.js';
+import GiftSetting from '../models/GiftSetting.js';
 import Ranking from '../models/Ranking.js';
 import ShopSetting from '../models/ShopSetting.js';
 import { addRankingPoint } from '../services/rankingService.js';
@@ -23,6 +24,33 @@ const MAX_TEXT_LENGTH = 50;
 const MAX_SOCIAL_NAME_LENGTH = 32;
 const characterCount = (value) => Array.from(value || '').length;
 const cleanString = (value) => typeof value === 'string' ? value.trim() : '';
+
+// Gift orders retain a snapshot for accounting, but their status view should
+// reflect the current item name and image configured by the shop (the same
+// source used by the OBS overlay). Keep the original quantity and paid price.
+const resolveCurrentGiftItems = async (shopId, items) => {
+  if (!Array.isArray(items) || items.length === 0) return items || [];
+
+  const ids = [...new Set(items
+    .map((item) => String(item?.id || ''))
+    .filter((id) => /^[0-9a-f]{24}$/i.test(id)))];
+  if (ids.length === 0) return items;
+
+  const currentItems = await GiftSetting.find({ shopId, _id: { $in: ids } })
+    .select('_id giftName image')
+    .lean();
+  const currentById = new Map(currentItems.map((item) => [String(item._id), item]));
+
+  return items.map((item) => {
+    const current = currentById.get(String(item?.id || ''));
+    if (!current) return item;
+    return {
+      ...item,
+      name: current.giftName || item.name,
+      image: current.image || item.image,
+    };
+  });
+};
 
 // ===== Helper: ลบไฟล์รูปภาพ =====
 const deleteImageFile = (imagePath) => {
@@ -682,6 +710,7 @@ export const getOrderStatus = async (req, res) => {
     if (!queueItem) {
       const historyItem = await CheckHistory.findOne({ shopId, transactionId: orderId }).sort({ approvalDate: -1 });
       if (historyItem) {
+        const giftItems = await resolveCurrentGiftItems(shopId, historyItem.metadata?.giftItems);
         const statusText = historyItem.status === 'completed' ? 'แสดงเสร็จสิ้น' : 'ถูกปฏิเสธ';
         return res.json({
           success: true, status: historyItem.status, statusText,
@@ -693,7 +722,7 @@ export const getOrderStatus = async (req, res) => {
             duration: historyItem.duration || historyItem.metadata?.duration || null,
             approvalDate: historyItem.approvalDate,
             tableNumber: historyItem.metadata?.tableNumber || null,
-            giftItems: historyItem.metadata?.giftItems || null,
+            giftItems,
             note: historyItem.metadata?.note || null,
             textColor: historyItem.metadata?.theme || null,
             socialColor: historyItem.metadata?.socialColor || null,
@@ -706,6 +735,8 @@ export const getOrderStatus = async (req, res) => {
       return res.json({ success: false, status: 'not_found', statusText: 'ไม่พบคำสั่งซื้อ', message: 'ไม่พบข้อมูลคำสั่งซื้อในระบบ' });
     }
 
+    const giftItems = await resolveCurrentGiftItems(shopId, queueItem.giftOrder?.items);
+
     if (queueItem.status === 'pending') {
       const queuePosition = await ImageQueue.countDocuments({ shopId, status: 'pending', receivedAt: { $lt: queueItem.receivedAt } });
       return res.json({
@@ -715,7 +746,7 @@ export const getOrderStatus = async (req, res) => {
           price: queueItem.price, queueNumber: queuePosition + 1, queuePosition: queuePosition + 1,
           totalQueue: await ImageQueue.countDocuments({ status: 'pending', shopId }),
           tableNumber: queueItem.giftOrder?.tableNumber || null,
-          giftItems: queueItem.giftOrder?.items || null,
+          giftItems,
           mediaUrl: queueItem.filePath || null, receivedAt: queueItem.receivedAt || null,
           time: queueItem.time || null, text: queueItem.text || null,
           textColor: queueItem.textColor || null, socialType: queueItem.socialType || null,
@@ -754,7 +785,7 @@ export const getOrderStatus = async (req, res) => {
           estimatedStartTime: estimatedStartTime.toISOString(),
           estimatedEndTime: estimatedEndTime.toISOString(),
           tableNumber: queueItem.giftOrder?.tableNumber || null,
-          giftItems: queueItem.giftOrder?.items || null,
+          giftItems,
           mediaUrl: queueItem.filePath || null, receivedAt: queueItem.receivedAt || null,
           time: queueItem.time || null, text: queueItem.text || null,
           textColor: queueItem.textColor || null, socialType: queueItem.socialType || null,
@@ -773,7 +804,7 @@ export const getOrderStatus = async (req, res) => {
           price: queueItem.price, queuePosition: 1, totalQueue: 1,
           remainingSeconds: Math.round(remainingSeconds),
           tableNumber: queueItem.giftOrder?.tableNumber || null,
-          giftItems: queueItem.giftOrder?.items || null,
+          giftItems,
           mediaUrl: queueItem.filePath || null, receivedAt: queueItem.receivedAt || null,
           startedAt: queueItem.playingAt || null, time: queueItem.time || null,
           text: queueItem.text || null, textColor: queueItem.textColor || null,
