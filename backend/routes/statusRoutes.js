@@ -2,7 +2,7 @@
  * Status Routes — Login, Health, System Config, Time History, Change ShopId, Settings History, Admin Report, Stat-Slip
  */
 import express from 'express';
-import { requireShopId, requireAdminAuth } from '../middleware/authMiddleware.js';
+import { requireShopId, requireAdminAuth, requireUserServiceAuth } from '../middleware/authMiddleware.js';
 import {
   login,
   healthCheck,
@@ -37,16 +37,17 @@ router.post('/api/time-history', requireAdminAuth, createTimeHistory);
 router.delete('/api/time-history/:id', requireAdminAuth, deleteTimeHistory);
 
 // SETTINGS HISTORY
-router.get('/api/settings-history', getSettingsHistory);
+router.get('/api/settings-history', requireAdminAuth, getSettingsHistory);
 
 // ADMIN REPORT
-router.get('/api/admin/report', getAdminReport);
+router.get('/api/admin/report', requireAdminAuth, getAdminReport);
 
 // STAT-SLIP
-router.get('/api/stat-slip', getStatSlip);
-router.post('/api/stat-slip', postStatSlip);
+router.get('/api/stat-slip', requireAdminAuth, getStatSlip);
+router.post('/api/stat-slip', requireUserServiceAuth, postStatSlip);
 
 // CHANGE PASSWORD
 router.post('/api/admin/change-password', requireAdminAuth, changePassword);
+router.post('/api/admin/change-shopid', requireAdminAuth, changeShopId);
 
 export default router;

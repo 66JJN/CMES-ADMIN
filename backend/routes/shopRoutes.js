@@ -5,7 +5,7 @@ import express from 'express';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import { requireShopId } from '../middleware/authMiddleware.js';
+import { requireShopId, requireAdminAuth } from '../middleware/authMiddleware.js';
 import { getShopProfile, uploadShopLogo, updateShopName } from '../controllers/shopController.js';
 
 const router = express.Router();
@@ -23,10 +23,13 @@ const logoStorage = new CloudinaryStorage({
 const uploadLogo = multer({ storage: logoStorage }).single('logo');
 
 // GET /profile
-router.get('/profile', requireShopId, getShopProfile);
+router.get('/profile', requireAdminAuth, getShopProfile);
+// Read-only data is consumed through CMES-USER; this route exposes no admin
+// credentials or mutable settings.
+router.get('/public-profile', requireShopId, getShopProfile);
 
 // POST /logo (multer upload → controller)
-router.post('/logo', requireShopId, (req, res, next) => {
+router.post('/logo', requireAdminAuth, (req, res, next) => {
   uploadLogo(req, res, (err) => {
     if (err) {
       console.error('[ShopLogo] Multer error:', err.message);
@@ -37,6 +40,6 @@ router.post('/logo', requireShopId, (req, res, next) => {
 }, uploadShopLogo);
 
 // POST /name
-router.post('/name', requireShopId, updateShopName);
+router.post('/name', requireAdminAuth, updateShopName);
 
 export default router;

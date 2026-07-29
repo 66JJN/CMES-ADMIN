@@ -1,6 +1,6 @@
 /**
  * authFetch.js — Admin shared fetch utility
- * - อัตโนมัติเพิ่ม x-shop-id + x-admin-id ทุก request
+ * - อัตโนมัติเพิ่ม Bearer JWT ทุก request
  * - รองรับ FormData (ไม่บังคับ Content-Type)
  * - Redirect กลับหน้า login เมื่อได้รับ 401 Unauthorized
  */
@@ -10,20 +10,19 @@ export const handleAdminUnauthorized = () => {
   localStorage.removeItem("adminId");
   localStorage.removeItem("adminUsername");
   localStorage.removeItem("shopId");
+  localStorage.removeItem("adminToken");
   window.location.href = "/";
 };
 
 const adminFetch = async (url, options = {}) => {
-  const shopId = localStorage.getItem("shopId") || "";
-  const adminId = localStorage.getItem("adminId") || "";
+  const token = localStorage.getItem("adminToken") || "";
   const isFormData = options.body instanceof FormData;
 
   const response = await fetch(url, {
     ...options,
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      "x-shop-id": shopId,
-      "x-admin-id": adminId,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
   });

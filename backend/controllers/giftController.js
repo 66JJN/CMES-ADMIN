@@ -44,10 +44,12 @@ export const getGiftSettings = async (req, res) => {
   try {
     const { shopId } = req;
     const gifts = await GiftSetting.find({ shopId });
+    const shopSettings = await ShopSetting.findOne({ shopId }).lean();
+    const isFreeMode = shopSettings?.freeMode === true;
     res.json({
       tableCount: giftSettings.tableCount || 10,
       items: gifts.map(g => ({
-        id: g._id.toString(), name: g.giftName, price: g.price,
+        id: g._id.toString(), name: g.giftName, price: isFreeMode ? 0 : g.price,
         description: g.description || "", imageUrl: g.image || ""
       }))
     });
@@ -180,6 +182,8 @@ export const createGiftOrder = async (req, res) => {
 
     const { shopId } = req;
     const { orderId, sender, senderPhone, userId, email, avatar, tableNumber, note, items, totalPrice } = req.body;
+    const shopSettings = await ShopSetting.findOne({ shopId }).lean();
+    const isFreeMode = shopSettings?.freeMode === true;
 
     if (!orderId || !tableNumber || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: "ข้อมูลคำสั่งซื้อไม่ครบ" });
@@ -197,19 +201,20 @@ export const createGiftOrder = async (req, res) => {
         }
       }
       return item;
-    }));
+    })).then(result => isFreeMode ? result.map(item => ({ ...item, price: 0 })) : result);
+    const effectiveTotalPrice = isFreeMode ? 0 : Math.max(0, Number(totalPrice) || 0);
 
     const queueData = {
       shopId, type: "gift", text: `ส่งของขวัญไปยังโต๊ะ ${tableNumber}`,
-      time: 30, price: Number(totalPrice) || 0, sender: sender || "Guest",
+      time: 30, price: effectiveTotalPrice, sender: sender || "Guest",
       textColor: "#fff", socialType: null, socialName: null, filePath: null,
       composed: true, status: "pending", userId: userId || null,
       email: email || null, avatar: avatar || null, receivedAt: new Date(),
-      paymentStatus: Number(totalPrice) > 0 ? 'paid' : 'free',
-      paidAt: Number(totalPrice) > 0 ? new Date() : null,
+      paymentStatus: isFreeMode ? 'free' : (effectiveTotalPrice > 0 ? 'paid' : 'free'),
+      paidAt: !isFreeMode && effectiveTotalPrice > 0 ? new Date() : null,
       giftOrder: {
         orderId, tableNumber, senderPhone: senderPhone || null,
-        items: enrichedItems, totalPrice: Number(totalPrice) || 0, note: note || ""
+        items: enrichedItems, totalPrice: effectiveTotalPrice, note: note || ""
       }
     };
 
@@ -225,7 +230,7 @@ export const createGiftOrder = async (req, res) => {
     }
 
     // บันทึก ranking
-    if (queueItem.paymentStatus === 'paid' && userId && userId !== 'guest' && userId !== 'unknown') {
+    if (!isFreeMode && queueItem.paymentStatus === 'paid' && userId && userId !== 'guest' && userId !== 'unknown') {
       await addRankingPoint(
         {
           userId, name: sender, amount: Number(totalPrice) || 0, email, avatar, shopId,
@@ -253,11 +258,14 @@ export const updateGiftOrderItems = async (req, res) => {
       return res.status(400).json({ success: false, message: "ต้องมีรายการสินค้าอย่างน้อย 1 รายการ" });
     }
 
-    const totalPrice = items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+    const shopSettings = await ShopSetting.findOne({ shopId }).select('freeMode').lean();
+    const isFreeMode = shopSettings?.freeMode === true;
+    const sanitizedItems = items.map((item) => ({ ...item, price: isFreeMode ? 0 : Math.max(0, Number(item.price) || 0) }));
+    const totalPrice = isFreeMode ? 0 : sanitizedItems.reduce((sum, item) => sum + item.price * (Number(item.quantity) || 1), 0);
 
     const updated = await ImageQueue.findOneAndUpdate(
       { _id: id, shopId, type: "gift" },
-      { "giftOrder.items": items, "giftOrder.totalPrice": totalPrice, price: totalPrice },
+      { "giftOrder.items": sanitizedItems, "giftOrder.totalPrice": totalPrice, price: totalPrice },
       { returnDocument: 'after' }
     );
 
@@ -291,6 +299,9 @@ export const checkBirthdayEligibility = async (req, res) => {
     let settings = await ShopSetting.findOneAndUpdate(
       { shopId }, {}, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
+    if (settings.freeMode === true) {
+      return res.json({ success: true, eligible: true, reason: 'free_mode', totalSpent: 0, required: 0 });
+    }
     const birthdayRequirement = settings.birthdaySpendingRequirement;
     const eligible = totalSpent >= birthdayRequirement;
 

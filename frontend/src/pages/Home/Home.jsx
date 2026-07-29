@@ -40,6 +40,7 @@ function HomeContent() {
     selectedDate,
     selectedMonth,
     selectedYear,
+    freeMode,
     showAllRanks,
     setQrCodeUrl,
     setShowQrModal,
@@ -196,7 +197,7 @@ function HomeContent() {
               </div>
             );
 
-            if (cardId === 'vip') return (
+            if (cardId === 'vip' && !freeMode) return (
               <div
                 key="vip"
                 className={cardWrapperClass}

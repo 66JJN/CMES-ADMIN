@@ -5,7 +5,7 @@ import express from 'express';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import { requireShopId, requireAdminAuth } from '../middleware/authMiddleware.js';
+import { requireShopId, requireAdminAuth, requireUserServiceAuth } from '../middleware/authMiddleware.js';
 import {
   getGiftSettings, createGiftItem, updateGiftItem, deleteGiftItem,
   updateTableCount, uploadGiftImage, createGiftOrder, updateGiftOrderItems,
@@ -35,7 +35,7 @@ router.patch('/table-count', requireAdminAuth, updateTableCount);
 router.post('/upload', requireAdminAuth, uploadGift.single('image'), uploadGiftImage);
 
 // Gift Order (จาก User Backend)
-router.post('/order', requireShopId, createGiftOrder);
+router.post('/order', requireUserServiceAuth, createGiftOrder);
 
 export default router;
 

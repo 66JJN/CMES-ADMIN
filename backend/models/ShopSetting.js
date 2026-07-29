@@ -53,6 +53,11 @@ const shopSettingSchema = new mongoose.Schema({
     type: String,
     default: null  // Cloudinary URL สำหรับภาพ QR code ชำระเงิน
   },
+  // Enforced by the server. Browser-submitted prices are ignored while enabled.
+  freeMode: {
+    type: Boolean,
+    default: false
+  },
   // Gift Settings
   tableCount: {
     type: Number,

@@ -18,7 +18,8 @@ export const ShopProvider = ({ children }) => {
 
   const initializeSocket = useCallback(() => {
 
-    if (!shopId) {
+    const token = localStorage.getItem("adminToken");
+    if (!shopId || !token) {
       console.log("[ShopContext] No shopId, skipping socket initialization");
       return;
     }
@@ -27,7 +28,7 @@ export const ShopProvider = ({ children }) => {
     console.log("[ShopContext] Initializing socket for shop:", shopId);
 
     const newSocket = io(REALTIME_URL, {
-      query: { shopId },
+      auth: { token },
       transports: ["websocket"], // ⚡ Enforce WebSocket only (no polling duplication)
       timeout: 30000,
       reconnection: true,
@@ -88,26 +89,15 @@ export const ShopProvider = ({ children }) => {
 
 
   useEffect(() => {
-
     if (shopId) {
-
       localStorage.setItem("shopId", shopId);
-
-      const cleanup = initializeSocket();
-      return cleanup;
-
-    } else {
-
-      localStorage.removeItem("shopId");
-
-      if (socket) {
-        socket.disconnect();
-        setSocket(null);
-      }
-
+      return initializeSocket();
     }
 
-  }, [shopId]);
+    localStorage.removeItem("shopId");
+    setSocket(null);
+    return undefined;
+  }, [shopId, initializeSocket]);
 
 
   const logout = useCallback(() => {
@@ -122,6 +112,7 @@ export const ShopProvider = ({ children }) => {
     localStorage.removeItem("shopId");
     localStorage.removeItem("adminId");
     localStorage.removeItem("adminUsername");
+    localStorage.removeItem("adminToken");
 
     setShopId(null);
     setIsSocketConnected(false);

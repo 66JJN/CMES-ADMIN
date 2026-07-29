@@ -43,7 +43,8 @@ import queueRoutes from './routes/queueRoutes.js';
 import incomeRoutes from './routes/incomeRoutes.js';
 import obsRoutes from './routes/obsRoutes.js';
 import statusRoutes from './routes/statusRoutes.js';
-import { requireShopId, requireAdminAuth } from './middleware/authMiddleware.js';
+import { requireShopId, requireAdminAuth, requireUserServiceAuth, authenticateSocketToken } from './middleware/authMiddleware.js';
+import ShopSetting from './models/ShopSetting.js';
 
 dotenv.config();
 
@@ -177,8 +178,8 @@ app.use('/api/shop', shopRoutes);
 // Gift routes: /api/gifts/*
 app.use('/api/gifts', giftRoutes);
 // Gift sub-routes mounted at queue level
-app.put('/api/queue/:id/gift-items', requireAdminAuth, requireShopId, updateGiftOrderItems);
-app.get('/api/birthday-eligibility/:email', requireShopId, checkBirthdayEligibility);
+app.put('/api/queue/:id/gift-items', requireAdminAuth, updateGiftOrderItems);
+app.get('/api/birthday-eligibility/:email', requireUserServiceAuth, checkBirthdayEligibility);
 
 // Ranking routes: /api/rankings/*
 app.use('/api/rankings', rankingRoutes);
@@ -187,7 +188,7 @@ app.use('/api/rankings', rankingRoutes);
 app.use('/api/config', configRoutes);
 
 // Queue routes (with multer middleware for /api/upload)
-app.post('/api/upload', requireShopId, uploadUser, (req, res, next) => { next(); });
+app.post('/api/upload', requireUserServiceAuth, uploadUser, (req, res, next) => { next(); });
 app.use('/api', queueRoutes);
 
 // Income stats: /api/admin/*
@@ -202,132 +203,144 @@ app.use('/', statusRoutes);
 // ==========================================
 // SOCKET.IO CONNECTION HANDLER
 // ==========================================
-let publicRankingType = 'alltime';
+const publicRankingTypes = new Map();
 
 const getSystemConfigWithSettings = async (shopId) => {
   try {
     if (!shopId) return systemConfig;
-    const history = await TimeHistory.find({ shopId }).sort({ createdAt: -1 });
-    const settings = history.map(h => ({ id: h.id, mode: h.mode, date: h.date, duration: h.duration, time: h.time, price: h.price }));
-    return { ...systemConfig, settings };
+    const [history, shopSettings] = await Promise.all([
+      TimeHistory.find({ shopId }).sort({ createdAt: -1 }).lean(),
+      ShopSetting.findOne({ shopId }).lean()
+    ]);
+    const config = { ...systemConfig, ...(shopSettings?.systemConfig || {}) };
+    const freeMode = shopSettings?.freeMode === true;
+    const settings = history.map(h => ({
+      id: h.id, mode: h.mode, date: h.date, duration: h.duration,
+      time: h.time, price: freeMode ? 0 : h.price
+    }));
+    return { ...config, freeMode, settings };
   } catch (error) {
     console.error('Error fetching settings for status:', error);
     return systemConfig;
   }
 };
 
-io.on('connection', (socket) => {
-  console.log('[Socket.IO] Client connected:', socket.id);
-  const shopId = socket.handshake.query.shopId;
-
-  if (shopId) {
-    socket.join(shopId);
-    console.log(`[Socket.IO] Client ${socket.id} joined room: ${shopId}`);
-    socket.shopId = shopId;
-    getSystemConfigWithSettings(shopId).then(config => socket.emit('status', config));
-    socket.emit('publicRankingTypeUpdated', { type: publicRankingType });
-  } else {
-    console.warn(`[Socket.IO] Client ${socket.id} connected without shopId`);
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error('Authentication required'));
+    socket.data.auth = await authenticateSocketToken(token);
+    return next();
+  } catch {
+    return next(new Error('Invalid or expired socket session'));
   }
+});
 
-  socket.on('updateStatus', (newStatus) => {
-    systemConfig = { ...systemConfig, ...newStatus };
-    saveSystemConfig();
-    app.set('systemConfig', systemConfig);
-    if (socket.shopId) {
-      getSystemConfigWithSettings(socket.shopId).then(config => io.to(socket.shopId).emit('status', config));
-    }
-  });
+io.on('connection', (socket) => {
+  const { shopId, kind } = socket.data.auth;
+  socket.shopId = shopId;
+  socket.join(shopId);
+  console.log(`[Socket.IO] ${kind} client connected: ${socket.id} (${shopId})`);
+  getSystemConfigWithSettings(shopId).then(config => socket.emit('status', config));
+  socket.emit('publicRankingTypeUpdated', { type: publicRankingTypes.get(shopId) || 'alltime' });
+
+  const adminOnly = (handler) => async (...args) => {
+    if (kind !== 'admin') return socket.emit('authorizationError', { message: 'Admin authorization required' });
+    return handler(...args);
+  };
 
   socket.on('getConfig', async () => {
     const config = await getSystemConfigWithSettings(socket.shopId);
     socket.emit('status', config);
   });
 
-  socket.on('adminUpdateConfig', (newConfig) => {
-    systemConfig = { ...systemConfig, ...newConfig };
-    saveSystemConfig();
-    app.set('systemConfig', systemConfig);
-    if (socket.shopId) io.to(socket.shopId).emit('configUpdate', systemConfig);
-  });
+  socket.on('updateStatus', adminOnly(async (newStatus = {}) => {
+    const { freeMode, ...config } = newStatus;
+    const existing = await ShopSetting.findOne({ shopId }).lean();
+    const update = { $set: { systemConfig: { ...(existing?.systemConfig || {}), ...config } } };
+    if (typeof freeMode === 'boolean') update.$set.freeMode = freeMode;
+    await ShopSetting.findOneAndUpdate({ shopId }, update, { upsert: true, new: true });
+    io.to(shopId).emit('status', await getSystemConfigWithSettings(shopId));
+  }));
 
-  socket.on('addPackage', async (setting) => {
+  socket.on('adminUpdateConfig', adminOnly(async (newConfig = {}) => {
+    const { freeMode, settings, ...config } = newConfig;
+    const existing = await ShopSetting.findOne({ shopId }).lean();
+    const update = { $set: { systemConfig: { ...(existing?.systemConfig || {}), ...config } } };
+    if (typeof freeMode === 'boolean') update.$set.freeMode = freeMode;
+    await ShopSetting.findOneAndUpdate({ shopId }, update, { upsert: true, new: true });
+    io.to(shopId).emit('configUpdate', await getSystemConfigWithSettings(shopId));
+    io.to(shopId).emit('status', await getSystemConfigWithSettings(shopId));
+  }));
+
+  socket.on('addPackage', adminOnly(async (setting = {}) => {
     try {
-      if (!socket.shopId) return;
+      const shopSettings = await ShopSetting.findOne({ shopId }).lean();
+      const price = shopSettings?.freeMode === true ? 0 : Math.max(0, Number(setting.price) || 0);
       await TimeHistory.create({
-        shopId: socket.shopId, id: String(setting.id),
+        shopId, id: String(setting.id),
         mode: setting.mode, date: setting.date, duration: setting.duration,
-        time: setting.time, price: setting.price
+        time: setting.time, price
       });
-      if (socket.shopId) {
-        io.to(socket.shopId).emit('settingAdded', setting);
-        const config = await getSystemConfigWithSettings(socket.shopId);
-        io.to(socket.shopId).emit('status', config);
-      }
+      io.to(shopId).emit('settingAdded', { ...setting, price });
+      io.to(shopId).emit('status', await getSystemConfigWithSettings(shopId));
     } catch (error) { console.error('[Socket.IO] Error adding TimeHistory:', error); }
-  });
+  }));
 
-  socket.on('removeSetting', async (id) => {
+  socket.on('removeSetting', adminOnly(async (id) => {
     try {
-      if (!socket.shopId) return;
-      await TimeHistory.findOneAndDelete({ id, shopId: socket.shopId });
-      if (socket.shopId) {
-        io.to(socket.shopId).emit('settingRemoved', { id });
-        const config = await getSystemConfigWithSettings(socket.shopId);
-        io.to(socket.shopId).emit('status', config);
-      }
+      await TimeHistory.findOneAndDelete({ id, shopId });
+      io.to(shopId).emit('settingRemoved', { id });
+      io.to(shopId).emit('status', await getSystemConfigWithSettings(shopId));
     } catch (error) { console.error('[Socket.IO] Error removing TimeHistory:', error); }
-  });
+  }));
 
-  socket.on('adminUpdatePerks', (data) => {
+  socket.on('adminUpdatePerks', adminOnly((data = {}) => {
     const { perks } = data;
-    if (perks && Array.isArray(perks) && socket.shopId) {
-      io.to(socket.shopId).emit('perksUpdated', { perks });
+    if (perks && Array.isArray(perks)) {
+      io.to(shopId).emit('perksUpdated', { perks });
     }
-  });
+  }));
 
-  socket.on('pause-display', (data) => { if (socket.shopId) io.to(socket.shopId).emit('pause-display', data); });
-  socket.on('resume-display', (data) => { if (socket.shopId) io.to(socket.shopId).emit('resume-display', data); });
+  socket.on('pause-display', adminOnly((data) => io.to(shopId).emit('pause-display', data)));
+  socket.on('resume-display', adminOnly((data) => io.to(shopId).emit('resume-display', data)));
 
-  socket.on('skip-current', async () => {
-    if (socket.shopId) io.to(socket.shopId).emit('skip-current');
+  socket.on('skip-current', adminOnly(async () => {
+    io.to(shopId).emit('skip-current');
     try {
-      const shopFilter = socket.shopId ? { shopId: socket.shopId, status: 'playing' } : { status: 'playing' };
-      const result = await ImageQueue.updateMany(shopFilter, { $set: { status: 'approved' }, $unset: { playingAt: '' } });
-      if (result.modifiedCount > 0 && socket.shopId) io.to(socket.shopId).emit('admin-update-queue');
-      if (socket.shopId) getShopState(socket.shopId).nextPlayTime = 0;
+      const result = await ImageQueue.updateMany({ shopId, status: 'playing' }, { $set: { status: 'approved' }, $unset: { playingAt: '' } });
+      if (result.modifiedCount > 0) io.to(shopId).emit('admin-update-queue');
+      getShopState(shopId).nextPlayTime = 0;
     } catch (err) { console.error('[Socket.IO] Error resetting playing items:', err); }
-  });
+  }));
 
-  socket.on('complete-playing', async (imageId) => {
+  socket.on('complete-playing', adminOnly(async (imageId) => {
     try {
-      const item = await ImageQueue.findById(imageId);
+      const item = await ImageQueue.findOne({ _id: imageId, shopId });
       if (item) {
         await completeItem(item, io);
-        const targetRoom = socket.shopId || item.shopId;
-        const state = getShopState(targetRoom);
+        const state = getShopState(shopId);
         state.nextPlayTime = Date.now() + 15000;
-        if (targetRoom) io.to(targetRoom).emit('pause-display', { remaining: 15, isCountingDown: true });
-        else io.emit('pause-display', { remaining: 15, isCountingDown: true });
+        io.to(shopId).emit('pause-display', { remaining: 15, isCountingDown: true });
       }
     } catch (err) { console.error('[Socket.IO] Error completing:', err); }
-  });
+  }));
 
-  socket.on('setPublicRankingType', (data) => {
+  socket.on('setPublicRankingType', adminOnly((data = {}) => {
     const { type } = data;
     if (['daily', 'monthly', 'alltime'].includes(type)) {
-      publicRankingType = type;
-      if (socket.shopId) io.to(socket.shopId).emit('publicRankingTypeUpdated', { type });
+      publicRankingTypes.set(shopId, type);
+      io.to(shopId).emit('publicRankingTypeUpdated', { type });
     }
-  });
+  }));
 
-  socket.on('admin-reorder-queue', (orderIds) => {
-    if (Array.isArray(orderIds) && socket.shopId) {
-      const state = getShopState(socket.shopId);
+  socket.on('admin-reorder-queue', adminOnly((orderIds) => {
+    if (Array.isArray(orderIds)) {
+      const state = getShopState(shopId);
       state.customQueueOrder = orderIds;
-      io.to(socket.shopId).emit('queue-reordered', { orderIds });
+      io.to(shopId).emit('queue-reordered', { orderIds });
     }
-  });
+  }));
 
   socket.on('disconnect', () => { console.log('[Socket.IO] Client disconnected:', socket.id); });
 });

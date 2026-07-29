@@ -169,3 +169,23 @@
   display: block;
   margin-top: 0.25rem;
 }
+
+/* Keep explanatory text inside the card without squeezing the switch. */
+.feature-card .toggle-card:not(.toggle-card-vertical) > div:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.feature-card .toggle-card .toggle-hint {
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--gray-500, #64748b);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.feature-card .toggle-card .switch-minimal {
+  flex: 0 0 auto;
+}

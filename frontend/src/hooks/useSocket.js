@@ -13,6 +13,7 @@ export default function useSocket() {
     enableText, setEnableText,
     enableGift, setEnableGift,
     enableBirthday, setEnableBirthday,
+    freeMode, setFreeMode,
     setPublicRankingType
   } = useContext(HomeContext);
 
@@ -26,6 +27,7 @@ export default function useSocket() {
       setEnableText(config.enableText ?? true);
       setEnableGift(config.enableGift ?? true);
       setEnableBirthday(config.enableBirthday ?? true);
+      setFreeMode(config.freeMode === true);
     };
 
     socket.on("status", handleStatus);
@@ -34,7 +36,7 @@ export default function useSocket() {
     return () => {
       socket.off("status", handleStatus);
     };
-  }, [socket, setSystemOn, setEnableImage, setEnableText, setEnableGift, setEnableBirthday]);
+  }, [socket, setSystemOn, setEnableImage, setEnableText, setEnableGift, setEnableBirthday, setFreeMode]);
 
   // Sync public ranking layouts updates
   useEffect(() => {
@@ -135,11 +137,19 @@ export default function useSocket() {
     });
   };
 
+  const handleToggleFreeMode = () => {
+    if (!socket) return;
+    const nextFreeMode = !freeMode;
+    setFreeMode(nextFreeMode);
+    socket.emit('adminUpdateConfig', { freeMode: nextFreeMode });
+  };
+
   return {
     handleToggleSystem,
     handleToggleImage,
     handleToggleText,
     handleToggleGift,
-    handleToggleBirthday
+    handleToggleBirthday,
+    handleToggleFreeMode
   };
 }

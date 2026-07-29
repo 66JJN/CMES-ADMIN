@@ -3,6 +3,7 @@
  */
 import CheckHistory from '../models/CheckHistory.js';
 import ImageQueue from '../models/ImageQueue.js';
+import ShopSetting from '../models/ShopSetting.js';
 
 const paidRecordsForPeriod = async (shopId, start, end) => {
   // Query ที่รองรับทั้ง records ใหม่ (มี paymentStatus/paidAt) และ records เก่า (legacy ที่ไม่มี fields เหล่านี้)
@@ -46,6 +47,15 @@ export const getIncomeStats = async (req, res) => {
 
     if (!startDate || !endDate) {
       return res.status(400).json({ success: false, message: "Missing startDate or endDate" });
+    }
+
+    const shopSettings = await ShopSetting.findOne({ shopId }).select('freeMode').lean();
+    if (shopSettings?.freeMode === true) {
+      return res.json({ success: true, freeMode: true, data: {
+        totalIncome: 0, totalUsers: 0, totalOrders: 0, freeOrders: 0,
+        totalAllOrders: 0, growthPct: 0, peakHours: [], peakDay: null,
+        dailyTrend: [], activities: [], topUsers: []
+      }});
     }
 
     const start = new Date(startDate);

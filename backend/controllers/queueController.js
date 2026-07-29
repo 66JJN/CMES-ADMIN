@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import ImageQueue from '../models/ImageQueue.js';
 import CheckHistory from '../models/CheckHistory.js';
 import Ranking from '../models/Ranking.js';
+import ShopSetting from '../models/ShopSetting.js';
 import { addRankingPoint } from '../services/rankingService.js';
 import { completeItem, getShopState } from '../services/queueService.js';
 import { moderateImage, isAIModerationEnabled } from '../utils/contentModeration.js';
@@ -50,8 +51,8 @@ export const uploadItem = async (req, res) => {
     // Fetch shop settings from DB to check if system is closed or feature is disabled
     const ShopSetting = (await import('../models/ShopSetting.js')).default;
     const settings = await ShopSetting.findOne({ shopId });
-    const systemConfig = req.app.get('systemConfig') || {};
-    const shopConfig = settings ? { ...systemConfig, ...settings.systemConfig } : systemConfig;
+    const shopConfig = settings?.systemConfig || {};
+    const isFreeMode = settings?.freeMode === true;
 
     const systemOn = shopConfig.systemOpen ?? shopConfig.systemOn ?? true;
     if (!systemOn) {
@@ -81,6 +82,9 @@ export const uploadItem = async (req, res) => {
       if (!userId || userId === "guest" || userId === "unknown") {
         return res.status(403).json({ success: false, error: "กรุณาเข้าสู่ระบบเพื่อใช้ฟีเจอร์วันเกิด" });
       }
+      if (isFreeMode) {
+        // Birthday is free for everyone when payment/ranking are disabled.
+      } else {
       const userRanking = await Ranking.findOne({ email, shopId });
       const totalSpent = userRanking ? (userRanking.points || 0) : 0;
       
@@ -93,11 +97,13 @@ export const uploadItem = async (req, res) => {
           totalSpent, required: birthdayRequirement
         });
       }
+      }
     }
 
+    const effectivePrice = isFreeMode ? 0 : Math.max(0, Number(price) || 0);
     const itemData = {
       shopId, type: type || "image", text: text || "",
-      time: Number(time) || 0, price: Number(price) || 0,
+      time: Number(time) || 0, price: effectivePrice,
       sender: sender || "Unknown", textColor: textColor || "#ffffff",
       socialColor: socialColor || "#ffffff", textLayout: textLayout || "right",
       socialType: socialType || null, socialName: socialName || null,
@@ -107,8 +113,8 @@ export const uploadItem = async (req, res) => {
       status: req.body.status || "pending",
       userId: userId || null, email: email || null, avatar: avatar || null,
       receivedAt: new Date(),
-      paymentStatus: Number(price) > 0 ? 'paid' : 'free',
-      paidAt: Number(price) > 0 ? new Date() : null
+      paymentStatus: isFreeMode ? 'free' : (effectivePrice > 0 ? 'paid' : 'free'),
+      paidAt: !isFreeMode && effectivePrice > 0 ? new Date() : null
     };
 
     // AI Content Moderation — เฉพาะรูปที่ผู้ใช้อัปโหลดเอง (image, birthday) ไม่รวม gift (แอดมินเลือกรูปให้)
@@ -140,9 +146,9 @@ export const uploadItem = async (req, res) => {
     const io = req.app.get('socketio');
     if (io) io.to(shopId).emit("new-upload", queueItem);
 
-    if (queueItem.paymentStatus === 'paid' && userId && userId !== "guest" && userId !== "unknown" && type !== "birthday") {
+    if (!isFreeMode && queueItem.paymentStatus === 'paid' && userId && userId !== "guest" && userId !== "unknown" && type !== "birthday") {
       await addRankingPoint({
-        userId, name: sender, amount: Number(price) || 0, email, avatar, shopId,
+        userId, name: sender, amount: effectivePrice, email, avatar, shopId,
         transactionId: queueItem._id.toString()
       }, io);
     }
@@ -178,10 +184,14 @@ export const confirmPayment = async (req, res) => {
     const queueItem = await ImageQueue.findOne({ _id: uploadId, shopId });
     if (!queueItem) return res.status(404).json({ success: false, error: "ไม่พบข้อมูลการอัปโหลด" });
 
+    const shopSettings = await ShopSetting.findOne({ shopId }).select('freeMode').lean();
+    const isFreeMode = shopSettings?.freeMode === true;
+
     if (queueItem.paymentStatus !== 'paid') {
       queueItem.status = "pending";
-      queueItem.paymentStatus = queueItem.price > 0 ? 'paid' : 'free';
-      queueItem.paidAt = queueItem.price > 0 ? new Date() : null;
+      if (isFreeMode) queueItem.price = 0;
+      queueItem.paymentStatus = !isFreeMode && queueItem.price > 0 ? 'paid' : 'free';
+      queueItem.paidAt = !isFreeMode && queueItem.price > 0 ? new Date() : null;
       queueItem.confirmedAt = new Date();
       if (userId) queueItem.userId = userId;
       if (email) queueItem.email = email;
@@ -190,7 +200,7 @@ export const confirmPayment = async (req, res) => {
     }
 
     const rankUserId = userId || queueItem.userId;
-    if (queueItem.paymentStatus === 'paid' && rankUserId && rankUserId !== "guest" && rankUserId !== "unknown" && queueItem.type !== "birthday") {
+    if (!isFreeMode && queueItem.paymentStatus === 'paid' && rankUserId && rankUserId !== "guest" && rankUserId !== "unknown" && queueItem.type !== "birthday") {
       const io = req.app.get('socketio');
       await addRankingPoint({
         userId: rankUserId, name: queueItem.sender, amount: queueItem.price,

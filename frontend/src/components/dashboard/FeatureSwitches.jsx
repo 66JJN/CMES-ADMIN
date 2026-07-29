@@ -22,6 +22,7 @@ export default function FeatureSwitches({
     enableText,
     enableGift,
     enableBirthday,
+    freeMode,
     birthdaySpendingRequirement,
     setBirthdaySpendingRequirement
   } = useContext(HomeContext);
@@ -31,7 +32,8 @@ export default function FeatureSwitches({
     handleToggleImage,
     handleToggleText,
     handleToggleGift,
-    handleToggleBirthday
+    handleToggleBirthday,
+    handleToggleFreeMode
   } = useSocket();
 
   const {
@@ -77,6 +79,13 @@ export default function FeatureSwitches({
 
           <div className="feature-sub-toggles">
             <div className="toggle-card">
+              <div>
+                <span>โหมดใช้งานฟรี</span>
+                <small className="toggle-hint">Server จะบังคับราคา 0 และปิดรายได้/อันดับจากยอดเงิน</small>
+              </div>
+              <Switch checked={freeMode} onChange={handleToggleFreeMode} disabled={!systemOn} />
+            </div>
+            <div className="toggle-card">
               <span>ฟังก์ชันส่งรูปภาพ</span>
               <Switch
                 checked={enableImage}
@@ -112,7 +121,7 @@ export default function FeatureSwitches({
               />
             </div>
 
-            <div className="toggle-card toggle-card-vertical">
+            {!freeMode && <div className="toggle-card toggle-card-vertical">
               <span>ยอดใช้จ่ายขั้นต่ำสำหรับวันเกิด (บาท)</span>
               <div className="spend-requirement-row">
                 <input
@@ -135,7 +144,7 @@ export default function FeatureSwitches({
               <small className="spend-requirement-hint">
                 ผู้ใช้ต้องใช้จ่ายครบจำนวนนี้ก่อนจึงจะใช้ฟีเจอร์วันเกิดฟรีได้
               </small>
-            </div>
+            </div>}
           </div>
         </div>
       )}

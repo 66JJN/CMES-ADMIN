@@ -5,7 +5,7 @@ import express from 'express';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import { requireShopId, requireAdminAuth } from '../middleware/authMiddleware.js';
+import { requireAdminAuth, requireAdminOrUserServiceAuth } from '../middleware/authMiddleware.js';
 import {
   getBirthdayRequirement, updateBirthdayRequirement,
   getPerks, updatePerks,
@@ -31,11 +31,11 @@ router.get('/birthday-requirement', requireAdminAuth, getBirthdayRequirement);
 router.post('/birthday-requirement', requireAdminAuth, updateBirthdayRequirement);
 
 // Perks
-router.get('/perks', requireShopId, getPerks);
+router.get('/perks', requireAdminOrUserServiceAuth, getPerks);
 router.post('/perks', requireAdminAuth, updatePerks);
 
 // Payment QR Code
-router.get('/payment-qr', requireShopId, getPaymentQr);
+router.get('/payment-qr', requireAdminOrUserServiceAuth, getPaymentQr);
 router.post('/payment-qr', requireAdminAuth, (req, res, next) => {
   uploadPaymentQrMiddleware(req, res, (err) => {
     if (err) {

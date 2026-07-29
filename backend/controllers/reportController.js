@@ -6,7 +6,8 @@ import AdminReport from '../models/AdminReport.js';
 // POST /api/report — รับ report จาก USER backend
 export const createReport = async (req, res) => {
   try {
-    const shopId = req.headers['x-shop-id'] || req.query.shopId || req.body.shopId || 'default';
+    // Route authentication supplies the tenant. Never accept it from payload.
+    const shopId = req.shopId;
     const { category, detail } = req.body;
 
     console.log(`[Report] Received report: shopId="${shopId}", category="${category}"`);

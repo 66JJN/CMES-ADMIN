@@ -10,6 +10,7 @@ import ShopSetting from '../models/ShopSetting.js';
 import ImageQueue from '../models/ImageQueue.js';
 import TimeHistory from '../models/TimeHistory.js';
 import { verifyPassword } from '../utils/hashPasswords.js';
+import { signAdminToken } from '../middleware/authMiddleware.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -34,11 +35,17 @@ export const login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Username หรือ Password ไม่ถูกต้อง' });
     }
 
+    if (!admin.isActive) {
+      return res.status(403).json({ success: false, message: 'บัญชีนี้ถูกปิดใช้งาน' });
+    }
+
+    const token = signAdminToken(admin);
     admin.lastLogin = new Date();
     await admin.save();
 
     res.json({
       success: true, message: 'เข้าสู่ระบบสำเร็จ',
+      token,
       user: {
         id: admin._id, username: admin.username,
         role: admin.role, shopId: admin.shopId
@@ -73,11 +80,17 @@ export const getSystemStatus = async (req, res) => {
       { shopId }, {}, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
 
+    const history = await TimeHistory.find({ shopId }).sort({ createdAt: -1 }).lean();
     const config = {
       ...systemConfig, ...settings.systemConfig,
       shopId: settings.shopId, displayTime: settings.displayTime,
       autoPlayEnabled: settings.autoPlayEnabled,
-      birthdaySpendingRequirement: settings.birthdaySpendingRequirement
+      birthdaySpendingRequirement: settings.birthdaySpendingRequirement,
+      freeMode: settings.freeMode,
+      settings: history.map((item) => ({
+        id: item.id, mode: item.mode, date: item.date, duration: item.duration,
+        time: item.time, price: settings.freeMode ? 0 : item.price
+      }))
     };
 
     res.json(config);
@@ -91,19 +104,27 @@ export const getSystemStatus = async (req, res) => {
 export const updateSystemConfig = async (req, res) => {
   try {
     const { shopId } = req;
-    const updates = req.body;
+    const { freeMode, ...updates } = req.body;
     const systemConfig = req.app.get('systemConfig') || {};
 
+    const existing = await ShopSetting.findOne({ shopId }).lean();
+    const mergedConfig = { ...(existing?.systemConfig || {}), ...updates };
     let settings = await ShopSetting.findOneAndUpdate(
-      { shopId }, { systemConfig: updates }, { upsert: true, returnDocument: 'after' }
+      { shopId }, {
+        $set: {
+          systemConfig: mergedConfig,
+          ...(typeof freeMode === 'boolean' ? { freeMode } : {})
+        }
+      }, { upsert: true, returnDocument: 'after' }
     );
 
     console.log(`[Admin][${shopId}] System config updated:`, Object.keys(updates));
 
     const config = {
-      ...systemConfig, ...updates,
+      ...systemConfig, ...mergedConfig,
       shopId: settings.shopId, displayTime: settings.displayTime,
-      autoPlayEnabled: settings.autoPlayEnabled
+      autoPlayEnabled: settings.autoPlayEnabled,
+      freeMode: settings.freeMode
     };
 
     const io = req.app.get('socketio');

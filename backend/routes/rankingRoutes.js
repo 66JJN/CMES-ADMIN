@@ -2,7 +2,7 @@
  * Ranking Routes — อันดับผู้สนับสนุน (daily, monthly, alltime)
  */
 import express from 'express';
-import { requireShopId, requireAdminAuth } from '../middleware/authMiddleware.js';
+import { requireShopId, requireAdminAuth, requireUserServiceAuth } from '../middleware/authMiddleware.js';
 import {
   getRankings,
   getRankingSummary,
@@ -16,12 +16,12 @@ const router = express.Router();
 router.get('/', requireAdminAuth, getRankings);
 
 // GET /api/rankings/summary
-router.get('/summary', getRankingSummary);
+router.get('/summary', requireAdminAuth, getRankingSummary);
 
 // GET /api/rankings/top
 router.get('/top', requireShopId, getTopRankings);
 
 // PUT /api/rankings/update-avatar
-router.put('/update-avatar', requireShopId, updateRankingAvatar);
+router.put('/update-avatar', requireUserServiceAuth, updateRankingAvatar);
 
 export default router;

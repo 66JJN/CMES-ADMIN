@@ -2,7 +2,7 @@
  * Queue Routes — Upload, Queue CRUD, Approve/Reject/Complete/Playing, History, Order Status
  */
 import express from 'express';
-import { requireShopId, requireAdminAuth } from '../middleware/authMiddleware.js';
+import { requireShopId, requireAdminAuth, requireUserServiceAuth } from '../middleware/authMiddleware.js';
 import {
   uploadItem,
   getQueue,
@@ -24,11 +24,11 @@ import {
 const router = express.Router();
 
 // NOTE: uploadUser multer middleware is mounted in server.js for /api/upload
-router.post('/upload', requireShopId, uploadItem);
+router.post('/upload', requireUserServiceAuth, uploadItem);
 
-router.get('/queue', requireShopId, getQueue);
+router.get('/queue', requireAdminAuth, getQueue);
 
-router.post('/confirm-payment/:uploadId', requireShopId, confirmPayment);
+router.post('/confirm-payment/:uploadId', requireAdminAuth, confirmPayment);
 
 router.post('/playing/:id', requireAdminAuth, markAsPlaying);
 
@@ -48,9 +48,9 @@ router.post('/delete-all-history', requireAdminAuth, deleteAllHistory);
 
 router.get('/history', requireAdminAuth, getBriefHistory);
 
-router.get('/order-status/:orderId', requireShopId, getOrderStatus);
+router.get('/order-status/:orderId', requireUserServiceAuth, getOrderStatus);
 
-router.delete('/user-delete-order/:orderId', requireShopId, userDeleteOrder);
+router.delete('/user-delete-order/:orderId', requireUserServiceAuth, userDeleteOrder);
 
 router.delete('/delete/:id', requireAdminAuth, adminDeleteQueueItem);
 

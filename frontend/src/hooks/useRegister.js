@@ -64,9 +64,10 @@ export default function useRegister() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        if (data.user && data.user.id) {
+        if (data.user && data.user.id && data.token) {
           localStorage.setItem("adminId", data.user.id);
           localStorage.setItem("adminUsername", data.user.username);
+          localStorage.setItem("adminToken", data.token);
 
           if (data.user.shopId) {
             console.log(`[Login] Shop ID: ${data.user.shopId}`);

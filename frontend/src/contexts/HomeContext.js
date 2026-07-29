@@ -10,6 +10,7 @@ export function HomeProvider({ children, socket, shopId }) {
   const [enableText, setEnableText] = useState(true);
   const [enableGift, setEnableGift] = useState(true);
   const [enableBirthday, setEnableBirthday] = useState(true);
+  const [freeMode, setFreeMode] = useState(false);
   const [birthdaySpendingRequirement, setBirthdaySpendingRequirement] = useState(100);
 
   // ===== Package controls state =====
@@ -66,6 +67,7 @@ export function HomeProvider({ children, socket, shopId }) {
     enableText, setEnableText,
     enableGift, setEnableGift,
     enableBirthday, setEnableBirthday,
+    freeMode, setFreeMode,
     birthdaySpendingRequirement, setBirthdaySpendingRequirement,
     mode, setMode,
     minute, setMinute,
