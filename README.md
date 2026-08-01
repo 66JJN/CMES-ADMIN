@@ -1,402 +1,341 @@
+<div align="center">
+
+# CMES-ADMIN
+
+**ระบบจัดการคอนเทนต์และคิวแสดงผลบนจอสำหรับร้านอาหาร บาร์ และสถานบันเทิง — ฝั่งผู้ดูแลร้าน**
+
+[Live Demo](https://cmes-admin-frontend.vercel.app/) · [CMES-USER](https://github.com/66JJN/CMES-USER) · [คู่มือทดลองระบบ](./docs/PILOT_DEMO_RUNBOOK.md)
+
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)
+![Socket.IO](https://img.shields.io/badge/Realtime-Socket.IO-010101?logo=socket.io&logoColor=white)
+![OBS](https://img.shields.io/badge/Display-OBS_Studio-302E31?logo=obsstudio&logoColor=white)
+![Deploy](https://img.shields.io/badge/Deploy-Vercel_%2B_Render-6C63FF)
+
+</div>
+
+## ภาพรวม
+
+CMES-ADMIN เป็นศูนย์ควบคุมของระบบ CMES ผู้ดูแลร้านสามารถเปิด–ปิดบริการ จัดการคิวรูปภาพ ข้อความ ของขวัญ และวันเกิด ตรวจรายการที่ AI flag ควบคุมการเล่นบน OBS ติดตามสถานะคำสั่งซื้อ และดูข้อมูลรายได้หรืออันดับผู้สนับสนุนแยกตามร้านได้แบบ realtime
+
+ระบบออกแบบสำหรับการทดลองใช้งานจริงในสถานบันเทิง โดยให้ MongoDB เป็น source of truth ของคิว ไม่พึ่ง localStorage หรือ memory สำหรับสถานะสำคัญ และมี recovery เมื่อ backend หรือ OBS หลุด
+
+### จุดเด่น
+
+- คิวถาวรใน MongoDB: `pending → approved → playing → completed/rejected`
+- Auto queue พร้อม pause, resume, skip, retry และปิดรับคิวใหม่โดยไม่ลบคิวเดิม
+- AI moderation สำหรับรูปภาพ: รูปปลอดภัยเข้า approved อัตโนมัติ รูปที่ถูก flag หรือประเมินไม่ได้รอ Admin ตรวจ
+- ข้อความเข้า approved อัตโนมัติเพื่อลดภาระพนักงาน
+- Free mode บังคับราคา `0` จาก server และไม่ใช้ยอดเงินฟรีกับรายได้/อันดับ
+- Admin JWT, Socket authentication, service token และ tenant isolation ตาม `shopId`
+- OBS Browser Source สำหรับ Image/Text/Gift, Ranking และ Lucky Wheel
+- ศูนย์ควบคุม OBS ผ่านเว็บ พร้อม preview และโปรไฟล์จอแยกได้สูงสุด 8 จอ
+- ปรับขนาด ตำแหน่ง การ fit รูป และพื้นหลังการ์ดของ Image/Text/Gift แยกกัน
+- Load test 60 submissions ตรวจคิวซ้ำ เพดานต่อผู้ใช้ และไม่ให้เล่นพร้อมกันเกินหนึ่งรายการต่อร้าน
+
+## Screenshots
+
+> รูปในส่วนนี้สามารถแทนที่ด้วยภาพล่าสุดได้โดยใช้ชื่อไฟล์เดิม
+
 <p align="center">
-  <h1 align="center">⚙️ CMES-ADMIN</h1>
-  <p align="center">
-    <strong>Content Management & Entertainment System — Admin Dashboard</strong>
-    <br />
-    ระบบจัดการ Digital Signage สำหรับร้านเหล้า ผับ บาร์ — ฝั่งแอดมิน
-    <br /><br />
-    <a href="https://cmes-admin-frontend.vercel.app/"><strong>🌐 Live Demo »</strong></a>
-    &nbsp;&nbsp;·&nbsp;&nbsp;
-    <a href="#-screenshots">Screenshots</a>
-    &nbsp;&nbsp;·&nbsp;&nbsp;
-    <a href="#-quick-start">Quick Start</a>
-    &nbsp;&nbsp;·&nbsp;&nbsp;
-    <a href="./docs/SKILL.md">SKILL.md</a>
-  </p>
+  <img src="docs/screenshots/dashboard.png" width="760" alt="CMES Admin dashboard" />
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" alt="React" />
-  <img src="https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white" alt="Node.js" />
-  <img src="https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white" alt="MongoDB" />
-  <img src="https://img.shields.io/badge/Realtime-Socket.IO-010101?logo=socket.io&logoColor=white" alt="Socket.IO" />
-  <img src="https://img.shields.io/badge/Storage-Cloudinary-3448C5?logo=cloudinary&logoColor=white" alt="Cloudinary" />
-  <img src="https://img.shields.io/badge/Moderation-SightEngine-E74C3C" alt="SightEngine" />
-  <img src="https://img.shields.io/badge/Frontend-Vercel-000?logo=vercel&logoColor=white" alt="Vercel" />
-  <img src="https://img.shields.io/badge/Backend-Render-46E3B7?logo=render&logoColor=white" alt="Render" />
-</p>
-
----
-
-## 📋 Table of Contents
-
-- [About](#-about)
-- [Screenshots](#-screenshots)
-- [Architecture](#-architecture)
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Quick Start](#-quick-start)
-- [Environment Variables](#-environment-variables)
-- [Project Structure](#-project-structure)
-- [API Reference](#-api-reference)
-- [Socket.IO Events](#-socketio-events)
-- [Deployment](#-deployment)
-- [Related Repos](#-related-repos)
-- [License](#-license)
-
----
-
-## 📖 About
-
-**CMES-ADMIN** คือ Admin Dashboard สำหรับจัดการระบบ Digital Signage ในร้านเหล้า/ผับ/บาร์:
-
-- 📸 จัดการคิวรูปภาพ → แสดงผลบน OBS overlay
-- 🎛️ เปิด/ปิด features (Image, Text, Gift, Birthday)
-- 🏆 ดู ranking ผู้สนับสนุน (Daily / Monthly / All-time)
-- 🎁 จัดการสินค้าของขวัญ (CRUD + รูปภาพ)
-- 📊 ดูรายงาน + สถิติสลิป
-- 🤖 AI Content Moderation (ตรวจรูปไม่เหมาะสม)
-- 🎡 Lucky Wheel — วงล้อสุ่มรางวัล
-- 🖥️ OBS Studio Control ผ่าน WebSocket
-- 🏪 ตั้งค่าร้าน — ชื่อ, โลโก้, QR Code ชำระเงิน
-
-> **Multi-tenant Architecture** — รองรับหลายร้านด้วย `shopId`, Socket.IO room-based isolation
-
----
-
-## 📸 Screenshots
-
-
-<p align="center">
-  <img src="docs/screenshots/dashboard.png" width="700" alt="Dashboard" />
+  <img src="docs/screenshots/image-queue.png" width="760" alt="CMES persistent queue" />
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/image-queue.png" width="700" alt="Image Queue" />
+  <img src="docs/screenshots/gift-setting.png" width="760" alt="CMES gift settings" />
 </p>
 
-<p align="center">
-  <img src="docs/screenshots/gift-setting.png" width="701" alt="Gift Setting" />
-</p>
+## สถาปัตยกรรม
 
-
-| หน้า | คำอธิบาย |
-|------|----------|
-| **Login** | Admin login ด้วย username + password (per shop) |
-| **Dashboard** | สถิติรวม, system switches, ranking, quick actions |
-| **Image Queue** | จัดการคิวรูปภาพ → approve/reject → แสดงบน OBS |
-| **Gift Setting** | เพิ่ม/แก้ไข/ลบ สินค้าของขวัญ + อัปโหลดรูป |
-| **Report** | ดูรายงานปัญหาจากลูกค้า + อัปเดตสถานะ |
-| **Ranking** | คะแนนสะสม Daily/Monthly/All-time |
-| **Lucky Wheel** | ตั้งค่ารางวัล + ความน่าจะเป็น |
-| **Edit Profile** | แก้ไขชื่อร้าน, โลโก้, QR Code ชำระเงิน |
-
----
-
-## 🏗 Architecture
-
-```
-┌──────────────────┐      ┌──────────────────────────────────┐
-│   CMES-ADMIN     │      │   CMES-ADMIN Backend             │
-│   Frontend       │────▶│   (Express + Socket.IO Server)   │
-│   (React/Vercel) │◀────│   (Render)                       │
-└──────────────────┘      └──────────┬───────────────────────┘
-                                     │
-                     ┌───────────────┼───────────────┐
-                     │               │               │
-               ┌─────┴─────┐   ┌─────┴─────┐   ┌─────┴─────┐
-               │ MongoDB   │   │ Cloudinary│   │SightEngine│
-               │ Atlas     │   │ (Storage) │   │(Moderation│
-               └───────────┘   └───────────┘   └───────────┘
-
-  Socket.IO Room-based:
-  ┌──────────┐  ┌──────────┐  ┌──────────┐
-  │ Shop A   │  │ Shop B   │  │ Shop C   │
-  │ (Room)   │  │ (Room)   │  │ (Room)   │
-  └──────────┘  └──────────┘  └──────────┘
+```mermaid
+flowchart LR
+    Admin["Admin Frontend<br/>React :3000"] -->|"Admin JWT"| AdminAPI["Admin Backend<br/>Express + Socket.IO :5001"]
+    User["User Frontend<br/>React :3001"] --> UserAPI["User Backend<br/>Express :5002"]
+    UserAPI -->|"USER_SERVICE_TOKEN"| AdminAPI
+    AdminAPI <--> Mongo[("MongoDB Atlas<br/>Queue + Settings + History")]
+    UserAPI <--> UserDB[("MongoDB Atlas<br/>Users + Pending Orders")]
+    AdminAPI --> Cloudinary["Cloudinary"]
+    AdminAPI --> AI["SightEngine"]
+    AdminAPI <-->|"Signed Socket session"| OBS["OBS Browser Sources"]
 ```
 
----
+หลักการแยกสิทธิ์:
 
-## ✨ Features
+- Browser ฝั่ง Admin ใช้ JWT ที่ได้จาก `/api/login`
+- Browser ฝั่ง User ไม่เรียก privileged Admin API โดยตรง
+- User backend เรียก Admin backend ด้วย `USER_SERVICE_TOKEN` ผ่าน header ภายในระหว่าง service
+- `shopId` ของคำสั่งที่ต้องยืนยันสิทธิ์มาจาก token/service identity ไม่เชื่อ `x-admin-id` หรือ `x-shop-id` จาก browser เพียงอย่างเดียว
+- Socket.IO แยก room ตามร้านและตรวจ token ก่อนเข้าร่วม room
 
-| Category | Features |
-|----------|----------|
-| **Image Queue** | รับรูปจาก User → Approve/Reject → แสดงบน OBS overlay |
-| **System Switches** | เปิด/ปิด Image, Text, Gift, Birthday, ตั้งราคา/เวลา |
-| **Gift Management** | CRUD สินค้า + อัปโหลดรูป Cloudinary + ตั้งราคา |
-| **Ranking** | Daily/Monthly/All-time, Top users, realtime update |
-| **Report** | ดูรายงานจากลูกค้า, อัปเดตสถานะ (new/in-progress/resolved) |
-| **Lucky Wheel** | ตั้งค่ารางวัล, animation, ความน่าจะเป็น |
-| **OBS Control** | ควบคุม OBS Studio ผ่าน obs-websocket-js |
-| **Content Moderation** | AI ตรวจรูปไม่เหมาะสม (SightEngine: nudity/weapon/alcohol) |
-| **Shop Profile** | ชื่อร้าน, โลโก้, QR Code ชำระเงิน |
-| **Income Stats** | สถิติรายรับและกิจกรรมแบบ Real-time ซิงค์ผ่าน Socket.IO พร้อมการคำนวณช่วงวันที่แบบไดนามิกตามเวลาไทย (Bangkok timezone) |
-| **Multi-tenant** | shopId isolation, Socket.IO rooms, compound DB indexes |
-| **Cron Jobs** | ลบรูปเก่า > 2 วัน อัตโนมัติ |
+## Queue และการกู้คืน
 
----
+MongoDB เก็บคิวและสถานะควบคุมหลักทั้งหมด:
 
-## 🛠 Tech Stack
+| สถานะ | ความหมาย |
+|---|---|
+| `pending` | รอ AI หรือ Admin ตรวจ |
+| `approved` | พร้อมเล่นตามลำดับคิว |
+| `playing` | กำลังแสดงบน OBS |
+| `completed` | แสดงเสร็จและย้ายไปประวัติ |
+| `rejected` | Admin ปฏิเสธและเก็บเหตุผลในประวัติ |
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | React 19, React Router 7, CSS Variables (theme.css), FontAwesome |
-| **Backend** | Node.js, Express 4 (Modular Routers & Controllers), ES Modules |
-| **Database** | MongoDB Atlas + Mongoose 9 |
-| **Auth** | bcrypt + shopId/adminId headers + Trust Proxy Rate Limiting |
-| **Realtime** | Socket.IO 4 (room-based multi-tenant) |
-| **Storage** | Cloudinary (gifts, user-uploads, logos, QR codes) |
-| **Moderation** | SightEngine API (nudity, weapon, alcohol) |
-| **OBS** | obs-websocket-js 5 |
-| **Cron** | node-cron 4 (scheduled cleanup) |
-| **Deploy** | Vercel (frontend) + Render (backend) |
+พฤติกรรม recovery:
 
----
+- Backend restart: รายการที่ค้าง `playing` ถูกคืนเป็น `approved`
+- OBS/browser source หลุดเกินช่วงตรวจจับ: ระบบ pause คิวและเก็บรายการเดิมไว้
+- OBS กลับมา: โหลดสถานะ `playing`/pause จาก MongoDB และ Admin กด resume หรือ retry ได้
+- การส่งซ้ำด้วย `submissionKey` เดิมจะคืนรายการเดิม ไม่สร้างคิวซ้ำ
+- จำกัด active queue ต่อผู้ใช้ ค่าเริ่มต้น 3 รายการ ปรับได้ด้วย `MAX_ACTIVE_QUEUE_PER_USER`
 
-## 🚀 Quick Start
+### รายได้ อันดับ และประวัติ
 
-### Prerequisites
+- Income และ ranking นับจากรายการที่ชำระเงินสำเร็จ โดยไม่ต้องรอให้ขึ้นจอ
+- Check History ใช้รายการปลายทางที่ `completed` หรือ `rejected`; สรุปรายรับของประวัติอ้างอิงรายการที่ชำระแล้วและแสดงเสร็จ
+- Free mode คืนยอดเงินและอันดับจากยอดสนับสนุนเป็นศูนย์ พร้อมบังคับราคาแพ็กเกจ/รายการใหม่เป็น `0` ที่ server
 
-- Node.js 18+
+## OBS และหลายจอ
+
+หน้า **ศูนย์ควบคุม OBS** ช่วยตั้งค่า Browser Source และควบคุม OBS WebSocket โดยไม่ต้องจัดทุกอย่างใน OBS ด้วยตนเอง
+
+- สร้าง signed display token อายุจำกัดสำหรับ Browser Source
+- มี overlay แยกสำหรับ Image/Text/Gift, Ranking และ Lucky Wheel
+- ตั้งโปรไฟล์จอได้สูงสุด 8 จอ พร้อมชื่อ ความละเอียด และเปิด/ปิดแต่ละจอ
+- แต่ละโปรไฟล์ปรับ preset, image fit, ตำแหน่งแนวตั้ง, card scale, ความกว้างรูป และ text scale
+- พื้นหลังการ์ด Image, Text และ Gift ตั้งแยกเป็นโปร่งใส, มืดโปร่ง หรือเบลอได้
+- การเชื่อม OBS WebSocket คงอยู่แม้ปิด modal และตัดเมื่อผู้ใช้กดตัดการเชื่อมต่อหรือออกจาก dashboard
+- Overlay แสดง fallback “ระบบกำลังเชื่อมต่อ” เมื่อ realtime ขาดหาย
+
+> OBS WebSocket ปกติใช้ `ws://localhost:4455` และเข้าถึงได้จาก browser ที่อยู่เครื่องหรือเครือข่ายเดียวกับ OBS เท่านั้น
+
+## Tech Stack
+
+| ส่วน | เทคโนโลยี |
+|---|---|
+| Frontend | React 19, React Router 7, CSS design system, Socket.IO Client, obs-websocket-js |
+| Backend | Node.js, Express 4, Socket.IO 4, ES Modules |
+| Database | MongoDB Atlas, Mongoose 9 |
+| Authentication | JWT, bcrypt, server-to-server service token |
+| Storage | Cloudinary |
+| Moderation | SightEngine |
+| Operations | Helmet, CORS allowlist, rate limiting, Mongo sanitization, node-cron |
+| Deployment | Vercel frontend, Render backend |
+
+## Local services
+
+ห้ามเปลี่ยนพอร์ตระหว่างสองโปรเจกต์ เพราะ CORS, Socket.IO และ service URL อ้างอิงชุดนี้ร่วมกัน:
+
+| Service | URL |
+|---|---|
+| CMES-ADMIN frontend | `http://localhost:3000` |
+| CMES-ADMIN backend | `http://localhost:5001` |
+| CMES-USER frontend | `http://localhost:3001` |
+| CMES-USER backend | `http://localhost:5002` |
+
+## Quick Start
+
+### Requirements
+
+- Node.js 20+
 - npm
-- MongoDB Atlas account ([free tier](https://cloud.mongodb.com))
-- Cloudinary account ([free tier](https://cloudinary.com))
+- MongoDB Atlas
+- Cloudinary
+- CMES-USER สำหรับทดสอบ customer flow แบบครบระบบ
+- SightEngine เฉพาะเมื่อต้องการ AI moderation
+- OBS Studio 28+ เฉพาะเมื่อต้องการทดสอบจอจริง
 
-### 1. Clone & Install
+### ติดตั้ง
 
-```bash
-git clone https://github.com/66JJN/CMES-ADMIN
+```powershell
+git clone https://github.com/66JJN/CMES-ADMIN.git
 cd CMES-ADMIN
 
-# Backend
 cd backend
-cp .env.example .env    # แก้ไขค่าใน .env
+Copy-Item .env.example .env
 npm install
 
-# Frontend (new terminal)
-cd frontend
-cp .env.example .env    # แก้ไขค่าใน .env
+cd ../frontend
+Copy-Item .env.example .env
 npm install
 ```
 
-### 2. Configure Environment
+ใส่ค่าจริงใน `.env` ของ backend/frontend โดยไม่ commit ไฟล์ดังกล่าว
 
-แก้ไข `backend/.env` — ดู [Environment Variables](#-environment-variables) สำหรับรายละเอียด
+### เปิดระบบ local
 
-### 3. Run Development
-
-```bash
-# Terminal 1 — Backend (port 5001)
-cd backend
+```powershell
+# Terminal 1 — Admin backend :5001
+cd D:\CMES-ADMIN\backend
 npm run dev
 
-# Terminal 2 — Frontend (port 3000)
-cd frontend
+# Terminal 2 — Admin frontend :3000
+cd D:\CMES-ADMIN\frontend
 npm start
 ```
 
-### 4. Open Dashboard
+เปิด `http://localhost:3000`
 
-```
-http://localhost:3000
-```
+## Environment Variables
 
----
+ดูรายการครบและค่าตัวอย่างได้ที่ [backend/.env.example](./backend/.env.example) และ [frontend/.env.example](./frontend/.env.example)
 
-## 🔑 Environment Variables
+### Admin backend
 
-### Frontend (`frontend/.env`)
+| Variable | หน้าที่ | Required |
+|---|---|---|
+| `MONGODB_URI` | MongoDB connection ของข้อมูล Admin/Queue | Yes |
+| `ADMIN_JWT_SECRET` | เซ็น Admin JWT; ต้องคงที่ระหว่าง deploy | Yes |
+| `USER_SERVICE_TOKEN` | ยืนยัน User backend; ต้องตรงกับ CMES-USER backend | Yes |
+| `USER_FRONTEND_URL` | CORS allowlist ของ User frontend | Yes |
+| `ADMIN_FRONTEND_URL` | CORS allowlist ของ Admin frontend | Yes |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary account | Yes |
+| `CLOUDINARY_API_KEY` | Cloudinary API key | Yes |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret | Yes |
+| `SIGHTENGINE_API_USER` | AI moderation user | Optional |
+| `SIGHTENGINE_API_SECRET` | AI moderation secret | Optional |
+| `MAX_ACTIVE_QUEUE_PER_USER` | จำนวน active queue ต่อผู้ใช้; default `3` | Optional |
+| `ADMIN_JWT_EXPIRES_IN` | อายุ Admin JWT; default `8h` | Optional |
+| `OBS_JWT_EXPIRES_IN` | อายุ display token; default `24h` | Optional |
+| `PORT` | Admin backend port; default `5001` | Optional |
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `REACT_APP_API_URL` | Admin backend URL | `http://localhost:5001` |
-| `REACT_APP_REALTIME_URL` | Socket.IO URL (= backend) | `http://localhost:5001` |
-| `REACT_APP_USER_API_URL` | User backend URL | `http://localhost:5002` |
-| `REACT_APP_USER_FRONTEND_URL` | User frontend URL (สำหรับ QR) | `http://localhost:3000` |
+`ADMIN_JWT_SECRET` และ `USER_SERVICE_TOKEN` ทำคนละหน้าที่และควรเป็นคนละค่า ห้ามส่งตัวแปรใดไปยัง frontend
 
-### Backend (`backend/.env`)
+### Admin frontend
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `MONGODB_URI` | MongoDB connection string | ✅ |
-| `JWT_SECRET` | JWT signing secret (64+ chars) | ✅ |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name | ✅ |
-| `CLOUDINARY_API_KEY` | Cloudinary API key | ✅ |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret | ✅ |
-| `DEFAULT_ADMIN_PASSWORD` | Password สำหรับ admin คนแรก | ✅ |
-| `SIGHTENGINE_API_USER` | SightEngine API user | Optional |
-| `SIGHTENGINE_API_SECRET` | SightEngine API secret | Optional |
-| `PORT` | Server port | `5001` |
+| Variable | Local value |
+|---|---|
+| `REACT_APP_API_URL` | `http://localhost:5001` |
+| `REACT_APP_USER_API_URL` | `http://localhost:5002` |
+| `REACT_APP_USER_FRONTEND_URL` | `http://localhost:3001` |
 
-> 📄 ดูตัวอย่างทั้งหมดที่ [`frontend/.env.example`](./frontend/.env.example) และ [`backend/.env.example`](./backend/.env.example)
+Socket.IO ใช้ backend เดียวกับ `REACT_APP_API_URL` ในโค้ดปัจจุบัน
 
----
+## API สำคัญ
 
-## 📁 Project Structure
+Endpoint ด้านล่างเป็นเพียงภาพรวม โปรดดู `backend/routes/` สำหรับรายการทั้งหมด
 
-```
-CMES-ADMIN/
-├── frontend/
-│   ├── src/
-│   │   ├── pages/                  # ★ Clean Architecture entry points (1 Page = 1 Directory)
-│   │   │   ├── Home/               #   Home.jsx + Home.css — Dashboard
-│   │   │   ├── Login/              #   Login.jsx — Admin login
-│   │   │   ├── EditProfile/        #   EditProfilePage.jsx — Shop profile editor
-│   │   │   ├── OBSControl/         #   OBSControlPage.jsx — OBS WebSocket control
-│   │   │   └── TimeHistory/        #   TimeHistoryPage.jsx — Time history
-│   │   ├── components/
-│   │   │   ├── ui/                 # ★ Reusable presentational components
-│   │   │   │   ├── Button.jsx      #   Gradient/outline/danger buttons
-│   │   │   │   ├── Card.jsx        #   Panel layout + Drag & Drop
-│   │   │   │   ├── Switch.jsx      #   Toggle switch (glassmorphism)
-│   │   │   │   ├── Select.jsx      #   Clean dropdown picker
-│   │   │   │   └── ErrorBoundary.jsx  # Lazy-load crash interceptor
-│   │   │   ├── dashboard/          # ★ Dashboard layout sections + CSS
-│   │   │   │   ├── FeatureSwitches.jsx  # Left: system master switch + toggles
-│   │   │   │   ├── PackageConfig.jsx    # Middle: package + payment QR
-│   │   │   │   ├── VipSupporters.jsx    # Right: VIP ranking
-│   │   │   │   ├── DashboardModals.jsx  # Modals (customer QR, OBS, perks)
-│   │   │   │   ├── ImageQueue.jsx       # Image Queue UI
-│   │   │   │   ├── CheckHistory.jsx     # Check History UI
-│   │   │   │   └── *.css               # AdminHeader, DashboardCards, …
-│   │   │   └── Stat-slip.js        # สถิติสลิป
-│   │   ├── hooks/                  # ★ Business logic custom hooks
-│   │   │   ├── useSocket.js        #   Socket.IO listeners + cleanup
-│   │   │   ├── useDashboardData.js #   HTTP fetches, drag-drop, perks CRUD
-│   │   │   ├── useRankingStats.js  #   Ranking API + birthday config
-│   │   │   ├── useCardReorder.js   #   Card reordering + localStorage
-│   │   │   ├── useImageQueue.js    #   Image queue business logic
-│   │   │   └── useCheckHistory.js  #   Check history business logic
-│   │   ├── contexts/
-│   │   │   ├── ShopContext.js      # ★ Multi-tenant context (shopId + Socket.IO)
-│   │   │   └── HomeContext.js      # ★ Dashboard local state (40+ config vars)
-│   │   ├── utils/
-│   │   │   └── dateHelpers.js      #   Asia/Bangkok date helpers
-│   │   ├── config/
-│   │   │   ├── apiConfig.js        # API URLs
-│   │   │   └── authFetch.js        # ★ Admin fetch utility
-│   │   ├── data-icon/              # Static icon assets
-│   │   ├── theme.css               # ★ Design system (CSS variables + utilities)
-│   │   ├── App.js                  # Router + ShopProvider wrapper
-│   │   ├── App.css                 # Shared component styles (btn, card, input)
-│   │   └── index.js
-│   ├── postcss.config.js           # PostCSS config
-│   ├── tailwind.config.js          # Tailwind config
-│   └── package.json
-│
-├── backend/
-│   ├── server.js                   # ★ Express + Socket.IO + server bootstrap
-│   ├── controllers/                # ★ Controllers (business logic)
-│   ├── routes/                     # ★ Express routers per feature (multi-tenant filtering)
-│   ├── services/                   # ★ Socket services and helper logic
-│   ├── helpers/                    # Helper scripts / models
-│   ├── middleware/                 # Auth verification, rate limiting middlewares
-│   ├── models/                     # Mongoose schemas (10 multi-tenant models)
-│   ├── public/                     # Static overlay views (OBS HTMLs, etc.)
-│   ├── utils/                      # Utilities (AI moderation, password hashing, cron cleanup)
-│   └── package.json
-│
-├── docs/                           # ★ Project documentation folder
-│   ├── screenshots/                # Dashboard screenshots
-│   ├── BUGLOG.md                   # Change history & bug tracking
-│   ├── DESIGN.md                   # System design specifications
-│   └── SKILL.md                    # Architecture & coding guidelines
-└── README.md                       # ← You are here
-```
+| Method | Endpoint | สิทธิ์ | หน้าที่ |
+|---|---|---|---|
+| `POST` | `/login` | Public | Login และออก Admin JWT |
+| `GET` | `/health` | Public | Health check และสถานะ MongoDB |
+| `POST` | `/api/config/update` | Admin | บันทึก system/free/overlay config |
+| `GET` | `/api/queue` | Admin | อ่านคิวของร้าน |
+| `POST` | `/api/queue/pause` | Admin | หยุดเวลาและการเล่นคิว |
+| `POST` | `/api/queue/resume` | Admin | เล่นคิวต่อจากเวลาที่เหลือ |
+| `POST` | `/api/queue/retry` | Admin | คืนงานที่สะดุดกลับเข้า approved |
+| `POST` | `/api/complete/:id` | Admin | ข้าม/จบรายการปัจจุบัน |
+| `POST` | `/api/history/restore/:id` | Admin | ดึงประวัติกลับเข้าคิวใหม่ |
+| `POST` | `/api/upload` | User service | รับ content จาก CMES-USER backend |
+| `POST` | `/api/queue/eligibility` | User service | ตรวจเพดานคิวก่อนรับชำระเงิน |
+| `GET` | `/api/order-status/:orderId` | User service | สถานะรายการสำหรับ User backend |
+| `GET` | `/api/obs/display-token` | Admin | สร้าง signed token สำหรับ OBS |
 
----
+## การทดสอบ
 
-## 📡 API Reference
+### Frontend build
 
-### Authentication
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/login` | — | Admin login |
-| `POST` | `/api/register` | Admin | สร้าง admin user ใหม่ |
-
-### Image Queue
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/api/queue` | Admin | ดูคิวรูปภาพ |
-| `POST` | `/api/queue/approve/:id` | Admin | Approve รูป |
-| `DELETE` | `/api/queue/:id` | Admin | ลบรูปจากคิว |
-
-### Gift Management
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/api/gifts/settings` | Shop | ดูรายการสินค้า |
-| `POST` | `/api/gifts/items` | Admin | เพิ่มสินค้า |
-| `PUT` | `/api/gifts/items/:id` | Admin | แก้ไขสินค้า |
-| `DELETE` | `/api/gifts/items/:id` | Admin | ลบสินค้า |
-
-### Reports
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/report` | — | รับ report จาก User backend |
-| `GET` | `/api/reports` | Admin | ดูรายงานทั้งหมด |
-| `PATCH` | `/api/reports/:id` | Admin | อัปเดตสถานะ report |
-
-### Shop Profile
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/api/shop/profile` | Shop | ดูชื่อ + โลโก้ร้าน |
-| `POST` | `/api/shop/logo` | Shop | อัปโหลดโลโก้ |
-| `POST` | `/api/shop/name` | Shop | เปลี่ยนชื่อร้าน |
-
-> **Auth levels:** `—` = public, `Shop` = ต้องมี `x-shop-id`, `Admin` = ต้องมี `x-shop-id` + `x-admin-id`
-
----
-
-## 🔌 Socket.IO Events
-
-| Event | Direction | Description |
-|-------|-----------|-------------|
-| `status` | Server → Client | System config (switches, price, time) |
-| `new-image` | Server → Client | รูปใหม่เข้าคิว |
-| `ranking-update` | Server → Client | คะแนน ranking อัปเดต |
-| `publicRankingTypeUpdated` | Server → Client | เปลี่ยนประเภท ranking |
-
-> ทุก event emit ไปยัง **room เฉพาะ shop** (`io.to(shopId).emit(...)`)
-
----
-
-## 🚢 Deployment
-
-### Frontend → Vercel
-```bash
+```powershell
 cd frontend
-npx vercel --prod
+npm run build
 ```
 
-### Backend → Render
-1. สร้าง **Web Service** ใน [Render](https://render.com)
-2. Root Directory: `backend`
-3. Build Command: `npm install`
-4. Start Command: `node server.js`
-5. ตั้ง Environment Variables ใน Render Dashboard
+### Queue load test
 
----
+ใช้ MongoDB test/local ที่ไม่มีข้อมูลสำคัญ สคริปต์สร้าง shop ชั่วคราวและล้างข้อมูลของ test shop ใน `finally`
 
-## 🔗 Related Repos
+```powershell
+cd backend
+npm run test:queue-load
+```
 
-| Repo | Description |
-|------|-------------|
-| [CMES-USER](https://github.com/66JJN/CMES-USER) | User App — อัปโหลดรูป, ชำระเงิน, ส่งของขวัญ |
+ผลที่คาดหวัง:
 
----
+```text
+PASS: 60 concurrent submissions; no duplicate; cap enforced; queue recovered and advanced.
+```
 
-## 📄 License
+Load test นี้ตรวจ logic 60 submissions ไม่ใช่การรับรอง production capacity ของ Render หรือเครือข่ายร้าน ควรทดสอบ Wi‑Fi, OBS และ backend จริงก่อนวันใช้งาน
 
-ISC License — feel free to use and modify.
+## Pilot checklist
 
----
+- `/health` ตอบ 200 และ MongoDB connected
+- User ส่ง Image, Text, Gift และ Birthday ตามโหมดที่เปิดได้
+- การกดซ้ำ/เน็ตสะดุดไม่สร้างรายการซ้ำ
+- pause/resume ทำให้เวลาหยุดและเดินต่อถูกต้องทั้ง Admin และ OBS
+- ปิด OBS แล้วคิวไม่หาย; เปิดกลับแล้ว retry/resume ได้
+- restart backend แล้วรายการ approved ยังอยู่
+- ปิดรับคิวใหม่แล้วคิวเดิมไม่ถูกลบ
+- Free mode แสดงราคา 0 จากข้อมูล server
+- ตรวจ OBS Browser Source ทุกโปรไฟล์จอ
+- รัน queue load test ผ่านด้วย environment ที่จะใช้จริง
 
-<p align="center">
-  Originally built with ❤️ by 
-  <a href="https://github.com/66JJN">SUPHAKON</a> 
-  &amp; <a href="https://github.com/Boriwat-wtm">BORIWAT</a>
-  <br />
-  This repo is a rebuilt &amp; extended version by 
-  <a href="https://github.com/66JJN">SUPHAKON</a>
-</p>
+ดูขั้นตอน demo เพิ่มเติมที่ [docs/PILOT_DEMO_RUNBOOK.md](./docs/PILOT_DEMO_RUNBOOK.md)
+
+## Deployment
+
+### Backend — Render
+
+1. Root Directory: `backend`
+2. Build Command: `npm install`
+3. Start Command: `npm start`
+4. ตั้ง environment จาก `backend/.env.example`
+5. ตั้ง `ADMIN_FRONTEND_URL` และ `USER_FRONTEND_URL` เป็น production URL จริง
+6. ตั้ง `USER_SERVICE_TOKEN` ค่าเดียวกับ CMES-USER backend
+
+### Frontend — Vercel
+
+1. Root Directory: `frontend`
+2. Build Command: `npm run build`
+3. ตั้ง `REACT_APP_API_URL`, `REACT_APP_USER_API_URL` และ `REACT_APP_USER_FRONTEND_URL`
+4. Deploy ใหม่เมื่อเปลี่ยนตัวแปร `REACT_APP_*` เพราะค่าถูกฝังตอน build
+
+## Troubleshooting
+
+| อาการ | สาเหตุ/วิธีตรวจ |
+|---|---|
+| `Invalid or expired socket session` | Admin JWT หมดอายุหรือ `ADMIN_JWT_SECRET` เปลี่ยน ให้ login ใหม่และใช้ secret คงที่บน Render |
+| `Not allowed by CORS` | URL frontend ไม่ตรง `ADMIN_FRONTEND_URL`/`USER_FRONTEND_URL` รวมถึงพอร์ต |
+| `EADDRINUSE :5001` | มี Admin backend เปิดอยู่แล้ว ตรวจ process ก่อนเปิดซ้ำ |
+| MongoDB SRV resolve ไม่ได้ | ตรวจ `nslookup -type=SRV _mongodb._tcp.<cluster>` และ network access ของ Atlas |
+| OBS แสดง “ระบบกำลังเชื่อมต่อ” | ตรวจ signed token, Browser Source URL, backend และ Socket.IO |
+| เปิดเว็บได้แต่สวิตช์ไม่บันทึก | ตรวจ Network ของ `/api/config/update`; 401 หมายถึงต้อง login ใหม่ |
+
+## Project Structure
+
+```text
+CMES-ADMIN/
+├── backend/
+│   ├── controllers/       # Queue, config, ranking, gifts, reports, OBS
+│   ├── middleware/        # JWT/service/display auth, rate limits
+│   ├── models/            # Queue, history, settings, ranking, admin
+│   ├── routes/            # Express route modules
+│   ├── services/          # Queue worker, recovery, submissions
+│   ├── public/            # OBS browser-source overlays
+│   ├── scripts/           # Load test and migrations
+│   └── server.js
+├── frontend/
+│   └── src/
+│       ├── components/    # Dashboard and reusable UI
+│       ├── contexts/      # Shop and dashboard state
+│       ├── hooks/         # Queue, realtime, OBS and data logic
+│       ├── pages/         # Login, Home, Queue, Profile, OBS
+│       └── config/        # API and authenticated fetch
+├── docs/
+└── README.md
+```
+
+## Related repository
+
+[CMES-USER](https://github.com/66JJN/CMES-USER) — เว็บสำหรับลูกค้าสมัครสมาชิก เลือกบริการ ส่งคอนเทนต์ ชำระเงิน และติดตามสถานะ
+
+## License
+
+ISC License
+
+<div align="center">
+Built by <a href="https://github.com/66JJN">SUPHAKON SAEPHAN</a>
+</div>
