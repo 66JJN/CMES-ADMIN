@@ -20,6 +20,22 @@ const imageQueueSchema = new mongoose.Schema({
     default: null,
     trim: true
   },
+  // Records created by the Admin OBS test runner. These are isolated from
+  // customer history, payments, rankings, and per-user queue limits.
+  isTest: {
+    type: Boolean,
+    default: false
+  },
+  testSessionId: {
+    type: String,
+    default: null,
+    trim: true
+  },
+  testStep: {
+    type: String,
+    enum: ['image', 'text', 'gift', null],
+    default: null
+  },
   sender: {
     type: String,
     required: true,
@@ -198,6 +214,7 @@ imageQueueSchema.index({ shopId: 1, userId: 1 });
 imageQueueSchema.index({ shopId: 1, submissionKey: 1 }, { unique: true, sparse: true });
 imageQueueSchema.index({ 'giftOrder.orderId': 1 });
 imageQueueSchema.index({ completedAt: 1 });
+imageQueueSchema.index({ shopId: 1, isTest: 1, testSessionId: 1 });
 
 // Virtual for legacy 'id' field compatibility
 imageQueueSchema.virtual('id').get(function () {

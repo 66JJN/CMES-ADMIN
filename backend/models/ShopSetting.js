@@ -49,6 +49,24 @@ const shopSettingSchema = new mongoose.Schema({
     at: { type: Date, default: null },
     itemId: { type: String, default: null }
   },
+  // Persisted source of truth for the one-click OBS presentation test.
+  obsTest: {
+    active: { type: Boolean, default: false },
+    sessionId: { type: String, default: null },
+    startedAt: { type: Date, default: null },
+    currentStep: {
+      type: String,
+      enum: ['image', 'text', 'gift', null],
+      default: null
+    },
+    previousQueueAccepting: { type: Boolean, default: true },
+    status: {
+      type: String,
+      enum: ['idle', 'running', 'failed'],
+      default: 'idle'
+    },
+    lastError: { type: String, default: null }
+  },
   // Selected by Admin for the public User leaderboard; persisted per tenant.
   publicRankingType: {
     type: String,
