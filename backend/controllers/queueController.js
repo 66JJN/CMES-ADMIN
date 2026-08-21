@@ -34,9 +34,13 @@ export const checkSubmissionEligibility = async (req, res) => {
     const userId = cleanString(req.body?.userId);
     const result = await getSubmissionEligibility({ shopId: req.shopId, userId });
     if (!result.eligible) {
-      return res.status(429).json({
+      const isObsTest = result.reason === 'OBS_TEST_ACTIVE';
+      return res.status(isObsTest ? 409 : 429).json({
         success: false,
-        message: `คุณมีคิวที่กำลังรออยู่ครบ ${result.limit} รายการแล้ว กรุณารอให้คิวเดิมแสดงเสร็จก่อน`,
+        code: result.reason || 'QUEUE_LIMIT_REACHED',
+        message: isObsTest
+          ? 'กำลังทดสอบจอ กรุณาลองใหม่อีกครั้งหลังการทดสอบเสร็จ'
+          : `คุณมีคิวที่กำลังรออยู่ครบ ${result.limit} รายการแล้ว กรุณารอให้คิวเดิมแสดงเสร็จก่อน`,
         ...result,
       });
     }
@@ -257,7 +261,7 @@ export const uploadItem = async (req, res) => {
     res.json({ success: true, uploadId: queueItem._id.toString(), aiModeration: queueItem.aiModeration || null });
   } catch (e) {
     console.error("[Admin] Error in upload:", e);
-    res.status(e.status || 500).json({ success: false, error: e.message });
+    res.status(e.status || 500).json({ success: false, code: e.code || 'UPLOAD_FAILED', error: e.message });
   }
 };
 
@@ -436,7 +440,7 @@ export const manualCompleteItem = async (req, res) => {
     await completeItem(item, io);
 
     const control = await getQueueControl(shopId);
-    const delaySeconds = Math.max(0, Number(control.queueDelay) || 15);
+    const delaySeconds = item.isTest ? 1 : Math.max(0, Number(control.queueDelay) || 15);
     await updateQueueControl(shopId, { queueNextPlayAt: new Date(Date.now() + delaySeconds * 1000) });
     if (io) io.to(shopId).emit('pause-display', { remaining: delaySeconds, isCountingDown: true });
 

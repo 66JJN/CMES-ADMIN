@@ -4,6 +4,7 @@
 import ImageQueue from '../models/ImageQueue.js';
 import CheckHistory from '../models/CheckHistory.js';
 import ShopSetting from '../models/ShopSetting.js';
+import { completeObsTestItem } from './obsTestService.js';
 
 // The local worker, manual controls, and recovery paths may all ask a single
 // server to start the next item at the same time. Keep that critical section
@@ -51,15 +52,15 @@ export async function recoverQueue(shopId, io) {
 /**
  * Get or initialize state สำหรับ shop
  */
-/** Emit the same canonical playback payload to Admin and OBS clients. */
-export function emitNowPlaying(item, emitter) {
-  if (!item || !emitter) return;
-  // Socket.IO server emits to the shop room; a single socket receives only its
-  // own recovery event when a display reconnects.
-  const target = emitter.sockets ? emitter.to(item.shopId) : emitter;
-
+export function buildNowPlayingPayload(item) {
+  if (!item) return null;
+  const testMetadata = {
+    isTest: item.isTest === true,
+    testSessionId: item.testSessionId || null,
+    testStep: item.testStep || null,
+  };
   if (item.type === 'gift' && item.giftOrder) {
-    target.emit('now-playing-gift', {
+    return { eventName: 'now-playing-gift', payload: {
       id: item._id?.toString(),
       sender: item.sender || 'Guest',
       avatar: item.avatar || null,
@@ -69,12 +70,12 @@ export function emitNowPlaying(item, emitter) {
       totalPrice: item.giftOrder.totalPrice || item.price || 0,
       time: item.time,
       type: 'gift',
-      playingAt: item.playingAt
-    });
-    return;
+      playingAt: item.playingAt,
+      ...testMetadata,
+    } };
   }
 
-  target.emit('now-playing-image', {
+  return { eventName: 'now-playing-image', payload: {
     id: item._id.toString(),
     sender: item.sender,
     price: item.price,
@@ -90,8 +91,20 @@ export function emitNowPlaying(item, emitter) {
     width: item.width,
     height: item.height,
     type: item.type || (item.filePath ? 'image' : 'text'),
-    playingAt: item.playingAt
-  });
+    playingAt: item.playingAt,
+    ...testMetadata,
+  } };
+}
+
+/** Emit the same canonical playback payload to Admin and OBS clients. */
+export function emitNowPlaying(item, emitter) {
+  if (!item || !emitter) return;
+  const event = buildNowPlayingPayload(item);
+  if (!event) return;
+  // Socket.IO server emits to the shop room; a single socket receives only its
+  // own recovery event when a display reconnects.
+  const target = emitter.sockets ? emitter.to(item.shopId) : emitter;
+  target.emit(event.eventName, event.payload);
 }
 
 // ==========================================
@@ -103,13 +116,20 @@ export function emitNowPlaying(item, emitter) {
  * @param {object} item — ImageQueue document
  * @param {object} io — Socket.IO server instance
  */
-export async function completeItem(item, io) {
+export async function completeItem(item, io, dependencies = {}) {
   try {
-    const deleted = await ImageQueue.findByIdAndDelete(item._id);
+    if (item?.isTest) {
+      await (dependencies.completeObsTestItem || completeObsTestItem)(item, io);
+      return;
+    }
+
+    const deleteRealItem = dependencies.deleteRealItem || ((itemId) => ImageQueue.findByIdAndDelete(itemId));
+    const createHistory = dependencies.createHistory || ((data) => CheckHistory.create(data));
+    const deleted = await deleteRealItem(item._id);
     if (!deleted) return; // Already processed
 
     const txId = (item.type === 'gift' && item.giftOrder?.orderId) ? item.giftOrder.orderId : item._id.toString();
-    await CheckHistory.create({
+    await createHistory({
       shopId: item.shopId,
       transactionId: txId,
       type: item.type || (item.filePath ? 'image' : 'text'),
@@ -255,7 +275,7 @@ export async function processAutoQueue(shopId, io) {
           await completeItem(playingItem, io);
 
           console.log(`[QueueWorker][${shopId}] Starting 15s delay...`);
-          const delaySeconds = Math.max(0, Number(control.queueDelay) || 15);
+          const delaySeconds = playingItem.isTest ? 1 : Math.max(0, Number(control.queueDelay) || 15);
           await updateQueueControl(shopId, { queueNextPlayAt: new Date(Date.now() + delaySeconds * 1000) });
           if (io) io.to(shopId).emit('pause-display', { remaining: delaySeconds, isCountingDown: true });
         }

@@ -1,58 +1,79 @@
 import ImageQueue from '../models/ImageQueue.js';
+import ShopSetting from '../models/ShopSetting.js';
+import { withShopQueueLock } from './shopQueueLock.js';
 
 const activeStatuses = ['pending', 'approved', 'playing'];
-const locks = new Map();
-
 const queueLimit = () => Math.max(1, Number(process.env.MAX_ACTIVE_QUEUE_PER_USER) || 3);
 
-export const getSubmissionEligibility = async ({ shopId, userId }) => {
-  if (!userId || ['guest', 'unknown'].includes(userId)) {
-    return { eligible: true, activeCount: 0, limit: queueLimit() };
-  }
-
-  const activeCount = await ImageQueue.countDocuments({
-    shopId,
-    userId,
-    status: { $in: activeStatuses },
-  });
-  const limit = queueLimit();
-  return { eligible: activeCount < limit, activeCount, limit };
+const defaultDependencies = {
+  findSettings: (shopId) => ShopSetting.findOne({ shopId }).select('obsTest.active').lean(),
+  findExisting: ({ shopId, submissionKey }) => ImageQueue.findOne({ shopId, submissionKey }),
+  countActive: (query) => ImageQueue.countDocuments(query),
+  createItem: (itemData) => ImageQueue.create(itemData),
+  withShopLock: withShopQueueLock,
 };
 
-// Serialise only submissions for the same shop/person. This closes the small
-// count-then-create race without slowing down other guests at the venue.
-const withLock = async (key, work) => {
-  const previous = locks.get(key) || Promise.resolve();
-  const current = previous.catch(() => undefined).then(work);
-  locks.set(key, current);
-  try {
-    return await current;
-  } finally {
-    if (locks.get(key) === current) locks.delete(key);
-  }
-};
+export const createSubmissionService = (overrides = {}) => {
+  const deps = { ...defaultDependencies, ...overrides };
 
-export const createQueueSubmission = async ({ itemData, quotaField, quotaValue }) => {
-  const { shopId, submissionKey } = itemData;
-  const lockKey = `${shopId}:${quotaField || 'submission'}:${quotaValue || submissionKey}`;
+  const isObsTestActive = async (shopId) => {
+    const settings = await deps.findSettings(shopId);
+    return settings?.obsTest?.active === true;
+  };
 
-  return withLock(lockKey, async () => {
-    if (submissionKey) {
-      const existing = await ImageQueue.findOne({ shopId, submissionKey });
-      if (existing) return { item: existing, duplicate: true };
+  const getSubmissionEligibility = async ({ shopId, userId }) => {
+    const limit = queueLimit();
+    if (await isObsTestActive(shopId)) {
+      return { eligible: false, reason: 'OBS_TEST_ACTIVE', activeCount: 0, limit };
     }
 
-    if (quotaField && quotaValue) {
-      const { eligible, limit } = quotaField === 'userId'
-        ? await getSubmissionEligibility({ shopId, userId: quotaValue })
-        : { eligible: true, limit: queueLimit() };
-      if (!eligible) {
-        const error = new Error(`ส่งคิวได้สูงสุด ${limit} รายการต่อคน กรุณารอให้คิวเดิมแสดงเสร็จก่อน`);
-        error.status = 429;
+    if (!userId || ['guest', 'unknown'].includes(userId)) {
+      return { eligible: true, activeCount: 0, limit };
+    }
+
+    const activeCount = await deps.countActive({
+      shopId,
+      userId,
+      status: { $in: activeStatuses },
+    });
+    return { eligible: activeCount < limit, activeCount, limit };
+  };
+
+  const createQueueSubmission = async ({ itemData, quotaField, quotaValue }) => {
+    const { shopId, submissionKey } = itemData;
+
+    return deps.withShopLock(shopId, async () => {
+      if (await isObsTestActive(shopId)) {
+        const error = new Error('กำลังทดสอบจอ กรุณาลองใหม่อีกครั้งหลังการทดสอบเสร็จ');
+        error.status = 409;
+        error.code = 'OBS_TEST_ACTIVE';
         throw error;
       }
-    }
 
-    return { item: await ImageQueue.create(itemData), duplicate: false };
-  });
+      if (submissionKey) {
+        const existing = await deps.findExisting({ shopId, submissionKey });
+        if (existing) return { item: existing, duplicate: true };
+      }
+
+      if (quotaField && quotaValue) {
+        const eligibility = quotaField === 'userId'
+          ? await getSubmissionEligibility({ shopId, userId: quotaValue })
+          : { eligible: true, limit: queueLimit() };
+        if (!eligibility.eligible) {
+          const error = new Error(`ส่งคิวได้สูงสุด ${eligibility.limit} รายการต่อคน กรุณารอให้คิวเดิมแสดงเสร็จก่อน`);
+          error.status = 429;
+          error.code = 'QUEUE_LIMIT_REACHED';
+          throw error;
+        }
+      }
+
+      return { item: await deps.createItem(itemData), duplicate: false };
+    });
+  };
+
+  return { getSubmissionEligibility, createQueueSubmission };
 };
+
+const submissionService = createSubmissionService();
+export const getSubmissionEligibility = submissionService.getSubmissionEligibility;
+export const createQueueSubmission = submissionService.createQueueSubmission;

@@ -254,7 +254,11 @@ export const createGiftOrder = async (req, res) => {
     res.json({ success: true, queueItem });
   } catch (error) {
     console.error("Gift order push failed", error);
-    res.status(error.status || 500).json({ success: false, message: error.message || "บันทึกคำสั่งซื้อไม่สำเร็จ" });
+    res.status(error.status || 500).json({
+      success: false,
+      code: error.code || 'GIFT_ORDER_FAILED',
+      message: error.message || "บันทึกคำสั่งซื้อไม่สำเร็จ"
+    });
   }
 };
 
