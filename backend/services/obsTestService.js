@@ -244,19 +244,39 @@ export const createObsTestService = (overrides = {}) => {
       emitRoom(io, shopId, 'obs-test-status', status);
       return status;
     } catch (error) {
-      await deps.deleteSessionItems({ shopId, isTest: true, testSessionId: sessionId }).catch(() => undefined);
-      await deps.saveSettings(shopId, {
-        systemConfig: { ...(settings?.systemConfig || {}), queueAccepting: previousQueueAccepting },
-        obsTest: {
-          active: false,
-          sessionId: null,
-          startedAt: null,
-          currentStep: null,
-          previousQueueAccepting,
-          status: 'idle',
-          lastError: null,
-        },
-      });
+      try {
+        await deps.deleteSessionItems({ shopId, isTest: true, testSessionId: sessionId });
+        await deps.saveSettings(shopId, {
+          systemConfig: { ...(settings?.systemConfig || {}), queueAccepting: previousQueueAccepting },
+          obsTest: {
+            active: false,
+            sessionId: null,
+            startedAt: null,
+            currentStep: null,
+            previousQueueAccepting,
+            status: 'idle',
+            lastError: null,
+          },
+        });
+      } catch {
+        const message = 'ล้างข้อมูลทดสอบยังไม่สำเร็จ ระบบยังปิดรับคิวอยู่';
+        await deps.saveSettings(shopId, {
+          systemConfig: { ...(settings?.systemConfig || {}), queueAccepting: false },
+          obsTest: {
+            active: true,
+            sessionId,
+            startedAt,
+            currentStep: 'image',
+            previousQueueAccepting,
+            status: 'failed',
+            lastError: message,
+          },
+        }).catch(() => undefined);
+        emitRoom(io, shopId, 'obs-test-status', {
+          active: true, status: 'failed', sessionId, code: 'TEST_CLEANUP_FAILED', message,
+        });
+        throw serviceError(503, 'TEST_CLEANUP_FAILED', message);
+      }
       throw error;
     }
   });

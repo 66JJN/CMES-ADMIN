@@ -5,6 +5,24 @@ import { withShopQueueLock } from './shopQueueLock.js';
 const activeStatuses = ['pending', 'approved', 'playing'];
 const queueLimit = () => Math.max(1, Number(process.env.MAX_ACTIVE_QUEUE_PER_USER) || 3);
 
+export const getQueueAvailabilityError = (settings = {}) => {
+  if (settings?.obsTest?.active) {
+    return {
+      status: 409,
+      code: 'OBS_TEST_ACTIVE',
+      message: 'กำลังทดสอบจอ กรุณาลองใหม่อีกครั้งหลังการทดสอบเสร็จ',
+    };
+  }
+  if (settings?.systemConfig?.queueAccepting === false) {
+    return {
+      status: 403,
+      code: 'QUEUE_NOT_ACCEPTING',
+      message: 'ขณะนี้ร้านปิดรับคิวชั่วคราว กรุณาลองใหม่อีกครั้งภายหลัง',
+    };
+  }
+  return null;
+};
+
 const defaultDependencies = {
   findSettings: (shopId) => ShopSetting.findOne({ shopId }).select('obsTest.active').lean(),
   findExisting: ({ shopId, submissionKey }) => ImageQueue.findOne({ shopId, submissionKey }),

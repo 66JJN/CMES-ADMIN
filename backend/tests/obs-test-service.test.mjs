@@ -9,6 +9,7 @@ const makeFixture = ({
   previousQueueAccepting = true,
   activeSession = false,
   failDelete = false,
+  failInsert = false,
 } = {}) => {
   const inserted = [];
   const deletedQueries = [];
@@ -41,7 +42,11 @@ const makeFixture = ({
       return settings;
     },
     loadGiftItems: async () => [{ _id: 'gift-1', giftName: 'น้ำอัดลม', image: '/gift.png', price: 20 }],
-    insertItems: async (items) => inserted.push(...items.map((item, index) => ({ ...item, _id: `test-${index + 1}` }))),
+    insertItems: async (items) => {
+      inserted.push({ ...items[0], _id: 'test-1' });
+      if (failInsert) throw new Error('insert interrupted');
+      inserted.push(...items.slice(1).map((item, index) => ({ ...item, _id: `test-${index + 2}` })));
+    },
     deleteSessionItems: async (query) => {
       deletedQueries.push(query);
       if (failDelete) throw new Error('database unavailable');
@@ -128,6 +133,20 @@ test('failed cleanup stays locked and can be retried safely', async () => {
   assert.equal(fixture.settings.systemConfig.queueAccepting, false);
   assert.match(fixture.settings.obsTest.lastError, /ล้างข้อมูล/);
   assert.equal(fixture.events.some((event) => event.name === 'obs-test-finished'), false);
+});
+
+test('failed rollback after partial start keeps submissions blocked', async () => {
+  const fixture = makeFixture({ failInsert: true, failDelete: true });
+
+  await assert.rejects(
+    () => fixture.service.start({ shopId: 'JJ', io: fixture.io }),
+    (error) => error.status === 503 && error.code === 'TEST_CLEANUP_FAILED',
+  );
+
+  assert.equal(fixture.settings.obsTest.active, true);
+  assert.equal(fixture.settings.obsTest.status, 'failed');
+  assert.equal(fixture.settings.systemConfig.queueAccepting, false);
+  assert.equal(fixture.inserted.length, 1);
 });
 
 test('completing each item advances and final gift cleans the session', async () => {

@@ -9,7 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { addRankingPoint } from '../services/rankingService.js';
-import { createQueueSubmission } from '../services/submissionService.js';
+import { createQueueSubmission, getQueueAvailabilityError } from '../services/submissionService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -186,8 +186,9 @@ export const createGiftOrder = async (req, res) => {
     const shopSettings = await ShopSetting.findOne({ shopId }).lean();
     const isFreeMode = shopSettings?.freeMode === true;
 
-    if (shopSettings?.systemConfig?.queueAccepting === false) {
-      return res.status(403).json({ success: false, message: 'ขณะนี้ร้านปิดรับคิวชั่วคราว กรุณาลองใหม่อีกครั้งภายหลัง' });
+    const availabilityError = getQueueAvailabilityError(shopSettings);
+    if (availabilityError) {
+      return res.status(availabilityError.status).json({ success: false, ...availabilityError });
     }
 
     if (!orderId || !tableNumber || !Array.isArray(items) || items.length === 0) {

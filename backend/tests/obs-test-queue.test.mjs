@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { buildNowPlayingPayload, completeItem } from '../services/queueService.js';
-import { createSubmissionService } from '../services/submissionService.js';
+import { createSubmissionService, getQueueAvailabilityError } from '../services/submissionService.js';
 
 test('test completion bypasses customer history and delegates to test lifecycle', async () => {
   const calls = [];
@@ -76,4 +76,18 @@ test('eligibility explains that OBS testing temporarily blocks checkout', async 
     activeCount: 0,
     limit: 3,
   });
+});
+
+test('OBS test error takes priority over the generic paused-queue message', () => {
+  assert.deepEqual(
+    getQueueAvailabilityError({
+      obsTest: { active: true },
+      systemConfig: { queueAccepting: false },
+    }),
+    {
+      status: 409,
+      code: 'OBS_TEST_ACTIVE',
+      message: 'กำลังทดสอบจอ กรุณาลองใหม่อีกครั้งหลังการทดสอบเสร็จ',
+    },
+  );
 });

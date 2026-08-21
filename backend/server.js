@@ -32,7 +32,7 @@ import { mongoSanitize } from './middleware/securityMiddleware.js';
 // Services
 import { processAutoQueue, completeItem, emitNowPlaying, playNextItem, recoverQueue, updateQueueControl } from './services/queueService.js';
 import { displayRegistry } from './services/displayRegistry.js';
-import { cleanupAllObsTests, cleanupExpiredObsTests, stopObsTest } from './services/obsTestService.js';
+import { cleanupAllObsTests, cleanupExpiredObsTests, getObsTestStatus, stopObsTest } from './services/obsTestService.js';
 
 // Route modules
 import reportRoutes from './routes/reportRoutes.js';
@@ -313,6 +313,9 @@ io.on('connection', (socket) => {
       displayDisconnectTimers.delete(shopId);
     }
     displayRegistry.connect(shopId);
+    getObsTestStatus(shopId)
+      .then(status => io.to(shopId).emit('obs-test-status', status))
+      .catch(error => console.error(`[OBSTest][${shopId}] Could not publish display readiness:`, error));
   }
   console.log(`[Socket.IO] ${kind} client connected: ${socket.id} (${shopId})`);
   getSystemConfigWithSettings(shopId).then(config => {
@@ -447,6 +450,7 @@ io.on('connection', (socket) => {
 
     try {
       await stopObsTest({ shopId, io, reason: 'display_disconnected' });
+      io.to(shopId).emit('obs-test-status', await getObsTestStatus(shopId));
     } catch (error) {
       console.error(`[OBSTest][${shopId}] Cleanup after display disconnect failed:`, error);
     }

@@ -68,3 +68,18 @@ test('stop sends the active session id and refreshes status', async () => {
   );
   expect(result.current.obsTest.active).toBe(false);
 });
+
+test('refreshes readiness when the customer queue changes', async () => {
+  const socket = createFakeSocket();
+  adminFetch
+    .mockReturnValueOnce(okJson({ success: true, ready: false, code: 'QUEUE_NOT_EMPTY', activeQueueCount: 1 }))
+    .mockReturnValueOnce(okJson({ success: true, ready: true, code: null, activeQueueCount: 0 }));
+  const { result } = renderHook(() => useOBSTest({
+    API_BASE_URL: 'http://localhost:5001', socket,
+  }));
+  await waitFor(() => expect(result.current.obsTest.code).toBe('QUEUE_NOT_EMPTY'));
+
+  act(() => socket.emitLocal('admin-update-queue'));
+  await waitFor(() => expect(result.current.obsTest.ready).toBe(true));
+  expect(adminFetch).toHaveBeenCalledTimes(2);
+});

@@ -55,13 +55,16 @@ export default function useOBSTest({ API_BASE_URL, socket }) {
     if (!socket) return undefined;
     const handleStatus = (status) => mergeStatus(status);
     const handleFinished = (status) => mergeStatus({ ...status, active: false });
+    const handleQueueChanged = () => refreshObsTest();
     socket.on('obs-test-status', handleStatus);
     socket.on('obs-test-finished', handleFinished);
+    socket.on('admin-update-queue', handleQueueChanged);
     return () => {
       socket.off('obs-test-status', handleStatus);
       socket.off('obs-test-finished', handleFinished);
+      socket.off('admin-update-queue', handleQueueChanged);
     };
-  }, [socket, mergeStatus]);
+  }, [socket, mergeStatus, refreshObsTest]);
 
   const runAction = useCallback(async (path, body) => {
     setIsObsTestBusy(true);
