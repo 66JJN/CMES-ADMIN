@@ -76,6 +76,14 @@ test('OBS overlay เรียกตัวตัดสินพื้นหล�
   assert.match(overlayHtml, /content-text/);
 });
 
+test('OBS overlay ล้างเฉพาะข้อมูลของ test session ที่กำลังแสดง', () => {
+  assert.match(overlayHtml, /let activeTestSessionId = null/);
+  assert.match(overlayHtml, /socket\.on\(['"]clear-test-display['"]/);
+  assert.match(overlayHtml, /data\.testSessionId !== activeTestSessionId/);
+  assert.match(overlayHtml, /function clearAllPlaybackTimers\(/);
+  assert.match(overlayHtml, /function hideAllContent\(/);
+});
+
 test('JavaScript ภายใน OBS overlay ไม่มี syntax error', () => {
   const inlineScripts = [...overlayHtml.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
     .map((match) => match[1])

@@ -1002,6 +1002,7 @@
     let isPaused = false; // สถานะหยุดชั่วคราว
     let remainingTime = 0; // เวลาที่เหลืออยู่เมื่อหยุด
     let currentId = null; // ID ของ item ที่กำลังเล่นอยู่
+    let activeTestSessionId = null;
 
     const logoMap = {
       ig: `${API_BASE_URL}/data-icon/ig-logo.png`,
@@ -1014,6 +1015,7 @@
       console.log('[Combined Overlay] Received payload:', payload);
       hideFallback();
       activeGiftPlaybackId = null;
+      activeTestSessionId = payload.isTest ? payload.testSessionId || null : null;
 
       // ลบข้อมูลก่อนหน้า
       clearInterval(countdownInterval);
@@ -1290,8 +1292,39 @@
     const giftNoteText = document.getElementById('gift-note-text');
     const giftCountdown = document.getElementById('gift-countdown');
 
+    function clearAllPlaybackTimers() {
+      clearTimeout(hideTimer);
+      clearTimeout(giftHideTimer);
+      clearInterval(countdownInterval);
+      clearInterval(giftCountdownInterval);
+      hideTimer = null;
+      giftHideTimer = null;
+      countdownInterval = null;
+      giftCountdownInterval = null;
+      activeGiftPlaybackId = null;
+    }
+
+    function hideAllContent() {
+      container.classList.remove('show');
+      giftContainer.classList.remove('show');
+      giftCountdown.classList.remove('show');
+      const timerEl = document.getElementById('countdown-timer');
+      if (timerEl) timerEl.classList.remove('show');
+      currentId = null;
+      isPaused = false;
+      remainingTime = 0;
+    }
+
+    socket.on('clear-test-display', (data = {}) => {
+      if (!activeTestSessionId || data.testSessionId !== activeTestSessionId) return;
+      activeTestSessionId = null;
+      clearAllPlaybackTimers();
+      hideAllContent();
+    });
+
     function showGift(payload = {}) {
       console.log('[Gift Overlay] Received:', payload);
+      activeTestSessionId = payload.isTest ? payload.testSessionId || null : null;
 
       // Track current playing item ID
       currentId = payload.id || null;
