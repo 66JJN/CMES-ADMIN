@@ -43,8 +43,27 @@
     #container.overlay-position-top { top: 8%; bottom: auto; transform-origin: center top; }
     #container.overlay-position-middle { top: 50%; bottom: auto; transform: translateX(-50%) translateY(calc(-50% + 20px)) scale(var(--overlay-scale)); }
     #container.overlay-position-middle.show { transform: translateX(-50%) translateY(-50%) scale(var(--overlay-scale)); }
-    #container.overlay-background-dim { padding: 20px; background: rgba(7, 12, 28, 0.74); box-shadow: 0 18px 58px rgba(0, 0, 0, 0.42); }
-    #container.overlay-background-blur { padding: 20px; background: rgba(15, 23, 42, 0.52); box-shadow: 0 18px 58px rgba(0, 0, 0, 0.35); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+    #container.overlay-content-card-transparent {
+      padding: 0;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    #container.overlay-content-card-dim {
+      padding: clamp(12px, 1.4vw, 20px);
+      background: rgba(7, 12, 28, 0.74);
+      box-shadow: 0 18px 58px rgba(0, 0, 0, 0.42);
+    }
+
+    #container.overlay-content-card-blur {
+      padding: clamp(12px, 1.4vw, 20px);
+      background: rgba(15, 23, 42, 0.52);
+      box-shadow: 0 18px 58px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
 
     /* Visible only while the browser source is reconnecting. */
     #fallback-status {
@@ -121,7 +140,14 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.35);
+      width: 100%;
+      max-width: none;
+      min-width: 0;
+      box-sizing: border-box;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
       border-radius: 12px;
       z-index: 2;
     }
@@ -148,18 +174,55 @@
 
     #container.overlay-image-cover #thumb { object-fit: cover; }
 
-    /* Each content type has its own card treatment. A transparent image can
-       therefore sit beside readable text on a dark/blurred card. */
+    /* Child sections stay transparent. The parent card is selected at runtime
+       after the overlay knows whether the item is image+copy or text-only. */
     #image-section.overlay-image-card-transparent,
-    #info-section.overlay-text-card-transparent { background: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
-    #image-section.overlay-image-card-dim,
-    #info-section.overlay-text-card-dim { background: rgba(7, 12, 28, 0.74); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.36); }
-    #image-section.overlay-image-card-blur,
-    #info-section.overlay-text-card-blur { background: rgba(15, 23, 42, 0.52); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.30); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
-    #image-section.overlay-image-card-dim,
-    #image-section.overlay-image-card-blur { padding: 16px; border-radius: 18px; }
-    #info-section.overlay-text-card-dim,
-    #info-section.overlay-text-card-blur { border-radius: 18px; }
+    #info-section.overlay-text-card-transparent {
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    #container.content-image #info-section {
+      width: clamp(220px, 24vw, 420px);
+      max-width: min(36vw, 420px);
+      min-width: 0;
+      box-sizing: border-box;
+    }
+
+    #container.content-image.layout-top,
+    #container.content-image.layout-bottom {
+      align-items: stretch;
+    }
+
+    #container.content-image.layout-top #info-section,
+    #container.content-image.layout-bottom #info-section {
+      width: min(var(--overlay-image-max-width), 70vw);
+      max-width: min(var(--overlay-image-max-width), 70vw);
+    }
+
+    #container.content-image.layout-center {
+      width: min(var(--overlay-image-max-width), 70vw);
+    }
+
+    #container.content-image.layout-center #info-section {
+      width: 100%;
+      max-width: none;
+    }
+
+    #container.content-text {
+      display: block;
+      width: fit-content;
+      max-width: min(88vw, 760px);
+    }
+
+    #container.content-text #info-section {
+      width: fit-content;
+      max-width: min(88vw, 760px);
+      min-width: 0;
+      box-sizing: border-box;
+    }
 
     /* ส่วนข้อความและ QR Code */
     #info-section {
@@ -767,6 +830,7 @@
   </div>
 
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="/obs-overlay-presentation.js"></script>
   <script>
     const REALTIME_URL = window.location.origin;
     const API_BASE_URL = window.location.origin;
@@ -843,10 +907,45 @@
       imageBackgroundStyle: 'transparent', textBackgroundStyle: 'dim', giftBackgroundStyle: 'dim'
     };
     let overlayStyle = { ...DEFAULT_OVERLAY_STYLE };
+    let currentContentContext = { hasImage: false, textLayout: 'right' };
 
     function boundedNumber(value, fallback, min, max) {
       const parsed = Number(value);
       return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
+    }
+
+    const applyCardBackground = (element, background, classPrefix) => {
+      element.classList.remove(`${classPrefix}-transparent`, `${classPrefix}-dim`, `${classPrefix}-blur`);
+      element.classList.add(`${classPrefix}-${background}`);
+    };
+
+    function applyCurrentContentPresentation() {
+      const presentation = globalThis.CMESOverlayPresentation.resolveOverlayPresentation(
+        currentContentContext,
+        overlayStyle
+      );
+
+      container.classList.remove(
+        'content-image',
+        'content-text',
+        'overlay-content-card-transparent',
+        'overlay-content-card-dim',
+        'overlay-content-card-blur'
+      );
+      container.classList.add(
+        `content-${presentation.contentType}`,
+        `overlay-content-card-${presentation.contentBackground}`
+      );
+
+      // Image and its attached copy are one composition. Child sections must
+      // stay transparent so a dim/blur choice produces one flexible card.
+      applyCardBackground(imageSection, 'transparent', 'overlay-image-card');
+      applyCardBackground(infoSection, 'transparent', 'overlay-text-card');
+      applyCardBackground(
+        document.querySelector('.cyberpunk-gift-card'),
+        presentation.giftBackground,
+        'overlay-gift-card'
+      );
     }
 
     // Keep the browser source resilient even if an older API returns no style,
@@ -859,9 +958,9 @@
       const validBackground = (value, fallback) => ['transparent', 'dim', 'blur'].includes(value) ? value : fallback;
       // `backgroundStyle` is kept only as a fallback for older saved profiles.
       const legacyBackground = validBackground(overlayStyle.backgroundStyle, 'transparent');
-      const imageBackground = validBackground(overlayStyle.imageBackgroundStyle, legacyBackground);
-      const textBackground = validBackground(overlayStyle.textBackgroundStyle, legacyBackground);
-      const giftBackground = validBackground(overlayStyle.giftBackgroundStyle, legacyBackground);
+      overlayStyle.imageBackgroundStyle = validBackground(overlayStyle.imageBackgroundStyle, legacyBackground);
+      overlayStyle.textBackgroundStyle = validBackground(overlayStyle.textBackgroundStyle, legacyBackground);
+      overlayStyle.giftBackgroundStyle = validBackground(overlayStyle.giftBackgroundStyle, legacyBackground);
       const presetScale = preset === 'focus' ? 1.08 : preset === 'cinema' ? 0.94 : 1;
       const presetImage = preset === 'focus' ? 1.15 : 1;
       const presetText = preset === 'focus' ? 0.92 : preset === 'cinema' ? 1.06 : 1;
@@ -871,17 +970,10 @@
       container.style.setProperty('--overlay-text-scale', String(boundedNumber(overlayStyle.textScale, 1, 0.75, 1.5) * presetText));
       document.documentElement.style.setProperty('--overlay-gift-scale', String(boundedNumber(overlayStyle.cardScale, 1, 0.7, 1.3) * presetScale));
 
-      const applyCardBackground = (element, background, classPrefix) => {
-        element.classList.remove(`${classPrefix}-transparent`, `${classPrefix}-dim`, `${classPrefix}-blur`);
-        element.classList.add(`${classPrefix}-${background}`);
-      };
-
-      container.classList.remove('overlay-position-top', 'overlay-position-middle', 'overlay-position-bottom', 'overlay-image-cover', 'overlay-background-dim', 'overlay-background-blur');
+      container.classList.remove('overlay-position-top', 'overlay-position-middle', 'overlay-position-bottom', 'overlay-image-cover');
       container.classList.add(`overlay-position-${position}`);
       if (fit === 'cover') container.classList.add('overlay-image-cover');
-      applyCardBackground(imageSection, imageBackground, 'overlay-image-card');
-      applyCardBackground(infoSection, textBackground, 'overlay-text-card');
-      applyCardBackground(document.querySelector('.cyberpunk-gift-card'), giftBackground, 'overlay-gift-card');
+      applyCurrentContentPresentation();
     }
 
     async function fetchOverlayStyle() {
@@ -1024,10 +1116,15 @@
       }
 
       // ใช้ textLayout เปลี่ยน layout ของ container
+      const normalizedTextLayout = ['left', 'top', 'bottom', 'center'].includes(textLayout)
+        ? textLayout
+        : 'right';
       container.classList.remove('layout-left', 'layout-top', 'layout-bottom', 'layout-center');
-      if (textLayout && textLayout !== 'right') {
-        container.classList.add('layout-' + textLayout);
+      if (normalizedTextLayout !== 'right') {
+        container.classList.add('layout-' + normalizedTextLayout);
       }
+      currentContentContext = { hasImage: Boolean(filePath), textLayout: normalizedTextLayout };
+      applyCurrentContentPresentation();
 
       // แสดง QR Code
       if (qrCodePath) {

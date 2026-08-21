@@ -14,9 +14,33 @@ const PRESETS = [
 ];
 
 const CARD_BACKGROUND_OPTIONS = [
-  ["transparent", "ใส"],
+  ["transparent", "โปร่งใส"],
   ["dim", "มืดโปร่ง"],
   ["blur", "เบลอโปร่ง"],
+];
+
+const BACKGROUND_SETTING_CARDS = [
+  {
+    key: "imageBackgroundStyle",
+    icon: "🖼️",
+    title: "รูปภาพ + ข้อความแนบ",
+    description: "ใช้พื้นหลังเดียวกันกับรูป ชื่อ Social และข้อความที่ส่งมาพร้อมรูป",
+    preview: "รูป + ข้อความ",
+  },
+  {
+    key: "textBackgroundStyle",
+    icon: "💬",
+    title: "ข้อความล้วน",
+    description: "ใช้เฉพาะรายการที่มีข้อความขึ้นจอโดยไม่มีรูปภาพ",
+    preview: "ข้อความล้วน",
+  },
+  {
+    key: "giftBackgroundStyle",
+    icon: "🎁",
+    title: "ของขวัญ",
+    description: "ใช้กับการ์ดผู้ส่ง โต๊ะ และรายการของขวัญเท่านั้น",
+    preview: "ของขวัญ",
+  },
 ];
 
 /** A simple operator panel: content appearance is saved per shop, while OBS
@@ -126,7 +150,7 @@ export default function OBSControlPanel({
             <h3>รูปแบบภาพและข้อความบนจอ</h3>
             <p>รูปทุกสัดส่วนจะอยู่ในกรอบเดียวกันด้วยโหมด <b>เห็นรูปครบ</b> เป็นค่าแนะนำ จึงไม่เล็กหรือใหญ่จนเสียสมดุล</p>
           </div>
-          <div className="obs-template-preview" data-background={activeStyle.textBackgroundStyle}>
+          <div className="obs-template-preview" data-background={activeStyle.imageBackgroundStyle}>
             <div className="obs-template-preview__image" data-fit={activeStyle.imageFit}>รูปภาพ</div>
             <div><b>ชื่อ Social</b><span>ข้อความบนจอ</span></div>
           </div>
@@ -151,21 +175,30 @@ export default function OBSControlPanel({
               <option value="bottom">ด้านล่าง</option><option value="middle">กึ่งกลาง</option><option value="top">ด้านบน</option>
             </select>
           </label>
-          <label className="obs-field"><span>พื้นหลังการ์ดรูปภาพ</span>
-            <select value={activeStyle.imageBackgroundStyle} onChange={(event) => updateStyle("imageBackgroundStyle", event.target.value)}>
-              {CARD_BACKGROUND_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-          </label>
-          <label className="obs-field"><span>พื้นหลังการ์ดข้อความ</span>
-            <select value={activeStyle.textBackgroundStyle} onChange={(event) => updateStyle("textBackgroundStyle", event.target.value)}>
-              {CARD_BACKGROUND_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-          </label>
-          <label className="obs-field"><span>พื้นหลังการ์ดของขวัญ</span>
-            <select value={activeStyle.giftBackgroundStyle} onChange={(event) => updateStyle("giftBackgroundStyle", event.target.value)}>
-              {CARD_BACKGROUND_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-          </label>
+          <section className="obs-background-settings" aria-labelledby="obs-background-heading">
+            <div className="obs-background-settings__heading">
+              <div>
+                <strong id="obs-background-heading">พื้นหลังการ์ด แยกตามประเภทเนื้อหา</strong>
+                <span>ปรับแต่ละประเภทได้อิสระ และดูผลจากตัวอย่างบนจอด้านบนทันที</span>
+              </div>
+              <span className="obs-background-settings__hint">กลางภาพจะโปร่งใสอัตโนมัติ</span>
+            </div>
+            <div className="obs-background-grid">
+              {BACKGROUND_SETTING_CARDS.map(({ key, icon, title, description, preview }) => (
+                <label className="obs-background-card" data-background={activeStyle[key]} key={key}>
+                  <span className="obs-background-card__top">
+                    <span className="obs-background-card__icon" aria-hidden="true">{icon}</span>
+                    <span><strong>{title}</strong><small>{description}</small></span>
+                  </span>
+                  <span className="obs-background-card__sample"><span>{preview}</span></span>
+                  <span className="obs-background-card__select-label">รูปแบบพื้นหลัง</span>
+                  <select value={activeStyle[key]} onChange={(event) => updateStyle(key, event.target.value)}>
+                    {CARD_BACKGROUND_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </label>
+              ))}
+            </div>
+          </section>
           <label className="obs-range-field"><span>ขนาดการ์ด <b>{Math.round(Number(activeStyle.cardScale) * 100)}%</b></span>
             <input type="range" min="0.7" max="1.3" step="0.05" value={activeStyle.cardScale} onChange={(event) => updateStyle("cardScale", Number(event.target.value))} />
           </label>
