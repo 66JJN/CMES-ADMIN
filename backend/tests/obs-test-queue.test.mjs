@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildNowPlayingPayload, completeItem } from '../services/queueService.js';
+import * as queueService from '../services/queueService.js';
 import { createSubmissionService, getQueueAvailabilityError } from '../services/submissionService.js';
+
+const { buildNowPlayingPayload, completeItem } = queueService;
 
 test('test completion bypasses customer history and delegates to test lifecycle', async () => {
   const calls = [];
@@ -40,6 +42,28 @@ test('playback payload preserves test identity for image and gift', () => {
     [gift.eventName, gift.payload.isTest, gift.payload.testSessionId, gift.payload.testStep],
     ['now-playing-gift', true, 's1', 'gift'],
   );
+});
+
+test('display can request the persisted playing gift again without changing queue state', async () => {
+  assert.equal(typeof queueService.replayCurrentPlaying, 'function');
+  if (typeof queueService.replayCurrentPlaying !== 'function') return;
+
+  const events = [];
+  const requestedShops = [];
+  const gift = {
+    _id: 'gift-1', shopId: 'JJ', sender: 'Test', type: 'gift', time: 15,
+    playingAt: new Date('2026-08-21T12:00:00Z'),
+    giftOrder: { tableNumber: '5', items: [], totalPrice: 0 },
+  };
+  const replayed = await queueService.replayCurrentPlaying('JJ', {
+    emit: (name, payload) => events.push([name, payload.id]),
+  }, {
+    findPlaying: async (shopId) => { requestedShops.push(shopId); return gift; },
+  });
+
+  assert.equal(replayed, true);
+  assert.deepEqual(requestedShops, ['JJ']);
+  assert.deepEqual(events, [['now-playing-gift', 'gift-1']]);
 });
 
 test('submission is rejected inside shop lock while OBS test is active', async () => {

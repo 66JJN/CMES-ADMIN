@@ -107,6 +107,17 @@ export function emitNowPlaying(item, emitter) {
   target.emit(event.eventName, event.payload);
 }
 
+/** Replay MongoDB's current item to one authenticated display socket. */
+export async function replayCurrentPlaying(shopId, emitter, dependencies = {}) {
+  if (!shopId || !emitter) return false;
+  const findPlaying = dependencies.findPlaying
+    || ((tenantShopId) => ImageQueue.findOne({ shopId: tenantShopId, status: 'playing' }));
+  const item = await findPlaying(shopId);
+  if (!item) return false;
+  emitNowPlaying(item, emitter);
+  return true;
+}
+
 // ==========================================
 // COMPLETE ITEM — บันทึก item เล่นเสร็จ
 // ==========================================

@@ -13,7 +13,7 @@ const overlayHtml = fs.readFileSync(overlayPath, 'utf8');
 const context = { globalThis: {} };
 vm.runInNewContext(source, context, { filename: scriptPath });
 
-const { resolveOverlayPresentation } = context.globalThis.CMESOverlayPresentation;
+const { resolveOverlayPresentation, getPlaybackRecoveryDelay } = context.globalThis.CMESOverlayPresentation;
 const plain = (value) => JSON.parse(JSON.stringify(value));
 
 const style = {
@@ -83,6 +83,18 @@ test('ข้อความล้วนไม่ใช้ layout ที่มี
 test('OBS overlay shows fallback when the operator explicitly disconnects control', () => {
   assert.match(overlayHtml, /socket\.on\(['"]obs-operator-connection['"]/);
   assert.match(overlayHtml, /operatorConnected/);
+});
+
+test('OBS ขอรายการปัจจุบันซ้ำหลังช่วงพักระหว่างคิวเพื่อกู้ event ที่พลาด', () => {
+  assert.equal(typeof getPlaybackRecoveryDelay, 'function');
+  if (typeof getPlaybackRecoveryDelay !== 'function') return;
+  assert.equal(getPlaybackRecoveryDelay({ isCountingDown: true, remaining: 1 }), 1350);
+  assert.equal(getPlaybackRecoveryDelay({ manual: true, remaining: 10 }), null);
+  assert.match(overlayHtml, /request-current-playing/);
+});
+
+test('ของขวัญใหม่ต้องออกจากสถานะพักก่อนเริ่มแสดง', () => {
+  assert.match(overlayHtml, /function showGift\(payload = \{\}\)[\s\S]*?isPaused = false/);
 });
 
 test('OBS overlay ล้างเฉพาะข้อมูลของ test session ที่กำลังแสดง', () => {

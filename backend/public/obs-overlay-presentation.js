@@ -29,5 +29,17 @@
     };
   }
 
-  root.CMESOverlayPresentation = Object.freeze({ resolveOverlayPresentation });
+  function getPlaybackRecoveryDelay(pauseData = {}) {
+    if (pauseData.manual === true || pauseData.isCountingDown !== true) return null;
+    const remainingSeconds = Number(pauseData.remaining);
+    const safeRemaining = Number.isFinite(remainingSeconds) && remainingSeconds >= 0
+      ? remainingSeconds
+      : 0;
+    return Math.round(safeRemaining * 1000) + 350;
+  }
+
+  root.CMESOverlayPresentation = Object.freeze({
+    resolveOverlayPresentation,
+    getPlaybackRecoveryDelay,
+  });
 }(globalThis));

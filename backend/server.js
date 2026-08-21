@@ -30,7 +30,7 @@ import { startCleanupJob } from "./utils/cron-cleanup.js";
 import { mongoSanitize } from './middleware/securityMiddleware.js';
 
 // Services
-import { processAutoQueue, completeItem, emitNowPlaying, playNextItem, recoverQueue, updateQueueControl } from './services/queueService.js';
+import { processAutoQueue, completeItem, emitNowPlaying, playNextItem, recoverQueue, replayCurrentPlaying, updateQueueControl } from './services/queueService.js';
 import { displayRegistry } from './services/displayRegistry.js';
 import { cleanupAllObsTests, cleanupExpiredObsTests, getObsTestStatus, stopObsTest } from './services/obsTestService.js';
 import { createDisplayDisconnectCoordinator } from './services/displayDisconnectCoordinator.js';
@@ -355,6 +355,19 @@ io.on('connection', (socket) => {
     if (kind !== 'admin') return socket.emit('authorizationError', { message: 'Admin authorization required' });
     return handler(...args);
   };
+
+  let lastPlaybackReplayAt = 0;
+  socket.on('request-current-playing', async () => {
+    if (kind !== 'display') return;
+    const now = Date.now();
+    if (now - lastPlaybackReplayAt < 500) return;
+    lastPlaybackReplayAt = now;
+    try {
+      await replayCurrentPlaying(shopId, socket);
+    } catch (error) {
+      console.error(`[DisplayRecovery][${shopId}] Could not replay current item:`, error);
+    }
+  });
 
   socket.on('getConfig', async () => {
     const config = await getSystemConfigWithSettings(socket.shopId);

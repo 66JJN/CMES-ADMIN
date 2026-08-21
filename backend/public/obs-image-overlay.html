@@ -1015,6 +1015,22 @@
     let remainingTime = 0; // เวลาที่เหลืออยู่เมื่อหยุด
     let currentId = null; // ID ของ item ที่กำลังเล่นอยู่
     let activeTestSessionId = null;
+    let playbackRecoveryTimer = null;
+
+    function clearPlaybackRecoveryTimer() {
+      clearTimeout(playbackRecoveryTimer);
+      playbackRecoveryTimer = null;
+    }
+
+    function schedulePlaybackRecovery(pauseData = {}) {
+      const delay = window.CMESOverlayPresentation.getPlaybackRecoveryDelay(pauseData);
+      if (delay === null) return;
+      clearPlaybackRecoveryTimer();
+      playbackRecoveryTimer = setTimeout(() => {
+        playbackRecoveryTimer = null;
+        if (socket.connected) socket.emit('request-current-playing');
+      }, delay);
+    }
 
     const logoMap = {
       ig: `${API_BASE_URL}/data-icon/ig-logo.png`,
@@ -1025,6 +1041,7 @@
 
     function show(payload = {}) {
       console.log('[Combined Overlay] Received payload:', payload);
+      clearPlaybackRecoveryTimer();
       updateFallbackVisibility();
       activeGiftPlaybackId = null;
       activeTestSessionId = payload.isTest ? payload.testSessionId || null : null;
@@ -1248,6 +1265,7 @@
     socket.on('pause-display', (data) => {
       console.log('[OBS] Pause display received:', data);
       isPaused = true;
+      schedulePlaybackRecovery(data);
 
       if (data && data.manual) {
         clearInterval(countdownInterval);
@@ -1285,6 +1303,7 @@
     socket.on('skip-current', () => {
       console.log('[OBS] Skip current received');
       activeGiftPlaybackId = null;
+      clearPlaybackRecoveryTimer();
       // ซ่อนการแสดงทันที
       clearTimeout(hideTimer);
       clearInterval(countdownInterval);
@@ -1328,6 +1347,7 @@
       countdownInterval = null;
       giftCountdownInterval = null;
       activeGiftPlaybackId = null;
+      clearPlaybackRecoveryTimer();
     }
 
     function hideAllContent() {
@@ -1350,6 +1370,10 @@
 
     function showGift(payload = {}) {
       console.log('[Gift Overlay] Received:', payload);
+      clearPlaybackRecoveryTimer();
+      updateFallbackVisibility();
+      // A new persisted item is active, so the previous inter-item pause has ended.
+      isPaused = false;
       activeTestSessionId = payload.isTest ? payload.testSessionId || null : null;
 
       // Track current playing item ID
