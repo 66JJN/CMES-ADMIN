@@ -62,11 +62,14 @@ const buildStatus = ({ settings, displayConnected, activeQueueCount }) => {
   } else if (!active && !displayConnected) {
     code = 'OBS_NOT_CONNECTED';
     message = 'เปิดหรือรีเฟรช Browser Source ใน OBS';
+  } else if (!active && settings?.queuePaused) {
+    code = 'QUEUE_PAUSED';
+    message = 'เชื่อมต่อ OBS หรือกดเล่นคิวต่อก่อนเริ่มทดสอบ';
   }
 
   return {
     active,
-    ready: !active && activeQueueCount === 0 && displayConnected,
+    ready: !active && activeQueueCount === 0 && displayConnected && settings?.queuePaused !== true,
     displayConnected,
     activeQueueCount,
     sessionId: obsTest.sessionId || null,
@@ -217,6 +220,9 @@ export const createObsTestService = (overrides = {}) => {
     }
     if (!deps.displayConnected(shopId)) {
       throw serviceError(503, 'OBS_NOT_CONNECTED', 'เปิดหรือรีเฟรช Browser Source ใน OBS ก่อนเริ่มทดสอบ');
+    }
+    if (settings?.queuePaused) {
+      throw serviceError(409, 'QUEUE_PAUSED', 'เชื่อมต่อ OBS หรือกดเล่นคิวต่อก่อนเริ่มทดสอบ');
     }
     if (await deps.countActive(shopId) > 0) {
       throw serviceError(409, 'QUEUE_NOT_EMPTY', 'กรุณารอให้คิวว่างก่อน');

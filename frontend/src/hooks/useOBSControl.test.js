@@ -31,3 +31,28 @@ test('publishes explicit OBS control connection state to the authenticated Admin
   obsControlModule.publishOBSOperatorState({ emit }, false);
   expect(emit).toHaveBeenCalledWith('set-obs-operator-connected', { connected: false });
 });
+
+test('republishes the current OBS state after the Admin socket reconnects', () => {
+  expect(typeof obsControlModule.subscribeOBSOperatorStateSync).toBe('function');
+  if (typeof obsControlModule.subscribeOBSOperatorStateSync !== 'function') return;
+
+  const listeners = new Map();
+  const socket = {
+    connected: true,
+    emit: jest.fn(),
+    on: jest.fn((name, handler) => listeners.set(name, handler)),
+    off: jest.fn((name, handler) => {
+      if (listeners.get(name) === handler) listeners.delete(name);
+    }),
+  };
+  let obsConnected = true;
+  const unsubscribe = obsControlModule.subscribeOBSOperatorStateSync(socket, () => obsConnected);
+
+  expect(socket.emit).toHaveBeenLastCalledWith('set-obs-operator-connected', { connected: true });
+  obsConnected = false;
+  listeners.get('connect')();
+  expect(socket.emit).toHaveBeenLastCalledWith('set-obs-operator-connected', { connected: false });
+
+  unsubscribe();
+  expect(socket.off).toHaveBeenCalledWith('connect', expect.any(Function));
+});

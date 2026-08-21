@@ -98,6 +98,16 @@ export const publishOBSOperatorState = (socket, connected) => {
   socket.emit("set-obs-operator-connected", { connected: Boolean(connected) });
 };
 
+export const subscribeOBSOperatorStateSync = (socket, getConnected) => {
+  if (!socket || typeof socket.on !== 'function' || typeof socket.off !== 'function') {
+    return () => {};
+  }
+  const publishCurrent = () => publishOBSOperatorState(socket, getConnected?.() === true);
+  socket.on('connect', publishCurrent);
+  if (socket.connected) publishCurrent();
+  return () => socket.off('connect', publishCurrent);
+};
+
 /**
  * Custom Hook for handling OBS Studio WebSocket controls.
  * Manages connection, scenes, audio muting, text inputs, dragging positions,
@@ -128,6 +138,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId, adminSock
   const draggingRef = useRef(null);
   const timeoutRef = useRef(null); // Ref to track pending connection timers
   const adminSocketRef = useRef(adminSocket);
+  const obsConnectedRef = useRef(false);
   const latestObsHandlersRef = useRef({
     fetchInitialData: null,
     fetchSceneItems: null,
@@ -139,6 +150,11 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId, adminSock
   useEffect(() => {
     adminSocketRef.current = adminSocket;
   }, [adminSocket]);
+
+  useEffect(() => subscribeOBSOperatorStateSync(
+    adminSocket,
+    () => obsConnectedRef.current,
+  ), [adminSocket]);
 
   const addLog = useCallback((msg, type = "info") => {
     setLogs((prev) => [
@@ -433,6 +449,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId, adminSock
     const obs = obsRef.current;
 
     const onConnect = () => {
+      obsConnectedRef.current = true;
       setIsConnected(true);
       publishOBSOperatorState(adminSocketRef.current, true);
       addLog("🟢 Connected to OBS Studio successfully", "success");
@@ -447,6 +464,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId, adminSock
     };
 
     const onDisconnect = () => {
+      obsConnectedRef.current = false;
       setIsConnected(false);
       publishOBSOperatorState(adminSocketRef.current, false);
       addLog("🔴 Disconnected from OBS Studio", "error");

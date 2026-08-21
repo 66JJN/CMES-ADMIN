@@ -465,7 +465,7 @@ export const getQueueControlStatus = async (req, res) => {
 export const setQueuePaused = async (req, res) => {
   try {
     const paused = req.params.action === 'pause';
-    let updates = { queuePaused: paused };
+    let updates = { queuePaused: paused, queuePauseReason: paused ? 'manual' : null };
     const playing = await ImageQueue.findOne({ shopId: req.shopId, status: 'playing' });
     const existing = await getQueueControl(req.shopId);
     if (paused && !existing.queuePaused && playing) {

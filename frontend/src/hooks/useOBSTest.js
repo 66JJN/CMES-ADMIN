@@ -59,10 +59,12 @@ export default function useOBSTest({ API_BASE_URL, socket }) {
     socket.on('obs-test-status', handleStatus);
     socket.on('obs-test-finished', handleFinished);
     socket.on('admin-update-queue', handleQueueChanged);
+    socket.on('queue-control-updated', handleQueueChanged);
     return () => {
       socket.off('obs-test-status', handleStatus);
       socket.off('obs-test-finished', handleFinished);
       socket.off('admin-update-queue', handleQueueChanged);
+      socket.off('queue-control-updated', handleQueueChanged);
     };
   }, [socket, mergeStatus, refreshObsTest]);
 

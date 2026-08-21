@@ -11,6 +11,7 @@ import { completeObsTestItem } from './obsTestService.js';
 // serial per shop; persisted queue state remains the source of truth.
 const shopsStartingNextItem = new Set();
 const shopsProcessingQueue = new Set();
+const obsOperatorTransitions = new Map();
 
 // ==========================================
 // PER-SHOP STATE MANAGEMENT
@@ -116,6 +117,67 @@ export async function replayCurrentPlaying(shopId, emitter, dependencies = {}) {
   if (!item) return false;
   emitNowPlaying(item, emitter);
   return true;
+}
+
+/**
+ * Keep persisted queue playback aligned with the local OBS Web Control.
+ * Disconnecting the controller hides the Browser Source with a fallback, so
+ * the worker must not consume real items behind that fallback. Transitions are
+ * serialized per shop to make a quick disconnect/reconnect deterministic.
+ */
+export async function syncObsOperatorConnection(shopId, connected, emitter, dependencies = {}) {
+  if (!shopId || !emitter?.to) return null;
+
+  const runTransition = async () => {
+    const getControl = dependencies.getControl || getQueueControl;
+    const updateControl = dependencies.updateControl || updateQueueControl;
+    const recover = dependencies.recover || recoverQueue;
+    const playNext = dependencies.playNext || playNextItem;
+    const room = emitter.to(shopId);
+    const control = await getControl(shopId);
+
+    room.emit('obs-operator-connection', { connected: connected === true });
+
+    if (connected !== true) {
+      if (control?.queuePaused) return control;
+      const pausedControl = await updateControl(shopId, {
+        queuePaused: true,
+        queuePauseReason: 'obs_operator_disconnected',
+        queuePausedAt: new Date(),
+        queuePausedRemainingSeconds: null,
+        queueNextPlayAt: null,
+      });
+      await recover(shopId, emitter);
+      room.emit('pause-display', { manual: true, reason: 'obs_operator_disconnected' });
+      room.emit('queue-control-updated', pausedControl);
+      return pausedControl;
+    }
+
+    if (control?.queuePaused && control?.queuePauseReason === 'obs_operator_disconnected') {
+      const resumedControl = await updateControl(shopId, {
+        queuePaused: false,
+        queuePauseReason: null,
+        queuePausedAt: null,
+        queuePausedRemainingSeconds: null,
+        queueNextPlayAt: null,
+      });
+      room.emit('resume-display', { manual: true, reason: 'obs_operator_reconnected' });
+      room.emit('queue-control-updated', resumedControl);
+      await playNext(shopId, emitter);
+      return resumedControl;
+    }
+
+    return control;
+  };
+
+  const previous = obsOperatorTransitions.get(shopId) || Promise.resolve();
+  const transition = previous.catch(() => undefined).then(runTransition);
+  obsOperatorTransitions.set(shopId, transition);
+  try {
+    return await transition;
+  } finally {
+    if (obsOperatorTransitions.get(shopId) === transition) obsOperatorTransitions.delete(shopId);
+  }
 }
 
 // ==========================================

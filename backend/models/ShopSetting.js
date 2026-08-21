@@ -40,6 +40,11 @@ const shopSettingSchema = new mongoose.Schema({
   },
   queuePausedAt: { type: Date, default: null },
   queuePausedRemainingSeconds: { type: Number, default: null },
+  queuePauseReason: {
+    type: String,
+    enum: ['manual', 'display_disconnected', 'obs_operator_disconnected', null],
+    default: null
+  },
   queueOrder: {
     type: [String],
     default: []

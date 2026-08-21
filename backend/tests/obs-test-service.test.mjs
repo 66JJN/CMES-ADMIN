@@ -8,6 +8,7 @@ const makeFixture = ({
   displayConnected = true,
   previousQueueAccepting = true,
   activeSession = false,
+  queuePaused = false,
   failDelete = false,
   failInsert = false,
 } = {}) => {
@@ -16,6 +17,7 @@ const makeFixture = ({
   const events = [];
   const settings = {
     shopId: 'JJ',
+    queuePaused,
     systemConfig: { queueAccepting: previousQueueAccepting },
     obsTest: activeSession ? {
       active: true,
@@ -120,6 +122,15 @@ test('start requires a connected Browser Source', async () => {
     () => fixture.service.start({ shopId: 'JJ', io: fixture.io }),
     (error) => error.status === 503 && error.code === 'OBS_NOT_CONNECTED',
   );
+});
+
+test('start rejects a paused real queue instead of making test playback look healthy', async () => {
+  const fixture = makeFixture({ queuePaused: true });
+  await assert.rejects(
+    () => fixture.service.start({ shopId: 'JJ', io: fixture.io }),
+    (error) => error.status === 409 && error.code === 'QUEUE_PAUSED',
+  );
+  assert.equal(fixture.inserted.length, 0);
 });
 
 test('stop deletes only matching test records and restores previous acceptance', async () => {

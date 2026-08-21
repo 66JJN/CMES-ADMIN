@@ -30,7 +30,7 @@ import { startCleanupJob } from "./utils/cron-cleanup.js";
 import { mongoSanitize } from './middleware/securityMiddleware.js';
 
 // Services
-import { processAutoQueue, completeItem, emitNowPlaying, playNextItem, recoverQueue, replayCurrentPlaying, updateQueueControl } from './services/queueService.js';
+import { processAutoQueue, completeItem, emitNowPlaying, playNextItem, recoverQueue, replayCurrentPlaying, syncObsOperatorConnection, updateQueueControl } from './services/queueService.js';
 import { displayRegistry } from './services/displayRegistry.js';
 import { cleanupAllObsTests, cleanupExpiredObsTests, getObsTestStatus, stopObsTest } from './services/obsTestService.js';
 import { createDisplayDisconnectCoordinator } from './services/displayDisconnectCoordinator.js';
@@ -248,6 +248,7 @@ const pauseQueueForDisconnectedDisplay = async (shopId) => {
     // approved queue. Staff can resume safely after OBS is back online.
     const control = await updateQueueControl(shopId, {
       queuePaused: true,
+      queuePauseReason: 'display_disconnected',
       queuePausedAt: new Date(),
       queuePausedRemainingSeconds: null,
       queueLastError: {
@@ -424,10 +425,14 @@ io.on('connection', (socket) => {
 
   socket.on('pause-display', adminOnly((data) => io.to(shopId).emit('pause-display', data)));
   socket.on('resume-display', adminOnly((data) => io.to(shopId).emit('resume-display', data)));
-  socket.on('set-obs-operator-connected', adminOnly((data = {}) => {
+  socket.on('set-obs-operator-connected', adminOnly(async (data = {}) => {
     const connected = data.connected === true;
     obsOperatorConnections.set(shopId, connected);
-    io.to(shopId).emit('obs-operator-connection', { connected });
+    try {
+      await syncObsOperatorConnection(shopId, connected, io);
+    } catch (error) {
+      console.error(`[OBSOperator][${shopId}] Could not synchronize queue state:`, error);
+    }
   }));
 
   socket.on('skip-current', adminOnly(async () => {
