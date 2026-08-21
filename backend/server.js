@@ -31,6 +31,8 @@ import { mongoSanitize } from './middleware/securityMiddleware.js';
 
 // Services
 import { processAutoQueue, completeItem, emitNowPlaying, playNextItem, recoverQueue, updateQueueControl } from './services/queueService.js';
+import { displayRegistry } from './services/displayRegistry.js';
+import { cleanupAllObsTests, cleanupExpiredObsTests, stopObsTest } from './services/obsTestService.js';
 
 // Route modules
 import reportRoutes from './routes/reportRoutes.js';
@@ -43,7 +45,9 @@ import queueRoutes from './routes/queueRoutes.js';
 import incomeRoutes from './routes/incomeRoutes.js';
 import obsRoutes from './routes/obsRoutes.js';
 import statusRoutes from './routes/statusRoutes.js';
+import obsTestRoutes from './routes/obsTestRoutes.js';
 import { requireShopId, requireAdminAuth, requireUserServiceAuth, authenticateSocketToken } from './middleware/authMiddleware.js';
+import { rejectDuringObsTest } from './middleware/obsTestMiddleware.js';
 import ShopSetting from './models/ShopSetting.js';
 
 dotenv.config();
@@ -198,7 +202,7 @@ app.use('/api/rankings', rankingRoutes);
 app.use('/api/config', configRoutes);
 
 // Queue routes (with multer middleware for /api/upload)
-app.post('/api/upload', requireUserServiceAuth, (req, res, next) => {
+app.post('/api/upload', requireUserServiceAuth, rejectDuringObsTest, (req, res, next) => {
   uploadUser(req, res, (error) => {
     if (!error) return next();
     if (error.code === 'LIMIT_FILE_SIZE') {
@@ -213,6 +217,9 @@ app.use('/api', queueRoutes);
 // Income stats: /api/admin/*
 app.use('/api/admin', incomeRoutes);
 
+// Tenant-safe OBS presentation test controls (Admin JWT only)
+app.use('/api/obs-test', obsTestRoutes);
+
 // OBS + Lucky Wheel routes (mixed paths)
 app.use('/', obsRoutes);
 
@@ -223,12 +230,11 @@ app.use('/', statusRoutes);
 // SOCKET.IO CONNECTION HANDLER
 // ==========================================
 const publicRankingTypes = new Map();
-const displaySocketCounts = new Map();
 const displayDisconnectTimers = new Map();
 const DISPLAY_DISCONNECT_GRACE_MS = 8000;
 
 const pauseQueueForDisconnectedDisplay = async (shopId) => {
-  if ((displaySocketCounts.get(shopId) || 0) > 0) return;
+  if (displayRegistry.isConnected(shopId)) return;
 
   try {
     const hasActiveQueue = await ImageQueue.exists({ shopId, status: { $in: ['approved', 'playing'] } });
@@ -306,7 +312,7 @@ io.on('connection', (socket) => {
       clearTimeout(pendingTimer);
       displayDisconnectTimers.delete(shopId);
     }
-    displaySocketCounts.set(shopId, (displaySocketCounts.get(shopId) || 0) + 1);
+    displayRegistry.connect(shopId);
   }
   console.log(`[Socket.IO] ${kind} client connected: ${socket.id} (${shopId})`);
   getSystemConfigWithSettings(shopId).then(config => {
@@ -432,17 +438,18 @@ io.on('connection', (socket) => {
     }
   }));
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     console.log('[Socket.IO] Client disconnected:', socket.id);
     if (kind !== 'display') return;
 
-    const remainingDisplays = Math.max(0, (displaySocketCounts.get(shopId) || 1) - 1);
-    if (remainingDisplays > 0) {
-      displaySocketCounts.set(shopId, remainingDisplays);
-      return;
-    }
+    const remainingDisplays = displayRegistry.disconnect(shopId);
+    if (remainingDisplays > 0) return;
 
-    displaySocketCounts.delete(shopId);
+    try {
+      await stopObsTest({ shopId, io, reason: 'display_disconnected' });
+    } catch (error) {
+      console.error(`[OBSTest][${shopId}] Cleanup after display disconnect failed:`, error);
+    }
     const timer = setTimeout(() => {
       displayDisconnectTimers.delete(shopId);
       pauseQueueForDisconnectedDisplay(shopId);
@@ -454,6 +461,7 @@ io.on('connection', (socket) => {
 // ===== LOAD INITIAL CONFIG =====
 mongoose.connection.once('open', async () => {
   try {
+    await cleanupAllObsTests(io);
     const history = await TimeHistory.find({}).sort({ createdAt: -1 });
     for (const h of history) {
       if (!h.time && h.duration) {
@@ -500,8 +508,13 @@ server.listen(PORT, async () => {
 
   // Queue Worker — 1s interval loop for all shops
   console.log("[QueueWorker] Starting 1s interval loop for all shops...");
+  let lastObsTestCleanupAt = 0;
   setInterval(async () => {
     try {
+      if (Date.now() - lastObsTestCleanupAt >= 60_000) {
+        lastObsTestCleanupAt = Date.now();
+        await cleanupExpiredObsTests(io);
+      }
       const activeShops = await ImageQueue.distinct('shopId', { status: { $in: ['pending', 'approved', 'playing'] } });
       for (const shopId of activeShops) {
         await processAutoQueue(shopId, io);
