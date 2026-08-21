@@ -7,7 +7,7 @@ import PackageConfig from '../../components/dashboard/PackageConfig';
 import VipSupporters from '../../components/dashboard/VipSupporters';
 import DashboardModals from '../../components/dashboard/DashboardModals';
 import { API_BASE_URL, USER_FRONTEND_URL } from '../../config/apiConfig';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './Home.css';
 import '../../components/dashboard/AdminHeader.css';
 import '../../components/dashboard/DashboardShared.css';
@@ -120,12 +120,12 @@ function HomeContent() {
             </div>
           </div>
           <nav className="nav-minimal" aria-label="เมนูหลัก">
-            <a href="/TimeHistory">ประวัติการตั้งเวลา</a>
-            <a href="/image-queue">ตรวจสอบรูปภาพ</a>
-            <a href="/report">รายงาน</a>
-            <a href="/check-history">ประวัติการตรวจสอบ</a>
-            <a href="/lucky-wheel">วงล้อเสี่ยงดวง</a>
-            <a href="/gift-setting">ตั้งค่าส่งของขวัญ</a>
+            <Link to="/TimeHistory">ประวัติการตั้งเวลา</Link>
+            <Link to="/image-queue">ตรวจสอบรูปภาพ</Link>
+            <Link to="/report">รายงาน</Link>
+            <Link to="/check-history">ประวัติการตรวจสอบ</Link>
+            <Link to="/lucky-wheel">วงล้อเสี่ยงดวง</Link>
+            <Link to="/gift-setting">ตั้งค่าส่งของขวัญ</Link>
             <a href="#!" onClick={(e) => { e.preventDefault(); setShowObsModal(true); }}>OBS Links</a>
             <a
               href="#!"
