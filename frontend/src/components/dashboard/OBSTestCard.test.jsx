@@ -14,6 +14,15 @@ test('explains why testing is disabled while customer queue is active', () => {
   expect(screen.getByRole('button', { name: 'เริ่มทดสอบ OBS' })).toBeDisabled();
 });
 
+test('explains the 15-second duration for all three samples', () => {
+  render(<OBSTestCard
+    obsTest={{ ready: true, active: false, totalSteps: 3 }}
+    startObsTest={jest.fn()}
+  />);
+
+  expect(screen.getByText('แต่ละรายการแสดง 15 วินาที ใช้เวลารวมประมาณ 47 วินาที')).toBeInTheDocument();
+});
+
 test('shows progress and confirms before stopping', () => {
   const stop = jest.fn();
   render(<OBSTestCard

@@ -76,6 +76,10 @@ test('OBS overlay เรียกตัวตัดสินพื้นหล�
   assert.match(overlayHtml, /content-text/);
 });
 
+test('ข้อความล้วนไม่ใช้ layout ที่มีไว้สำหรับวางข้อความทับรูป', () => {
+  assert.match(overlayHtml, /if \(filePath && normalizedTextLayout !== ['"]right['"]\)/);
+});
+
 test('OBS overlay ล้างเฉพาะข้อมูลของ test session ที่กำลังแสดง', () => {
   assert.match(overlayHtml, /let activeTestSessionId = null/);
   assert.match(overlayHtml, /socket\.on\(['"]clear-test-display['"]/);

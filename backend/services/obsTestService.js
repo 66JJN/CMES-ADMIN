@@ -8,6 +8,7 @@ import { withShopQueueLock } from './shopQueueLock.js';
 const ACTIVE_STATUSES = ['pending', 'approved', 'playing'];
 const STEP_ORDER = ['image', 'text', 'gift'];
 const MAX_SESSION_AGE_MS = 10 * 60 * 1000;
+const TEST_ITEM_DURATION_SECONDS = 15;
 
 const serviceError = (status, code, message) => Object.assign(new Error(message), { status, code });
 
@@ -79,22 +80,26 @@ const buildStatus = ({ settings, displayConnected, activeQueueCount }) => {
 };
 
 const makeItems = ({ shopId, sessionId, approvedAt, gifts }) => {
-  const common = (step) => ({
-    shopId,
-    isTest: true,
-    testSessionId: sessionId,
-    testStep: step,
-    submissionKey: `obs-test:${sessionId}:${step}`,
-    sender: 'ระบบทดสอบ OBS',
-    time: 5,
-    price: 0,
-    paymentStatus: 'free',
-    status: 'approved',
-    approvedAt,
-    receivedAt: approvedAt,
-    userId: null,
-    email: null,
-  });
+  const common = (step) => {
+    const stepIndex = STEP_ORDER.indexOf(step);
+    const queuedAt = new Date(new Date(approvedAt).getTime() + Math.max(0, stepIndex));
+    return {
+      shopId,
+      isTest: true,
+      testSessionId: sessionId,
+      testStep: step,
+      submissionKey: `obs-test:${sessionId}:${step}`,
+      sender: 'ระบบทดสอบ OBS',
+      time: TEST_ITEM_DURATION_SECONDS,
+      price: 0,
+      paymentStatus: 'free',
+      status: 'approved',
+      approvedAt: queuedAt,
+      receivedAt: queuedAt,
+      userId: null,
+      email: null,
+    };
+  };
 
   const giftItems = (gifts?.length ? gifts : [{
     _id: 'sample-gift', giftName: 'เครื่องดื่มทดสอบ', image: '/data-icon/unknown-person-icon.png', price: 0,
@@ -121,9 +126,12 @@ const makeItems = ({ shopId, sessionId, approvedAt, gifts }) => {
     {
       ...common('text'),
       type: 'text',
-      text: 'ทดสอบข้อความล้วน ภาษาไทย การตัดบรรทัด และตำแหน่งบนจอ',
+      socialType: 'fb',
+      socialName: 'CMES TEST',
+      socialColor: '#67a7ff',
+      text: 'ทดสอบข้อความจริงบนจอ อ่านง่ายและพอดีกับจอ',
       textColor: '#ffffff',
-      textLayout: 'center',
+      textLayout: 'right',
     },
     {
       ...common('gift'),
@@ -285,7 +293,7 @@ export const createObsTestService = (overrides = {}) => {
     if (!item?.isTest || !item?.testSessionId) return false;
     await deps.deleteItem(item._id);
     const remaining = await deps.findSessionItems(item.shopId, item.testSessionId);
-    if (remaining.length === 0 || item.testStep === 'gift') {
+    if (remaining.length === 0) {
       await stop({
         shopId: item.shopId,
         io,

@@ -70,7 +70,7 @@ export default function OBSTestCard({
             <strong>{obsTest.ready ? 'พร้อมทดสอบ' : blockedByQueue ? 'กรุณารอให้คิวว่างก่อน' : displayDisconnected ? 'OBS ยังไม่เชื่อมต่อ' : obsTest.message || 'กำลังตรวจสอบความพร้อม'}</strong>
             {blockedByQueue && <small>มี {obsTest.activeQueueCount || 0} รายการที่ต้องแสดงให้เสร็จก่อน</small>}
             {displayDisconnected && <small>เปิดหรือรีเฟรช Browser Source ภาพและข้อความใน OBS ก่อน</small>}
-            {!blockedByQueue && !displayDisconnected && obsTest.ready && <small>ใช้เวลาประมาณ 17 วินาที และล้างข้อมูลจำลองให้อัตโนมัติ</small>}
+            {!blockedByQueue && !displayDisconnected && obsTest.ready && <small>แต่ละรายการแสดง 15 วินาที ใช้เวลารวมประมาณ 47 วินาที</small>}
           </div>
           <button type="button" disabled={!obsTest.ready || isObsTestBusy} onClick={startObsTest}>
             {isObsTestBusy ? 'กำลังเริ่มทดสอบ…' : 'เริ่มทดสอบ OBS'}

@@ -1122,7 +1122,10 @@
         ? textLayout
         : 'right';
       container.classList.remove('layout-left', 'layout-top', 'layout-bottom', 'layout-center');
-      if (normalizedTextLayout !== 'right') {
+      // Layout variants describe where copy sits around/on an image. A
+      // text-only item has no image frame, so applying layout-center would
+      // absolutely position its content inside a zero-width fit-content card.
+      if (filePath && normalizedTextLayout !== 'right') {
         container.classList.add('layout-' + normalizedTextLayout);
       }
       currentContentContext = { hasImage: Boolean(filePath), textLayout: normalizedTextLayout };

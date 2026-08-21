@@ -84,6 +84,25 @@ test('start creates image, text, gift in order and remembers queue accepting', a
   assert.equal(fixture.events.at(-1).name, 'obs-test-status');
 });
 
+test('test items mirror real submissions and each display for 15 seconds', async () => {
+  const fixture = makeFixture();
+  await fixture.service.start({ shopId: 'JJ', io: fixture.io });
+
+  assert.deepEqual(fixture.inserted.map((item) => item.time), [15, 15, 15]);
+  assert.ok(
+    fixture.inserted.every((item, index, items) => (
+      index === 0 || new Date(item.approvedAt).getTime() > new Date(items[index - 1].approvedAt).getTime()
+    )),
+    'approvedAt must make image, text and gift ordering deterministic',
+  );
+
+  const textItem = fixture.inserted.find((item) => item.testStep === 'text');
+  assert.equal(textItem.socialType, 'fb');
+  assert.equal(textItem.socialName, 'CMES TEST');
+  assert.equal(textItem.textLayout, 'right');
+  assert.ok([...textItem.text].length <= 50);
+});
+
 test('start rejects a real queue without changing shop state', async () => {
   const fixture = makeFixture({ activeCount: 1 });
   await assert.rejects(
@@ -162,4 +181,16 @@ test('completing each item advances and final gift cleans the session', async ()
   assert.equal(fixture.settings.obsTest.active, false);
   assert.equal(fixture.settings.systemConfig.queueAccepting, true);
   assert.equal(fixture.events.at(-1).name, 'obs-test-finished');
+});
+
+test('gift finishing early does not delete image and text that have not played', async () => {
+  const fixture = makeFixture();
+  await fixture.service.start({ shopId: 'JJ', io: fixture.io });
+
+  const gift = fixture.inserted.find((item) => item.testStep === 'gift');
+  await fixture.service.completeItem(gift, fixture.io);
+
+  assert.equal(fixture.settings.obsTest.active, true);
+  assert.deepEqual(fixture.inserted.map((item) => item.testStep), ['image', 'text']);
+  assert.equal(fixture.events.some((event) => event.name === 'obs-test-finished'), false);
 });
