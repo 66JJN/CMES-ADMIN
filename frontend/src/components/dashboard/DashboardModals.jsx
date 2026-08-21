@@ -5,8 +5,7 @@ import { API_BASE_URL, USER_FRONTEND_URL } from '../../config/apiConfig';
 import adminFetch from '../../config/authFetch';
 import Button from '../ui/Button';
 import ErrorBoundary from '../ui/ErrorBoundary';
-import useOBSControl from '../../hooks/useOBSControl';
-import useOBSTest from '../../hooks/useOBSTest';
+import { useOBSControlContext } from '../../contexts/OBSControlContext';
 import OBSControlPanel from './OBSControlPanel';
 import './DashboardShared.css';
 import './DashboardModals.css';
@@ -55,14 +54,7 @@ export default function DashboardModals() {
 
   const adminId = localStorage.getItem("adminId") || "default-admin";
   const adminUsername = localStorage.getItem("adminUsername") || "Admin";
-  // Keep this hook mounted with the dashboard, rather than with the modal.
-  // A connected OBS session must remain active after the modal is closed.
-  const obsControlState = useOBSControl({
-    API_BASE_URL,
-    adminId,
-    shopId: shopId || adminId,
-  });
-  const obsTestState = useOBSTest({ API_BASE_URL, socket });
+  const obsSessionState = useOBSControlContext() || {};
 
   const [copiedImage, setCopiedImage] = useState(false);
   const [copiedRanking, setCopiedRanking] = useState(false);
@@ -368,7 +360,7 @@ export default function DashboardModals() {
 
               <div className="obs-lazy-panel-container">
                 <ErrorBoundary>
-                  <OBSControlPanel {...obsControlState} {...obsTestState} />
+                  <OBSControlPanel {...obsSessionState} />
                 </ErrorBoundary>
               </div>
             </div>

@@ -58,12 +58,52 @@ const normalizeDisplayProfiles = (profiles, fallbackStyle) => (
     : [normalizeDisplayProfile(DEFAULT_DISPLAY_PROFILE, 0, fallbackStyle)]
 );
 
+const DISPLAY_TOKEN_RENEWAL_WINDOW_MS = 5 * 60 * 1000;
+
+const decodeJwtExpiryMs = (token) => {
+  try {
+    const encodedPayload = String(token || "").split(".")[1];
+    if (!encodedPayload) return 0;
+    const normalized = encodedPayload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    if (typeof window === "undefined" || typeof window.atob !== "function") return 0;
+    const json = decodeURIComponent(Array.from(
+      window.atob(padded),
+      (char) => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`
+    ).join(""));
+    return Number(JSON.parse(json).exp || 0) * 1000;
+  } catch {
+    return 0;
+  }
+};
+
+export const shouldReuseBrowserSourceUrl = (existingUrl, desiredUrl, nowMs = Date.now()) => {
+  try {
+    const existing = new URL(existingUrl);
+    const desired = new URL(desiredUrl);
+    const sameDestination = existing.origin === desired.origin
+      && existing.pathname === desired.pathname
+      && existing.searchParams.get("shopId") === desired.searchParams.get("shopId")
+      && existing.searchParams.get("displayId") === desired.searchParams.get("displayId");
+    if (!sameDestination) return false;
+    const expiresAt = decodeJwtExpiryMs(existing.searchParams.get("token"));
+    return expiresAt > nowMs + DISPLAY_TOKEN_RENEWAL_WINDOW_MS;
+  } catch {
+    return false;
+  }
+};
+
+export const publishOBSOperatorState = (socket, connected) => {
+  if (!socket || typeof socket.emit !== "function") return;
+  socket.emit("set-obs-operator-connected", { connected: Boolean(connected) });
+};
+
 /**
  * Custom Hook for handling OBS Studio WebSocket controls.
  * Manages connection, scenes, audio muting, text inputs, dragging positions,
  * and clears pending timers/listeners to prevent memory leaks.
  */
-export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
+export default function useOBSControl({ API_BASE_URL, adminId, shopId, adminSocket }) {
   const [url, setUrl] = useState("ws://localhost:4455");
   const [password, setPassword] = useState("");
   const [isConnected, setIsConnected] = useState(false);
@@ -87,6 +127,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
   const canvasRef = useRef(null);
   const draggingRef = useRef(null);
   const timeoutRef = useRef(null); // Ref to track pending connection timers
+  const adminSocketRef = useRef(adminSocket);
   const latestObsHandlersRef = useRef({
     fetchInitialData: null,
     fetchSceneItems: null,
@@ -94,6 +135,10 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
 
   const [overlayItems, setOverlayItems] = useState({});
   const [dragging, setDragging] = useState(null);
+
+  useEffect(() => {
+    adminSocketRef.current = adminSocket;
+  }, [adminSocket]);
 
   const addLog = useCallback((msg, type = "info") => {
     setLogs((prev) => [
@@ -237,13 +282,25 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
       const ensureBrowserSource = async (inputName, url, width = 1920, height = 1080) => {
         if (existingSourceNames.includes(inputName)) {
           const { inputSettings = {} } = await obs.call("GetInputSettings", { inputName });
-          if (inputSettings.url !== url) {
+          const reusableUrl = shouldReuseBrowserSourceUrl(inputSettings.url, url);
+          const dimensionsChanged = Number(inputSettings.width) !== Number(width)
+            || Number(inputSettings.height) !== Number(height);
+          if (!reusableUrl || dimensionsChanged) {
             await obs.call("SetInputSettings", {
               inputName,
-              inputSettings: { url, width, height },
+              inputSettings: {
+                url: reusableUrl ? inputSettings.url : url,
+                width,
+                height,
+              },
               overlay: true,
             });
-            addLog(`🔄 Updated '${inputName}' with a fresh secure display link`, "success");
+            addLog(
+              reusableUrl
+                ? `📐 Updated '${inputName}' display size without reloading it`
+                : `🔄 Updated '${inputName}' with a fresh secure display link`,
+              "success"
+            );
           }
           return;
         }
@@ -377,6 +434,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
 
     const onConnect = () => {
       setIsConnected(true);
+      publishOBSOperatorState(adminSocketRef.current, true);
       addLog("🟢 Connected to OBS Studio successfully", "success");
       
       // Cleanup previous timeout if existing
@@ -390,6 +448,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
 
     const onDisconnect = () => {
       setIsConnected(false);
+      publishOBSOperatorState(adminSocketRef.current, false);
       addLog("🔴 Disconnected from OBS Studio", "error");
     };
 
@@ -444,6 +503,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
     obs.on("SceneItemEnableStateChanged", onSceneItemEnableStateChanged);
 
     return () => {
+      publishOBSOperatorState(adminSocketRef.current, false);
       obs.removeAllListeners();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       obs.disconnect().catch(() => {});
@@ -457,6 +517,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
   const handleConnect = useCallback(async () => {
     if (isConnected) {
       try {
+        publishOBSOperatorState(adminSocketRef.current, false);
         await obsRef.current.disconnect();
       } catch (err) {
         console.error(err);
@@ -470,6 +531,7 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId }) {
       });
       addLog(`OBS Studio Version: ${obsWebSocketVersion}`, "info");
     } catch (err) {
+      publishOBSOperatorState(adminSocketRef.current, false);
       addLog(`Connection failed: ${err.message}`, "error");
     }
   }, [isConnected, url, password, addLog]);

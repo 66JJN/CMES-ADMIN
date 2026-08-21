@@ -33,6 +33,7 @@ import { mongoSanitize } from './middleware/securityMiddleware.js';
 import { processAutoQueue, completeItem, emitNowPlaying, playNextItem, recoverQueue, updateQueueControl } from './services/queueService.js';
 import { displayRegistry } from './services/displayRegistry.js';
 import { cleanupAllObsTests, cleanupExpiredObsTests, getObsTestStatus, stopObsTest } from './services/obsTestService.js';
+import { createDisplayDisconnectCoordinator } from './services/displayDisconnectCoordinator.js';
 
 // Route modules
 import reportRoutes from './routes/reportRoutes.js';
@@ -230,8 +231,8 @@ app.use('/', statusRoutes);
 // SOCKET.IO CONNECTION HANDLER
 // ==========================================
 const publicRankingTypes = new Map();
-const displayDisconnectTimers = new Map();
 const DISPLAY_DISCONNECT_GRACE_MS = 8000;
+const obsOperatorConnections = new Map();
 
 const pauseQueueForDisconnectedDisplay = async (shopId) => {
   if (displayRegistry.isConnected(shopId)) return;
@@ -263,6 +264,19 @@ const pauseQueueForDisconnectedDisplay = async (shopId) => {
     console.error(`[QueueFallback][${shopId}] Could not pause queue after OBS disconnect:`, error);
   }
 };
+
+const displayDisconnectCoordinator = createDisplayDisconnectCoordinator({
+  registry: displayRegistry,
+  graceMs: DISPLAY_DISCONNECT_GRACE_MS,
+  stopTest: async (shopId) => {
+    await stopObsTest({ shopId, io, reason: 'display_disconnected' });
+    io.to(shopId).emit('obs-test-status', await getObsTestStatus(shopId));
+  },
+  pauseQueue: pauseQueueForDisconnectedDisplay,
+  onError: (error, shopId, step) => {
+    console.error(`[DisplayRecovery][${shopId}] ${step} failed:`, error);
+  }
+});
 
 const getSystemConfigWithSettings = async (shopId) => {
   try {
@@ -307,12 +321,10 @@ io.on('connection', (socket) => {
   socket.shopId = shopId;
   socket.join(shopId);
   if (kind === 'display') {
-    const pendingTimer = displayDisconnectTimers.get(shopId);
-    if (pendingTimer) {
-      clearTimeout(pendingTimer);
-      displayDisconnectTimers.delete(shopId);
-    }
-    displayRegistry.connect(shopId);
+    displayDisconnectCoordinator.displayConnected(shopId);
+    socket.emit('obs-operator-connection', {
+      connected: obsOperatorConnections.get(shopId) !== false
+    });
     getObsTestStatus(shopId)
       .then(status => io.to(shopId).emit('obs-test-status', status))
       .catch(error => console.error(`[OBSTest][${shopId}] Could not publish display readiness:`, error));
@@ -399,6 +411,11 @@ io.on('connection', (socket) => {
 
   socket.on('pause-display', adminOnly((data) => io.to(shopId).emit('pause-display', data)));
   socket.on('resume-display', adminOnly((data) => io.to(shopId).emit('resume-display', data)));
+  socket.on('set-obs-operator-connected', adminOnly((data = {}) => {
+    const connected = data.connected === true;
+    obsOperatorConnections.set(shopId, connected);
+    io.to(shopId).emit('obs-operator-connection', { connected });
+  }));
 
   socket.on('skip-current', adminOnly(async () => {
     io.to(shopId).emit('skip-current');
@@ -445,20 +462,7 @@ io.on('connection', (socket) => {
     console.log('[Socket.IO] Client disconnected:', socket.id);
     if (kind !== 'display') return;
 
-    const remainingDisplays = displayRegistry.disconnect(shopId);
-    if (remainingDisplays > 0) return;
-
-    try {
-      await stopObsTest({ shopId, io, reason: 'display_disconnected' });
-      io.to(shopId).emit('obs-test-status', await getObsTestStatus(shopId));
-    } catch (error) {
-      console.error(`[OBSTest][${shopId}] Cleanup after display disconnect failed:`, error);
-    }
-    const timer = setTimeout(() => {
-      displayDisconnectTimers.delete(shopId);
-      pauseQueueForDisconnectedDisplay(shopId);
-    }, DISPLAY_DISCONNECT_GRACE_MS);
-    displayDisconnectTimers.set(shopId, timer);
+    displayDisconnectCoordinator.displayDisconnected(shopId);
   });
 });
 

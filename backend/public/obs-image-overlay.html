@@ -860,6 +860,18 @@
       fallbackStatus.classList.remove('show');
     }
 
+    let backendConnected = false;
+    // Keep the fallback visible until the server confirms the operator state.
+    // This avoids a brief false "ready" flash after Browser Source reconnects.
+    let operatorConnected = false;
+    function updateFallbackVisibility() {
+      if (backendConnected && operatorConnected) {
+        hideFallback();
+      } else {
+        showFallback('ระบบกำลังเชื่อมต่อ', 'กรุณารอสักครู่');
+      }
+    }
+
     showFallback();
 
     // เก็บการตั้งค่ารูปภาพสินค้า
@@ -1013,7 +1025,7 @@
 
     function show(payload = {}) {
       console.log('[Combined Overlay] Received payload:', payload);
-      hideFallback();
+      updateFallbackVisibility();
       activeGiftPlaybackId = null;
       activeTestSessionId = payload.isTest ? payload.testSessionId || null : null;
 
@@ -1208,10 +1220,21 @@
 
     socket.on('connect', () => {
       console.log('[Combined Overlay] Connected', socket.id);
-      hideFallback();
+      backendConnected = true;
+      updateFallbackVisibility();
     });
-    socket.on('connect_error', () => showFallback('ระบบกำลังเชื่อมต่อ', 'กรุณารอสักครู่'));
-    socket.on('disconnect', () => showFallback('ระบบกำลังเชื่อมต่อ', 'กรุณารอสักครู่'));
+    socket.on('connect_error', () => {
+      backendConnected = false;
+      updateFallbackVisibility();
+    });
+    socket.on('disconnect', () => {
+      backendConnected = false;
+      updateFallbackVisibility();
+    });
+    socket.on('obs-operator-connection', (data = {}) => {
+      operatorConnected = data.connected !== false;
+      updateFallbackVisibility();
+    });
     socket.on('now-playing-image', show);
     socket.on('now-playing-gift', showGift);
     socket.on('configUpdate', (config) => {

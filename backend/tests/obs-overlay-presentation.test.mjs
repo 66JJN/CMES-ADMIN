@@ -80,6 +80,11 @@ test('ข้อความล้วนไม่ใช้ layout ที่มี
   assert.match(overlayHtml, /if \(filePath && normalizedTextLayout !== ['"]right['"]\)/);
 });
 
+test('OBS overlay shows fallback when the operator explicitly disconnects control', () => {
+  assert.match(overlayHtml, /socket\.on\(['"]obs-operator-connection['"]/);
+  assert.match(overlayHtml, /operatorConnected/);
+});
+
 test('OBS overlay ล้างเฉพาะข้อมูลของ test session ที่กำลังแสดง', () => {
   assert.match(overlayHtml, /let activeTestSessionId = null/);
   assert.match(overlayHtml, /socket\.on\(['"]clear-test-display['"]/);
