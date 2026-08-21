@@ -6,6 +6,7 @@ import adminFetch from '../../config/authFetch';
 import Button from '../ui/Button';
 import ErrorBoundary from '../ui/ErrorBoundary';
 import useOBSControl from '../../hooks/useOBSControl';
+import useOBSTest from '../../hooks/useOBSTest';
 import OBSControlPanel from './OBSControlPanel';
 import './DashboardShared.css';
 import './DashboardModals.css';
@@ -61,6 +62,7 @@ export default function DashboardModals() {
     adminId,
     shopId: shopId || adminId,
   });
+  const obsTestState = useOBSTest({ API_BASE_URL, socket });
 
   const [copiedImage, setCopiedImage] = useState(false);
   const [copiedRanking, setCopiedRanking] = useState(false);
@@ -366,7 +368,7 @@ export default function DashboardModals() {
 
               <div className="obs-lazy-panel-container">
                 <ErrorBoundary>
-                  <OBSControlPanel {...obsControlState} />
+                  <OBSControlPanel {...obsControlState} {...obsTestState} />
                 </ErrorBoundary>
               </div>
             </div>

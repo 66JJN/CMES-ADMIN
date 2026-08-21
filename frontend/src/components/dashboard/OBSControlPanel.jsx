@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./OBSControlPanel.css";
+import OBSTestCard from "./OBSTestCard";
 
 const SOURCE_LABELS = [
   ["Overlay_ImageText", "ภาพและข้อความ", "🖼️"],
@@ -54,6 +55,7 @@ export default function OBSControlPanel({
   updateActiveDisplayProfile, addDisplayProfile, removeActiveDisplayProfile,
   handleConnect, handleSceneSwitch, handleEmergencyHide, handleMarqueeUpdate,
   handleToggleMute, handleCanvasMouseDown, handleCanvasMouseMove, handleCanvasMouseUp,
+  obsTest, isObsTestBusy, startObsTest, stopObsTest,
 }) {
   const [previewMode, setPreviewMode] = useState("image");
   const activeStyle = activeDisplayProfile?.overlayStyle || overlayStyle;
@@ -105,6 +107,13 @@ export default function OBSControlPanel({
           </button>
         </div>
       </div>
+
+      <OBSTestCard
+        obsTest={obsTest}
+        isObsTestBusy={isObsTestBusy}
+        startObsTest={startObsTest}
+        stopObsTest={stopObsTest}
+      />
 
       <section className="display-profile-card">
         <div className="obs-section-heading">
