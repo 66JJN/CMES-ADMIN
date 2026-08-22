@@ -86,95 +86,86 @@ test('display can request the persisted playing gift again without changing queu
   assert.deepEqual(events, [['now-playing-gift', 'gift-1']]);
 });
 
-test('OBS control disconnect preserves real content by pausing and recovering the queue', async () => {
+test('OBS Web Control state is informational and never mutates the persisted queue', async () => {
   assert.equal(typeof queueService.syncObsOperatorConnection, 'function');
   if (typeof queueService.syncObsOperatorConnection !== 'function') return;
 
   const events = [];
-  const recovered = [];
   const emitter = { to: () => ({ emit: (name) => events.push(name) }) };
   const result = await queueService.syncObsOperatorConnection('JJ', false, emitter, {
     getControl: async () => ({ queuePaused: false, queuePauseReason: null }),
-    updateControl: async (_shopId, updates) => ({ ...updates }),
-    recover: async (shopId) => recovered.push(shopId),
-    playNext: async () => { throw new Error('disconnected OBS must not play content'); },
+    updateControl: async () => { throw new Error('operator state must not mutate queue control'); },
+    recover: async () => { throw new Error('operator state must not recover playing content'); },
+    playNext: async () => { throw new Error('operator state must not advance content'); },
   });
 
-  assert.equal(result.queuePaused, true);
-  assert.equal(result.queuePauseReason, 'obs_operator_disconnected');
-  assert.equal(result.queueNextPlayAt, null);
-  assert.deepEqual(recovered, ['JJ']);
-  assert.deepEqual(events, [
-    'obs-operator-connection',
-    'pause-display',
-    'queue-control-updated',
-  ]);
+  assert.equal(result.queuePaused, false);
+  assert.equal(result.queuePauseReason, null);
+  assert.deepEqual(events, ['obs-operator-connection']);
 });
 
-test('OBS control reconnect resumes its recovered queue but keeps a manual pause', async () => {
+test('OBS Web Control reconnect does not resume or advance a persisted queue', async () => {
   assert.equal(typeof queueService.syncObsOperatorConnection, 'function');
   if (typeof queueService.syncObsOperatorConnection !== 'function') return;
 
   const events = [];
-  const played = [];
   const emitter = { to: () => ({ emit: (name) => events.push(name) }) };
   const baseDependencies = {
-    updateControl: async (_shopId, updates) => ({ ...updates }),
-    recover: async () => { throw new Error('reconnect must not recover twice'); },
-    playNext: async (shopId) => played.push(shopId),
+    updateControl: async () => { throw new Error('operator state must not mutate queue control'); },
+    recover: async () => { throw new Error('operator state must not recover content'); },
+    playNext: async () => { throw new Error('operator state must not advance content'); },
   };
 
   const resumed = await queueService.syncObsOperatorConnection('JJ', true, emitter, {
     ...baseDependencies,
     getControl: async () => ({ queuePaused: true, queuePauseReason: 'obs_operator_disconnected' }),
   });
-  assert.equal(resumed.queuePaused, false);
-  assert.equal(resumed.queuePauseReason, null);
-  assert.deepEqual(played, ['JJ']);
-  assert.deepEqual(events, ['obs-operator-connection', 'resume-display', 'queue-control-updated']);
+  assert.equal(resumed.queuePaused, true);
+  assert.equal(resumed.queuePauseReason, 'obs_operator_disconnected');
+  assert.deepEqual(events, ['obs-operator-connection']);
 
-  played.length = 0;
   events.length = 0;
   const manual = await queueService.syncObsOperatorConnection('JJ', true, emitter, {
     ...baseDependencies,
     getControl: async () => ({ queuePaused: true, queuePauseReason: 'manual' }),
   });
   assert.equal(manual.queuePaused, true);
-  assert.deepEqual(played, []);
   assert.deepEqual(events, ['obs-operator-connection']);
 });
 
-test('a quick OBS reconnect waits for disconnect recovery before resuming', async () => {
-  let releasePause;
-  let markPauseStarted;
-  const pauseStarted = new Promise((resolve) => { markPauseStarted = resolve; });
-  const pauseCanFinish = new Promise((resolve) => { releasePause = resolve; });
-  let control = { queuePaused: false, queuePauseReason: null };
-  const played = [];
+test('a quick OBS Web Control reconnect cannot reorder queue transitions', async () => {
+  const control = { queuePaused: false, queuePauseReason: null };
   const emitter = { to: () => ({ emit: () => {} }) };
   const dependencies = {
     getControl: async () => ({ ...control }),
-    updateControl: async (_shopId, updates) => {
-      if (updates.queuePaused === true) {
-        markPauseStarted();
-        await pauseCanFinish;
-      }
-      control = { ...control, ...updates };
-      return { ...control };
-    },
-    recover: async () => {},
-    playNext: async (shopId) => played.push(shopId),
+    updateControl: async () => { throw new Error('operator state must not mutate queue control'); },
+    recover: async () => { throw new Error('operator state must not recover content'); },
+    playNext: async () => { throw new Error('operator state must not advance content'); },
   };
 
   const disconnecting = queueService.syncObsOperatorConnection('JJ', false, emitter, dependencies);
-  await pauseStarted;
   const reconnecting = queueService.syncObsOperatorConnection('JJ', true, emitter, dependencies);
-  releasePause();
   await Promise.all([disconnecting, reconnecting]);
 
   assert.equal(control.queuePaused, false);
   assert.equal(control.queuePauseReason, null);
-  assert.deepEqual(played, ['JJ']);
+});
+
+test('an actual Browser Source reconnect clears only the obsolete operator pause', async () => {
+  assert.equal(typeof queueService.resumeLegacyObsOperatorPause, 'function');
+  if (typeof queueService.resumeLegacyObsOperatorPause !== 'function') return;
+
+  const events = [];
+  const emitter = { to: () => ({ emit: (name) => events.push(name) }) };
+  const result = await queueService.resumeLegacyObsOperatorPause('JJ', emitter, {
+    getControl: async () => ({ queuePaused: true, queuePauseReason: 'obs_operator_disconnected' }),
+    updateControl: async (_shopId, updates) => ({ ...updates }),
+    playNext: async () => { throw new Error('display restore must emit each item only once'); },
+  });
+
+  assert.equal(result.queuePaused, false);
+  assert.equal(result.queuePauseReason, null);
+  assert.deepEqual(events, ['resume-display', 'queue-control-updated']);
 });
 
 test('submission is rejected inside shop lock while OBS test is active', async () => {

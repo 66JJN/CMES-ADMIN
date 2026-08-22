@@ -80,9 +80,9 @@ test('ข้อความล้วนไม่ใช้ layout ที่มี
   assert.match(overlayHtml, /if \(filePath && normalizedTextLayout !== ['"]right['"]\)/);
 });
 
-test('OBS overlay shows fallback when the operator explicitly disconnects control', () => {
-  assert.match(overlayHtml, /socket\.on\(['"]obs-operator-connection['"]/);
-  assert.match(overlayHtml, /operatorConnected/);
+test('OBS overlay readiness depends on its own backend connection, not Admin Web Control', () => {
+  assert.doesNotMatch(overlayHtml, /socket\.on\(['"]obs-operator-connection['"]/);
+  assert.doesNotMatch(overlayHtml, /operatorConnected/);
 });
 
 test('OBS ขอรายการปัจจุบันซ้ำหลังช่วงพักระหว่างคิวเพื่อกู้ event ที่พลาด', () => {

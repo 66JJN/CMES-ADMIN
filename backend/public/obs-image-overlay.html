@@ -861,11 +861,8 @@
     }
 
     let backendConnected = false;
-    // Keep the fallback visible until the server confirms the operator state.
-    // This avoids a brief false "ready" flash after Browser Source reconnects.
-    let operatorConnected = false;
     function updateFallbackVisibility() {
-      if (backendConnected && operatorConnected) {
+      if (backendConnected) {
         hideFallback();
       } else {
         showFallback('ระบบกำลังเชื่อมต่อ', 'กรุณารอสักครู่');
@@ -1246,10 +1243,6 @@
     });
     socket.on('disconnect', () => {
       backendConnected = false;
-      updateFallbackVisibility();
-    });
-    socket.on('obs-operator-connection', (data = {}) => {
-      operatorConnected = data.connected !== false;
       updateFallbackVisibility();
     });
     socket.on('now-playing-image', show);

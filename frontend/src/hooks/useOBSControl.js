@@ -102,7 +102,12 @@ export const subscribeOBSOperatorStateSync = (socket, getConnected) => {
   if (!socket || typeof socket.on !== 'function' || typeof socket.off !== 'function') {
     return () => {};
   }
-  const publishCurrent = () => publishOBSOperatorState(socket, getConnected?.() === true);
+  // A reconnect of the Admin Socket.IO connection does not prove that OBS Web
+  // Control disconnected. Publishing a temporary false state here used to
+  // pause/recover the real queue while changing pages.
+  const publishCurrent = () => {
+    if (getConnected?.() === true) publishOBSOperatorState(socket, true);
+  };
   socket.on('connect', publishCurrent);
   if (socket.connected) publishCurrent();
   return () => socket.off('connect', publishCurrent);
@@ -521,7 +526,6 @@ export default function useOBSControl({ API_BASE_URL, adminId, shopId, adminSock
     obs.on("SceneItemEnableStateChanged", onSceneItemEnableStateChanged);
 
     return () => {
-      publishOBSOperatorState(adminSocketRef.current, false);
       obs.removeAllListeners();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       obs.disconnect().catch(() => {});

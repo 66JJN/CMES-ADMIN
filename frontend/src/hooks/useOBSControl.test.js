@@ -32,7 +32,7 @@ test('publishes explicit OBS control connection state to the authenticated Admin
   expect(emit).toHaveBeenCalledWith('set-obs-operator-connected', { connected: false });
 });
 
-test('republishes the current OBS state after the Admin socket reconnects', () => {
+test('republishes only a confirmed OBS connection after the Admin socket reconnects', () => {
   expect(typeof obsControlModule.subscribeOBSOperatorStateSync).toBe('function');
   if (typeof obsControlModule.subscribeOBSOperatorStateSync !== 'function') return;
 
@@ -49,9 +49,10 @@ test('republishes the current OBS state after the Admin socket reconnects', () =
   const unsubscribe = obsControlModule.subscribeOBSOperatorStateSync(socket, () => obsConnected);
 
   expect(socket.emit).toHaveBeenLastCalledWith('set-obs-operator-connected', { connected: true });
+  socket.emit.mockClear();
   obsConnected = false;
   listeners.get('connect')();
-  expect(socket.emit).toHaveBeenLastCalledWith('set-obs-operator-connected', { connected: false });
+  expect(socket.emit).not.toHaveBeenCalled();
 
   unsubscribe();
   expect(socket.off).toHaveBeenCalledWith('connect', expect.any(Function));

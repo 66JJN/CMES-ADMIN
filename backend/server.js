@@ -30,7 +30,7 @@ import { startCleanupJob } from "./utils/cron-cleanup.js";
 import { mongoSanitize } from './middleware/securityMiddleware.js';
 
 // Services
-import { processAutoQueue, completeItem, emitNowPlaying, playNextItem, recoverQueue, replayCurrentPlaying, syncObsOperatorConnection, updateQueueControl } from './services/queueService.js';
+import { processAutoQueue, completeItem, emitNowPlaying, playNextItem, recoverQueue, replayCurrentPlaying, resumeLegacyObsOperatorPause, syncObsOperatorConnection, updateQueueControl } from './services/queueService.js';
 import { displayRegistry } from './services/displayRegistry.js';
 import { cleanupAllObsTests, cleanupExpiredObsTests, getObsTestStatus, stopObsTest } from './services/obsTestService.js';
 import { createDisplayDisconnectCoordinator } from './services/displayDisconnectCoordinator.js';
@@ -232,7 +232,6 @@ app.use('/', statusRoutes);
 // ==========================================
 const publicRankingTypes = new Map();
 const DISPLAY_DISCONNECT_GRACE_MS = 8000;
-const obsOperatorConnections = new Map();
 
 const pauseQueueForDisconnectedDisplay = async (shopId) => {
   if (displayRegistry.isConnected(shopId)) return;
@@ -323,9 +322,6 @@ io.on('connection', (socket) => {
   socket.join(shopId);
   if (kind === 'display') {
     displayDisconnectCoordinator.displayConnected(shopId);
-    socket.emit('obs-operator-connection', {
-      connected: obsOperatorConnections.get(shopId) !== false
-    });
     getObsTestStatus(shopId)
       .then(status => io.to(shopId).emit('obs-test-status', status))
       .catch(error => console.error(`[OBSTest][${shopId}] Could not publish display readiness:`, error));
@@ -339,10 +335,13 @@ io.on('connection', (socket) => {
   // A browser source can reconnect after OBS/browser/backend restart. Restore
   // its persisted playback state directly from MongoDB instead of waiting for
   // a future queue event.
-  Promise.all([
+  const prepareDisplayQueue = kind === 'display'
+    ? resumeLegacyObsOperatorPause(shopId, io)
+    : Promise.resolve();
+  prepareDisplayQueue.then(() => Promise.all([
     ImageQueue.findOne({ shopId, status: 'playing' }).lean(),
     ShopSetting.findOne({ shopId }).select('queuePaused queuePausedRemainingSeconds queueNextPlayAt').lean()
-  ]).then(([playingItem, control]) => {
+  ])).then(([playingItem, control]) => {
     if (playingItem) emitNowPlaying(playingItem, socket);
     if (control?.queuePaused) {
       socket.emit('pause-display', { manual: true, remaining: control.queuePausedRemainingSeconds ?? null });
@@ -427,7 +426,6 @@ io.on('connection', (socket) => {
   socket.on('resume-display', adminOnly((data) => io.to(shopId).emit('resume-display', data)));
   socket.on('set-obs-operator-connected', adminOnly(async (data = {}) => {
     const connected = data.connected === true;
-    obsOperatorConnections.set(shopId, connected);
     try {
       await syncObsOperatorConnection(shopId, connected, io);
     } catch (error) {
