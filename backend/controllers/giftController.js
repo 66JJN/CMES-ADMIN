@@ -30,6 +30,12 @@ function saveGiftSettings() {
   fs.writeFileSync(giftSettingsPath, JSON.stringify(giftSettings, null, 2));
 }
 
+export function emitGiftQueueUpdate(io, shopId, queueItem) {
+  if (!io || !shopId) return;
+  io.to(shopId).emit("new-upload", queueItem);
+  io.to(shopId).emit("admin-update-queue");
+}
+
 async function syncGiftSettingsFromDB(shopId) {
   const gifts = await GiftSetting.find({ shopId });
   giftSettings.items = gifts.map(g => ({
@@ -235,11 +241,9 @@ export const createGiftOrder = async (req, res) => {
 
     const io = req.app.get('socketio');
 
-    // Notify admins
-    if (io) {
-      io.emit("new-upload", queueItem);
-      io.to(shopId).emit("admin-update-queue");
-    }
+    // Notify only this shop. A global emit leaks the event to every venue and
+    // can make another Admin dashboard refresh or preview the wrong queue.
+    emitGiftQueueUpdate(io, shopId, queueItem);
 
     // บันทึก ranking
     if (!isFreeMode && queueItem.paymentStatus === 'paid' && userId && userId !== 'guest' && userId !== 'unknown') {

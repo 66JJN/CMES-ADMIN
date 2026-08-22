@@ -41,6 +41,26 @@ test('real completion deletes the item through its shop boundary', async () => {
   assert.equal(history[0].shopId, 'Mellow01');
 });
 
+test('history failure keeps the real queue item available for retry', async () => {
+  let deleteCalls = 0;
+  const item = {
+    _id: 'real-history-failure', shopId: 'Mellow01', isTest: false, type: 'text',
+    sender: 'Guest', text: 'keep me', time: 10, price: 0,
+  };
+
+  await completeItem(item, null, {
+    createHistory: async () => {
+      throw new Error('history unavailable');
+    },
+    deleteRealItem: async () => {
+      deleteCalls += 1;
+      return item;
+    },
+  });
+
+  assert.equal(deleteCalls, 0);
+});
+
 test('completed image history preserves which moderation provider produced the result', async () => {
   const history = [];
   const item = {

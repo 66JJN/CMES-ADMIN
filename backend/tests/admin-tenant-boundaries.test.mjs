@@ -6,6 +6,7 @@ import ImageQueue from '../models/ImageQueue.js';
 import CheckHistory from '../models/CheckHistory.js';
 import { getSettingsHistory, healthCheck } from '../controllers/statusController.js';
 import { getOrderStatus, userDeleteOrder } from '../controllers/queueController.js';
+import * as giftController from '../controllers/giftController.js';
 
 const makeResponse = () => {
   const state = { statusCode: 200, body: undefined };
@@ -118,4 +119,23 @@ test('deleting a pending order keeps the shop in the final delete query', async 
 
   assert.deepEqual(deleteQuery, { _id: 'queue-1', shopId: 'Mellow01' });
   assert.equal(res.state.statusCode, 200);
+});
+
+test('gift queue updates are emitted only to the authenticated shop room', () => {
+  assert.equal(typeof giftController.emitGiftQueueUpdate, 'function');
+  if (typeof giftController.emitGiftQueueUpdate !== 'function') return;
+
+  const calls = [];
+  const io = {
+    emit: (...args) => calls.push(['global', ...args]),
+    to: (shopId) => ({ emit: (...args) => calls.push(['room', shopId, ...args]) }),
+  };
+  const item = { _id: 'gift-1', shopId: 'Mellow01' };
+
+  giftController.emitGiftQueueUpdate(io, 'Mellow01', item);
+
+  assert.deepEqual(calls, [
+    ['room', 'Mellow01', 'new-upload', item],
+    ['room', 'Mellow01', 'admin-update-queue'],
+  ]);
 });

@@ -99,6 +99,7 @@ checkHistorySchema.index(
 // Index for shop-specific queries
 checkHistorySchema.index({ shopId: 1, status: 1, createdAt: -1 });
 checkHistorySchema.index({ shopId: 1, paymentStatus: 1, paidAt: -1 });
+checkHistorySchema.index({ shopId: 1, transactionId: 1 }, { unique: true });
 
 const CheckHistory = mongoose.model("CheckHistory", checkHistorySchema);
 

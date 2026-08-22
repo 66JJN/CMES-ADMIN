@@ -264,15 +264,8 @@ export async function completeItem(item, io, dependencies = {}) {
       return;
     }
 
-    const deleteRealItem = dependencies.deleteRealItem || ((shopId, itemId) => (
-      ImageQueue.findOneAndDelete({ _id: itemId, shopId })
-    ));
-    const createHistory = dependencies.createHistory || ((data) => CheckHistory.create(data));
-    const deleted = await deleteRealItem(item.shopId, item._id);
-    if (!deleted) return; // Already processed
-
     const txId = (item.type === 'gift' && item.giftOrder?.orderId) ? item.giftOrder.orderId : item._id.toString();
-    await createHistory({
+    const historyData = {
       shopId: item.shopId,
       transactionId: txId,
       type: item.type || (item.filePath ? 'image' : 'text'),
@@ -308,7 +301,23 @@ export async function completeItem(item, io, dependencies = {}) {
       duration: item.time,
       approvedBy: 'system',
       notes: 'Completed by QueueWorker'
-    });
+    };
+
+    // Persist the completed record first. If MongoDB is temporarily unavailable,
+    // the playing queue item remains in place and the next worker tick can retry.
+    // The upsert plus the compound unique index makes that retry idempotent.
+    const createHistory = dependencies.createHistory || ((data) => CheckHistory.findOneAndUpdate(
+      { shopId: data.shopId, transactionId: data.transactionId },
+      { $setOnInsert: data },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    ));
+    await createHistory(historyData);
+
+    const deleteRealItem = dependencies.deleteRealItem || ((shopId, itemId) => (
+      ImageQueue.findOneAndDelete({ _id: itemId, shopId })
+    ));
+    const deleted = await deleteRealItem(item.shopId, item._id);
+    if (!deleted) return; // Already processed by another worker
 
     console.log(`[QueueWorker] Completed item ${item._id} for shop ${item.shopId}`);
 
