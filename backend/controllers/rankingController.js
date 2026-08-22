@@ -99,8 +99,8 @@ export const getRankingSummary = async (req, res) => {
     const today = getThaiDateStr();
     const currentMonth = getThaiMonthStr();
 
-    const shopId = req.query.shopId || req.headers['x-shop-id'] || '';
-    let matchQuery = shopId ? { shopId } : {};
+    const { shopId } = req;
+    let matchQuery = { shopId };
 
     if (type === "daily") {
       matchQuery = { ...matchQuery, date: req.query.date || today };
