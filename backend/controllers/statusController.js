@@ -7,6 +7,11 @@ import ShopSetting from '../models/ShopSetting.js';
 import TimeHistory from '../models/TimeHistory.js';
 import { verifyPassword } from '../utils/hashPasswords.js';
 import { signAdminToken } from '../middleware/authMiddleware.js';
+import {
+  getModerationProviderStatus,
+  isModerationProviderSupported,
+  normalizeModerationProvider,
+} from '../utils/contentModeration.js';
 
 // Overlay settings are intentionally a small, validated design system rather
 // than arbitrary CSS supplied by the browser.  This keeps a shop from saving a
@@ -177,6 +182,8 @@ export const getSystemStatus = async (req, res) => {
       shopId: settings.shopId, displayTime: settings.displayTime,
       autoPlayEnabled: settings.autoPlayEnabled,
       queueAccepting: settings.systemConfig?.queueAccepting !== false,
+      moderationProvider: normalizeModerationProvider(settings.systemConfig?.moderationProvider),
+      moderationProviders: getModerationProviderStatus(),
       birthdaySpendingRequirement: settings.birthdaySpendingRequirement,
       freeMode: settings.freeMode,
       publicRankingType: settings.publicRankingType || 'alltime',
@@ -206,6 +213,21 @@ export const updateSystemConfig = async (req, res) => {
     if (Object.prototype.hasOwnProperty.call(updates, 'displayProfiles')) {
       updates.displayProfiles = sanitizeDisplayProfiles(updates.displayProfiles);
     }
+    if (Object.prototype.hasOwnProperty.call(updates, 'moderationProvider')) {
+      if (!isModerationProviderSupported(updates.moderationProvider)) {
+        return res.status(400).json({
+          success: false,
+          message: 'API ตรวจสอบรูปภาพที่เลือกไม่ถูกต้อง',
+        });
+      }
+      const providers = getModerationProviderStatus();
+      if (!providers[updates.moderationProvider].configured) {
+        return res.status(400).json({
+          success: false,
+          message: 'API ที่เลือกยังไม่ได้ตั้งค่าใน Admin Backend',
+        });
+      }
+    }
 
     const existing = await ShopSetting.findOne({ shopId }).lean();
     const mergedConfig = { ...(existing?.systemConfig || {}), ...updates };
@@ -225,6 +247,8 @@ export const updateSystemConfig = async (req, res) => {
       shopId: settings.shopId, displayTime: settings.displayTime,
       autoPlayEnabled: settings.autoPlayEnabled,
       queueAccepting: mergedConfig.queueAccepting !== false,
+      moderationProvider: normalizeModerationProvider(mergedConfig.moderationProvider),
+      moderationProviders: getModerationProviderStatus(),
       freeMode: settings.freeMode
     };
 

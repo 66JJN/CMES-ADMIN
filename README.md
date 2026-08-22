@@ -25,7 +25,7 @@ CMES-ADMIN เป็นศูนย์ควบคุมของระบบ CM
 
 - คิวถาวรใน MongoDB: `pending → approved → playing → completed/rejected`
 - Auto queue พร้อม pause, resume, skip, retry และปิดรับคิวใหม่โดยไม่ลบคิวเดิม
-- AI moderation สำหรับรูปภาพ: รูปปลอดภัยเข้า approved อัตโนมัติ รูปที่ถูก flag หรือประเมินไม่ได้รอ Admin ตรวจ
+- AI moderation สำหรับรูปภาพ: Admin เลือก Sightengine หรือ Objexify แยกตามร้านได้ รูปปลอดภัยเข้า approved อัตโนมัติ ส่วนรูปที่ถูก flag หรือประเมินไม่ได้รอ Admin ตรวจ
 - ข้อความเข้า approved อัตโนมัติเพื่อลดภาระพนักงาน
 - Free mode บังคับราคา `0` จาก server และไม่ใช้ยอดเงินฟรีกับรายได้/อันดับ
 - Admin JWT, Socket authentication, service token และ tenant isolation ตาม `shopId`
@@ -157,7 +157,7 @@ MongoDB เก็บคิวและสถานะควบคุมหลั
 - MongoDB Atlas
 - Cloudinary
 - CMES-USER สำหรับทดสอบ customer flow แบบครบระบบ
-- SightEngine เฉพาะเมื่อต้องการ AI moderation
+- SightEngine สำหรับ AI moderation หลัก และ Objexify เมื่อต้องการทดลองผู้ให้บริการสำรอง
 - OBS Studio 28+ เฉพาะเมื่อต้องการทดสอบจอจริง
 
 ### ติดตั้ง
@@ -209,6 +209,8 @@ npm start
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret | Yes |
 | `SIGHTENGINE_API_USER` | AI moderation user | Optional |
 | `SIGHTENGINE_API_SECRET` | AI moderation secret | Optional |
+| `OBJEXIFY_API_BASE_URL` | Base URL ของ Objexify เช่น `https://objexify.dpdns.org` | Optional |
+| `OBJEXIFY_API_KEY` | Bearer token สำหรับ Objexify; เก็บเฉพาะ Admin backend | Optional |
 | `MAX_ACTIVE_QUEUE_PER_USER` | จำนวน active queue ต่อผู้ใช้; default `3` | Optional |
 | `ADMIN_JWT_EXPIRES_IN` | อายุ Admin JWT; default `8h` | Optional |
 | `OBS_JWT_EXPIRES_IN` | อายุ display token; default `24h` | Optional |

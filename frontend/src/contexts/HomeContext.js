@@ -12,6 +12,11 @@ export function HomeProvider({ children, socket, shopId }) {
   const [enableBirthday, setEnableBirthday] = useState(true);
   const [freeMode, setFreeMode] = useState(false);
   const [queueAccepting, setQueueAccepting] = useState(true);
+  const [moderationProvider, setModerationProvider] = useState('sightengine');
+  const [moderationProviders, setModerationProviders] = useState({
+    sightengine: { configured: false },
+    objexify: { configured: false },
+  });
   const [birthdaySpendingRequirement, setBirthdaySpendingRequirement] = useState(100);
 
   // ===== Package controls state =====
@@ -70,6 +75,8 @@ export function HomeProvider({ children, socket, shopId }) {
     enableBirthday, setEnableBirthday,
     freeMode, setFreeMode,
     queueAccepting, setQueueAccepting,
+    moderationProvider, setModerationProvider,
+    moderationProviders, setModerationProviders,
     birthdaySpendingRequirement, setBirthdaySpendingRequirement,
     mode, setMode,
     minute, setMinute,

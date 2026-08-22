@@ -132,6 +132,11 @@ const imageQueueSchema = new mongoose.Schema({
 
   // AI Content Moderation
   aiModeration: {
+    provider: {
+      type: String,
+      enum: ['sightengine', 'objexify'],
+      default: 'sightengine'
+    },
     checked: { type: Boolean, default: false },       // AI ตรวจสอบแล้วหรือยัง
     safe: { type: Boolean, default: null },            // ผลตรวจ: ปลอดภัยหรือไม่
     autoApproved: { type: Boolean, default: false },   // ถูก auto-approve โดย AI หรือไม่

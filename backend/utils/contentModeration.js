@@ -1,195 +1,257 @@
 /**
- * contentModeration.js — AI Content Moderation using SightEngine
- * ตรวจสอบรูปภาพอัตโนมัติก่อนอนุมัติขึ้นจอ
- * 
- * Flow:
- *   1. รูปถูกอัปโหลดไป Cloudinary แล้วได้ URL กลับมา
- *   2. ส่ง URL ให้ SightEngine ตรวจสอบ
- *   3. ถ้าผ่าน → auto-approve (status: "approved")
- *   4. ถ้าไม่ผ่าน → ค้างใน queue (status: "pending") ให้ Admin ตรวจสอบ
- * 
- * Free Tier: 2,000 operations/month, 500/day
+ * ตรวจรูปภาพผ่านผู้ให้บริการที่ร้านเลือก แล้วคืนผลในรูปแบบเดียวกัน
+ * เพื่อไม่ให้ Queue Controller ต้องรู้ว่าผลตอบกลับของแต่ละ API ต่างกันอย่างไร
  */
 
-import fetch from 'node-fetch';
+const DEFAULT_PROVIDER = 'sightengine';
+const SUPPORTED_PROVIDERS = new Set(['sightengine', 'objexify']);
+const OBJEXIFY_ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png']);
+const MAX_OBJEXIFY_IMAGE_BYTES = 10 * 1024 * 1024;
 
-// ===== Configuration =====
-// อ่านค่า env แบบ lazy (ตอนเรียกใช้งาน) เพราะ dotenv.config() อาจยังไม่ทำงานตอน import
-function getApiUser() { return process.env.SIGHTENGINE_API_USER || ''; }
-function getApiSecret() { return process.env.SIGHTENGINE_API_SECRET || ''; }
+const getSightengineApiUser = () => process.env.SIGHTENGINE_API_USER || '';
+const getSightengineApiSecret = () => process.env.SIGHTENGINE_API_SECRET || '';
+const getObjexifyBaseUrl = () => (process.env.OBJEXIFY_API_BASE_URL || '').replace(/\/+$/, '');
+const getObjexifyApiKey = () => process.env.OBJEXIFY_API_KEY || '';
+const timeoutSignal = (milliseconds) => (
+  typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(milliseconds) : undefined
+);
 
-// เกณฑ์ความปลอดภัย (0.0 - 1.0)
-// ค่ายิ่งต่ำ = เข้มงวดมากขึ้น (ปฏิเสธง่ายขึ้น)
 const THRESHOLDS = {
-  nudity: 0.40,          // เนื้อหาโป๊เปลือย (ค่าต่ำกว่านี้ถือว่าปลอดภัย)
-  weapon: 0.60,          // อาวุธ
-  alcohol: 0.80,         // เครื่องดื่มแอลกอฮอล์ (ผ่อนปรนกว่า เพราะร้านอาจขายเครื่องดื่ม)
-  drugs: 0.50,           // ยาเสพติด
-  offensive: 0.50,       // เนื้อหาน่ารังเกียจ/รุนแรง
-  gore: 0.40,            // เลือด/ความรุนแรง
-  scam: 0.70,            // การหลอกลวง
+  nudity: 0.40,
+  weapon: 0.60,
+  alcohol: 0.80,
+  drugs: 0.50,
+  offensive: 0.50,
+  gore: 0.40,
 };
 
-/**
- * ตรวจสอบความเหมาะสมของรูปภาพด้วย SightEngine AI
- * 
- * @param {string} imageUrl - URL ของรูปภาพ (Cloudinary URL)
- * @returns {Object} ผลการตรวจสอบ
- *   - safe: boolean (true = ปลอดภัย, false = ต้องตรวจสอบ)
- *   - reasons: string[] (เหตุผลที่ไม่ผ่าน)
- *   - scores: Object (คะแนนดิบจาก AI)
- *   - aiChecked: boolean (true = AI ตรวจสอบแล้ว)
- */
-export async function moderateImage(imageUrl) {
-  // ถ้าไม่มี API key → ข้ามการตรวจสอบ (ทำงานแบบเดิม)
-  if (!getApiUser() || !getApiSecret()) {
-    console.log('[AI Moderation] ⚠ ไม่มี API key — ข้ามการตรวจสอบ AI');
-    return {
-      safe: false,  // ไม่ auto-approve ถ้าไม่มี AI
-      reasons: ['AI moderation not configured'],
-      scores: {},
-      aiChecked: false
-    };
-  }
+export const isModerationProviderSupported = (provider) => SUPPORTED_PROVIDERS.has(provider);
 
-  // ตรวจสอบว่ามี URL รูปภาพหรือไม่
-  if (!imageUrl) {
-    return {
-      safe: false,
-      reasons: ['No image URL provided'],
-      scores: {},
-      aiChecked: false
-    };
+export const normalizeModerationProvider = (provider) => (
+  isModerationProviderSupported(provider) ? provider : DEFAULT_PROVIDER
+);
+
+export const getModerationProviderStatus = () => ({
+  sightengine: {
+    configured: Boolean(getSightengineApiUser() && getSightengineApiSecret()),
+  },
+  objexify: {
+    configured: Boolean(getObjexifyBaseUrl() && getObjexifyApiKey()),
+  },
+});
+
+const uncheckedResult = (provider, reason) => ({
+  provider,
+  safe: false,
+  reasons: [reason],
+  scores: {},
+  aiChecked: false,
+});
+
+const moderateWithSightengine = async (imageUrl, fetchImpl) => {
+  const provider = 'sightengine';
+  if (!getSightengineApiUser() || !getSightengineApiSecret()) {
+    console.warn('[AI Moderation] Sightengine ยังไม่ได้ตั้งค่า');
+    return uncheckedResult(provider, 'Sightengine ยังไม่ได้ตั้งค่า');
   }
 
   try {
-    console.log(`[AI Moderation] 🔍 กำลังตรวจสอบรูปภาพ: ${imageUrl.substring(0, 80)}...`);
-
-    // เรียก SightEngine API
     const params = new URLSearchParams({
       url: imageUrl,
       models: 'nudity-2.1,weapon,alcohol,recreational_drug,offensive,gore',
-      api_user: getApiUser(),
-      api_secret: getApiSecret()
+      api_user: getSightengineApiUser(),
+      api_secret: getSightengineApiSecret(),
     });
-
-    const response = await fetch(`https://api.sightengine.com/1.0/check.json?${params}`, {
+    const response = await fetchImpl(`https://api.sightengine.com/1.0/check.json?${params}`, {
       method: 'GET',
-      timeout: 10000 // 10 seconds timeout
+      signal: timeoutSignal(10000),
     });
 
     if (!response.ok) {
-      console.error(`[AI Moderation] ✗ API error: ${response.status}`);
-      // ถ้า API ล้มเหลว → ให้ Admin ตรวจสอบเอง (ไม่ auto-approve)
-      return {
-        safe: false,
-        reasons: [`API error: ${response.status}`],
-        scores: {},
-        aiChecked: false
-      };
+      return uncheckedResult(provider, `Sightengine ตอบกลับ HTTP ${response.status}`);
     }
 
     const result = await response.json();
-
     if (result.status !== 'success') {
-      console.error('[AI Moderation] ✗ API returned error:', result);
-      return {
-        safe: false,
-        reasons: ['API check failed'],
-        scores: {},
-        aiChecked: false
-      };
+      return uncheckedResult(provider, 'Sightengine ไม่สามารถตรวจรูปภาพได้');
     }
 
-    // ===== วิเคราะห์ผลลัพธ์ =====
     const reasons = [];
     const scores = {};
-
-    // 1. ตรวจสอบ Nudity
     if (result.nudity) {
-      const nudityScore = result.nudity.sexual_activity || result.nudity.sexual_display || result.nudity.erotica || 0;
-      scores.nudity = nudityScore;
-      if (nudityScore > THRESHOLDS.nudity) {
-        reasons.push(`เนื้อหาไม่เหมาะสม (nudity: ${(nudityScore * 100).toFixed(1)}%)`);
-      }
+      const score = Math.max(
+        Number(result.nudity.sexual_activity) || 0,
+        Number(result.nudity.sexual_display) || 0,
+        Number(result.nudity.erotica) || 0
+      );
+      scores.nudity = score;
+      if (score > THRESHOLDS.nudity) reasons.push(`เนื้อหาไม่เหมาะสม (nudity: ${(score * 100).toFixed(1)}%)`);
     }
-
-    // 2. ตรวจสอบ Weapon
     if (result.weapon) {
-      const weaponScore = result.weapon?.classes?.firearm || result.weapon?.classes?.knife || 0;
-      scores.weapon = weaponScore;
-      if (weaponScore > THRESHOLDS.weapon) {
-        reasons.push(`พบอาวุธ (weapon: ${(weaponScore * 100).toFixed(1)}%)`);
-      }
+      const score = Math.max(
+        Number(result.weapon?.classes?.firearm) || 0,
+        Number(result.weapon?.classes?.knife) || 0
+      );
+      scores.weapon = score;
+      if (score > THRESHOLDS.weapon) reasons.push(`พบอาวุธ (weapon: ${(score * 100).toFixed(1)}%)`);
     }
-
-    // 3. ตรวจสอบ Alcohol
     if (result.alcohol) {
-      const alcoholScore = result.alcohol?.prob || 0;
-      scores.alcohol = alcoholScore;
-      if (alcoholScore > THRESHOLDS.alcohol) {
-        reasons.push(`พบเครื่องดื่มแอลกอฮอล์ (alcohol: ${(alcoholScore * 100).toFixed(1)}%)`);
-      }
+      const score = result.alcohol?.prob || 0;
+      scores.alcohol = score;
+      if (score > THRESHOLDS.alcohol) reasons.push(`พบเครื่องดื่มแอลกอฮอล์ (alcohol: ${(score * 100).toFixed(1)}%)`);
     }
-
-    // 4. ตรวจสอบ Drugs
     if (result.recreational_drug) {
-      const drugScore = result.recreational_drug?.prob || 0;
-      scores.drugs = drugScore;
-      if (drugScore > THRESHOLDS.drugs) {
-        reasons.push(`พบยาเสพติด (drugs: ${(drugScore * 100).toFixed(1)}%)`);
-      }
+      const score = result.recreational_drug?.prob || 0;
+      scores.drugs = score;
+      if (score > THRESHOLDS.drugs) reasons.push(`พบยาเสพติด (drugs: ${(score * 100).toFixed(1)}%)`);
     }
-
-    // 5. ตรวจสอบ Offensive content
     if (result.offensive) {
-      const offensiveScore = result.offensive?.prob || 0;
-      scores.offensive = offensiveScore;
-      if (offensiveScore > THRESHOLDS.offensive) {
-        reasons.push(`เนื้อหาน่ารังเกียจ (offensive: ${(offensiveScore * 100).toFixed(1)}%)`);
-      }
+      const score = result.offensive?.prob || 0;
+      scores.offensive = score;
+      if (score > THRESHOLDS.offensive) reasons.push(`เนื้อหาน่ารังเกียจ (offensive: ${(score * 100).toFixed(1)}%)`);
     }
-
-    // 6. ตรวจสอบ Gore
     if (result.gore) {
-      const goreScore = result.gore?.prob || 0;
-      scores.gore = goreScore;
-      if (goreScore > THRESHOLDS.gore) {
-        reasons.push(`เนื้อหารุนแรง/เลือด (gore: ${(goreScore * 100).toFixed(1)}%)`);
-      }
-    }
-
-    const isSafe = reasons.length === 0;
-
-    if (isSafe) {
-      console.log(`[AI Moderation] ✓ รูปภาพปลอดภัย — อนุมัติอัตโนมัติ`);
-    } else {
-      console.log(`[AI Moderation] ⚠ รูปภาพอาจไม่เหมาะสม — ส่งให้ Admin ตรวจสอบ`);
-      console.log(`[AI Moderation]   เหตุผล: ${reasons.join(', ')}`);
+      const score = result.gore?.prob || 0;
+      scores.gore = score;
+      if (score > THRESHOLDS.gore) reasons.push(`เนื้อหารุนแรง/เลือด (gore: ${(score * 100).toFixed(1)}%)`);
     }
 
     return {
-      safe: isSafe,
+      provider,
+      safe: reasons.length === 0,
       reasons,
       scores,
-      aiChecked: true
+      aiChecked: true,
     };
-
   } catch (error) {
-    console.error('[AI Moderation] ✗ Error:', error.message);
-    // ถ้าเกิดข้อผิดพลาด → ให้ Admin ตรวจสอบเอง
-    return {
-      safe: false,
-      reasons: [`Error: ${error.message}`],
-      scores: {},
-      aiChecked: false
-    };
+    console.error('[AI Moderation][Sightengine] Error:', error.message);
+    return uncheckedResult(provider, `Sightengine ขัดข้อง: ${error.message}`);
   }
-}
+};
+
+const validateCloudinaryUrl = (imageUrl) => {
+  try {
+    const parsed = new URL(imageUrl);
+    return parsed.protocol === 'https:' && parsed.hostname === 'res.cloudinary.com';
+  } catch {
+    return false;
+  }
+};
+
+const responseToBuffer = async (response) => {
+  if (typeof response.arrayBuffer === 'function') {
+    return Buffer.from(await response.arrayBuffer());
+  }
+  if (typeof response.buffer === 'function') return response.buffer();
+  throw new Error('ไม่สามารถอ่านไฟล์รูปภาพได้');
+};
+
+const makeObjexifyReasons = (results) => {
+  const highestByLabel = new Map();
+  for (const item of results) {
+    for (const detection of item?.detections || []) {
+      const label = String(detection?.label || '').trim();
+      if (!label) continue;
+      const confidence = Number(detection?.confidence) || 0;
+      highestByLabel.set(label, Math.max(highestByLabel.get(label) || 0, confidence));
+    }
+  }
+
+  const scores = Object.fromEntries(highestByLabel.entries());
+  const reasons = [...highestByLabel.entries()].map(
+    ([label, confidence]) => `พบเนื้อหาไม่เหมาะสม: ${label} (${(confidence * 100).toFixed(1)}%)`
+  );
+  return { scores, reasons };
+};
+
+const moderateWithObjexify = async (imageUrl, fetchImpl) => {
+  const provider = 'objexify';
+  const baseUrl = getObjexifyBaseUrl();
+  const apiKey = getObjexifyApiKey();
+  if (!baseUrl || !apiKey) {
+    return uncheckedResult(provider, 'Objexify ยังไม่ได้ตั้งค่าใน Admin Backend');
+  }
+  if (!validateCloudinaryUrl(imageUrl)) {
+    return uncheckedResult(provider, 'Objexify รับเฉพาะรูปจาก Cloudinary ของระบบ');
+  }
+
+  try {
+    const imageResponse = await fetchImpl(imageUrl, {
+      method: 'GET',
+      signal: timeoutSignal(10000),
+    });
+    if (!imageResponse.ok) {
+      return uncheckedResult(provider, `ดาวน์โหลดรูปจาก Cloudinary ไม่สำเร็จ (HTTP ${imageResponse.status})`);
+    }
+
+    const contentType = String(imageResponse.headers?.get?.('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (!OBJEXIFY_ALLOWED_IMAGE_TYPES.has(contentType)) {
+      return uncheckedResult(provider, 'Objexify รองรับเฉพาะไฟล์ JPG และ PNG');
+    }
+
+    const contentLength = Number(imageResponse.headers?.get?.('content-length')) || 0;
+    if (contentLength > MAX_OBJEXIFY_IMAGE_BYTES) {
+      return uncheckedResult(provider, 'ไฟล์รูปมีขนาดเกิน 10 MB');
+    }
+
+    const imageBuffer = await responseToBuffer(imageResponse);
+    if (imageBuffer.length > MAX_OBJEXIFY_IMAGE_BYTES) {
+      return uncheckedResult(provider, 'ไฟล์รูปมีขนาดเกิน 10 MB');
+    }
+
+    const extension = contentType === 'image/png' ? 'png' : 'jpg';
+    const formData = new FormData();
+    formData.append(
+      'images',
+      new Blob([imageBuffer], { type: contentType }),
+      `cmes-upload.${extension}`
+    );
+
+    const response = await fetchImpl(`${baseUrl}/analyze-image`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: formData,
+      signal: timeoutSignal(15000),
+    });
+    if (!response.ok) {
+      return uncheckedResult(provider, `Objexify ตอบกลับ HTTP ${response.status}`);
+    }
+
+    const result = await response.json();
+    if (!['passed', 'inappropriate'].includes(result?.status) || !Array.isArray(result?.results)) {
+      return uncheckedResult(provider, 'Objexify ส่งผลตรวจกลับมาไม่ครบถ้วน');
+    }
+    if ((result.skipped || []).length > 0 || result.processed_count !== 1) {
+      const reason = result.skipped?.[0]?.reason || 'ประมวลผลรูปไม่สำเร็จ';
+      return uncheckedResult(provider, `Objexify ข้ามไฟล์: ${reason}`);
+    }
+
+    const { scores, reasons } = makeObjexifyReasons(result.results);
+    const safe = result.status === 'passed' && reasons.length === 0;
+    if (!safe && reasons.length === 0) reasons.push('Objexify ระบุว่ารูปภาพอาจไม่เหมาะสม');
+
+    return { provider, safe, reasons, scores, aiChecked: true };
+  } catch (error) {
+    console.error('[AI Moderation][Objexify] Error:', error.message);
+    return uncheckedResult(provider, `Objexify ขัดข้อง: ${error.message}`);
+  }
+};
 
 /**
- * ตรวจสอบว่าระบบ AI Moderation ถูกตั้งค่าแล้วหรือยัง
+ * @param {string} imageUrl Cloudinary URL ของรูปที่ต้องตรวจ
+ * @param {{provider?: string, fetchImpl?: Function}} options
  */
-export function isAIModerationEnabled() {
-  return !!(getApiUser() && getApiSecret());
+export async function moderateImage(imageUrl, options = {}) {
+  const provider = normalizeModerationProvider(options.provider);
+  const fetchImpl = options.fetchImpl || globalThis.fetch;
+  if (!imageUrl) return uncheckedResult(provider, 'ไม่พบ URL รูปภาพ');
+  if (typeof fetchImpl !== 'function') return uncheckedResult(provider, 'Server ไม่รองรับการเรียก API ตรวจรูปภาพ');
+  if (provider === 'objexify') return moderateWithObjexify(imageUrl, fetchImpl);
+  return moderateWithSightengine(imageUrl, fetchImpl);
+}
+
+export function isAIModerationEnabled(provider = DEFAULT_PROVIDER) {
+  return getModerationProviderStatus()[normalizeModerationProvider(provider)].configured;
 }

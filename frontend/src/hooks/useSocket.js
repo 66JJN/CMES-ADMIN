@@ -17,6 +17,8 @@ export default function useSocket() {
     enableBirthday, setEnableBirthday,
     freeMode, setFreeMode,
     queueAccepting, setQueueAccepting,
+    moderationProvider, setModerationProvider,
+    moderationProviders, setModerationProviders,
     setPublicRankingType,
     showToast
   } = useContext(HomeContext);
@@ -58,6 +60,11 @@ export default function useSocket() {
       setEnableBirthday(config.enableBirthday ?? true);
       setFreeMode(config.freeMode === true);
       setQueueAccepting(config.queueAccepting !== false);
+      setModerationProvider(config.moderationProvider || 'sightengine');
+      setModerationProviders(config.moderationProviders || {
+        sightengine: { configured: false },
+        objexify: { configured: false },
+      });
     };
 
     socket.on("status", handleStatus);
@@ -66,7 +73,7 @@ export default function useSocket() {
     return () => {
       socket.off("status", handleStatus);
     };
-  }, [socket, setSystemOn, setEnableImage, setEnableText, setEnableGift, setEnableBirthday, setFreeMode, setQueueAccepting]);
+  }, [socket, setSystemOn, setEnableImage, setEnableText, setEnableGift, setEnableBirthday, setFreeMode, setQueueAccepting, setModerationProvider, setModerationProviders]);
 
   // Sync public ranking layouts updates
   useEffect(() => {
@@ -190,6 +197,19 @@ export default function useSocket() {
     persistConfig({ queueAccepting: nextQueueAccepting }, () => setQueueAccepting(queueAccepting));
   };
 
+  const handleModerationProviderChange = (provider) => {
+    if (!moderationProviders?.[provider]?.configured) {
+      showToast('API ที่เลือกยังไม่ได้ตั้งค่าใน Admin Backend', 'error');
+      return;
+    }
+    const previousProvider = moderationProvider;
+    setModerationProvider(provider);
+    persistConfig(
+      { moderationProvider: provider },
+      () => setModerationProvider(previousProvider)
+    );
+  };
+
   return {
     handleToggleSystem,
     handleToggleImage,
@@ -197,6 +217,7 @@ export default function useSocket() {
     handleToggleGift,
     handleToggleBirthday,
     handleToggleFreeMode,
-    handleToggleQueueAccepting
+    handleToggleQueueAccepting,
+    handleModerationProviderChange
   };
 }

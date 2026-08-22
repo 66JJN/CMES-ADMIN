@@ -35,6 +35,22 @@ const checkHistorySchema = new mongoose.Schema(
     content: { type: String, default: "" }, // สำหรับ Text message หรือ Gift Name
     mediaUrl: { type: String, default: null }, // สำหรับ Image path, เดิม filePath
 
+    // Keep the moderation source/result after a queue item completes so the
+    // shop can compare Sightengine and Objexify test results later.
+    aiModeration: {
+      provider: {
+        type: String,
+        enum: ['sightengine', 'objexify'],
+        default: 'sightengine'
+      },
+      checked: { type: Boolean, default: false },
+      safe: { type: Boolean, default: null },
+      autoApproved: { type: Boolean, default: false },
+      reasons: [{ type: String }],
+      scores: { type: mongoose.Schema.Types.Mixed },
+      checkedAt: { type: Date, default: null }
+    },
+
     // User information
     userId: { type: String, default: null },
     email: { type: String, default: null },

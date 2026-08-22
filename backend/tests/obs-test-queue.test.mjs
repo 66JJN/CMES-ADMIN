@@ -41,6 +41,27 @@ test('real completion deletes the item through its shop boundary', async () => {
   assert.equal(history[0].shopId, 'Mellow01');
 });
 
+test('completed image history preserves which moderation provider produced the result', async () => {
+  const history = [];
+  const item = {
+    _id: 'real-image-1', shopId: 'Mellow01', isTest: false, type: 'image',
+    sender: 'Guest', filePath: 'https://res.cloudinary.com/demo/image.jpg',
+    time: 10, price: 0,
+    aiModeration: {
+      provider: 'objexify', checked: true, safe: false, autoApproved: false,
+      reasons: ['พบเนื้อหาไม่เหมาะสม: weapon (91.0%)'], scores: { weapon: 0.91 },
+      checkedAt: new Date('2026-08-22T00:00:00Z'),
+    },
+  };
+
+  await completeItem(item, null, {
+    deleteRealItem: async () => item,
+    createHistory: async (record) => history.push(record),
+  });
+
+  assert.deepEqual(history[0].aiModeration, item.aiModeration);
+});
+
 test('playback payload preserves test identity for image and gift', () => {
   const common = {
     _id: '1', shopId: 'JJ', sender: 'ระบบทดสอบ', time: 5, price: 0,

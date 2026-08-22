@@ -24,6 +24,8 @@ export default function FeatureSwitches({
     enableBirthday,
     freeMode,
     queueAccepting,
+    moderationProvider,
+    moderationProviders,
     birthdaySpendingRequirement,
     setBirthdaySpendingRequirement
   } = useContext(HomeContext);
@@ -35,7 +37,8 @@ export default function FeatureSwitches({
     handleToggleGift,
     handleToggleBirthday,
     handleToggleFreeMode,
-    handleToggleQueueAccepting
+    handleToggleQueueAccepting,
+    handleModerationProviderChange
   } = useSocket();
 
   const {
@@ -101,6 +104,47 @@ export default function FeatureSwitches({
                 onChange={handleToggleImage}
                 disabled={!systemOn}
               />
+            </div>
+
+            <div className={`moderation-provider-card ${moderationProvider === 'objexify' ? 'is-experimental' : ''}`}>
+              <div className="moderation-provider-heading">
+                <div>
+                  <label htmlFor="moderation-provider">API ตรวจสอบรูปภาพ</label>
+                  <small>ใช้ตรวจรูปภาพและรูปวันเกิดก่อนอนุมัติขึ้นจอ</small>
+                </div>
+                <span className={`moderation-provider-badge ${moderationProvider === 'objexify' ? 'experimental' : 'primary'}`}>
+                  {moderationProvider === 'objexify' ? 'ทดลอง' : 'หลัก'}
+                </span>
+              </div>
+              <select
+                id="moderation-provider"
+                className="moderation-provider-select"
+                value={moderationProvider}
+                onChange={(event) => handleModerationProviderChange(event.target.value)}
+                disabled={!systemOn || !enableImage}
+              >
+                <option
+                  value="sightengine"
+                  disabled={!moderationProviders?.sightengine?.configured}
+                >
+                  {moderationProviders?.sightengine?.configured
+                    ? 'Sightengine (หลัก)'
+                    : 'Sightengine (ยังไม่ได้ตั้งค่า)'}
+                </option>
+                <option
+                  value="objexify"
+                  disabled={!moderationProviders?.objexify?.configured}
+                >
+                  {moderationProviders?.objexify?.configured
+                    ? 'Objexify (ทดลอง)'
+                    : 'Objexify (ยังไม่ได้ตั้งค่า)'}
+                </option>
+              </select>
+              <small className="moderation-provider-note">
+                {moderationProvider === 'objexify'
+                  ? 'กำลังใช้ Server ของเพื่อน • รองรับ JPG/PNG • หากขัดข้อง รูปจะรอ Admin ตรวจ'
+                  : 'ค่าปกติของระบบ • รองรับรูปจาก Cloudinary โดยไม่ต้องดาวน์โหลดเข้าระบบเพิ่ม'}
+              </small>
             </div>
 
             <div className="toggle-card">

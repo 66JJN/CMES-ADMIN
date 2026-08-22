@@ -34,6 +34,7 @@ import { processAutoQueue, completeItem, emitNowPlaying, playNextItem, recoverQu
 import { displayRegistry } from './services/displayRegistry.js';
 import { cleanupAllObsTests, cleanupExpiredObsTests, getObsTestStatus, stopObsTest } from './services/obsTestService.js';
 import { createDisplayDisconnectCoordinator } from './services/displayDisconnectCoordinator.js';
+import { getModerationProviderStatus, normalizeModerationProvider } from './utils/contentModeration.js';
 
 // Route modules
 import reportRoutes from './routes/reportRoutes.js';
@@ -297,6 +298,8 @@ const getSystemConfigWithSettings = async (shopId) => {
     return {
       ...config,
       queueAccepting: config.queueAccepting !== false,
+      moderationProvider: normalizeModerationProvider(config.moderationProvider),
+      moderationProviders: getModerationProviderStatus(),
       freeMode,
       birthdaySpendingRequirement: shopSettings?.birthdaySpendingRequirement ?? config.birthdaySpendingRequirement,
       publicRankingType: shopSettings?.publicRankingType || 'alltime',

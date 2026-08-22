@@ -189,3 +189,91 @@
 .feature-card .toggle-card .switch-minimal {
   flex: 0 0 auto;
 }
+
+.feature-card .moderation-provider-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.75rem 0.8rem;
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f5f3ff 100%);
+}
+
+.feature-card .moderation-provider-card.is-experimental {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: linear-gradient(135deg, #fffbeb 0%, #fff7ed 100%);
+}
+
+.feature-card .moderation-provider-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.feature-card .moderation-provider-heading > div {
+  min-width: 0;
+}
+
+.feature-card .moderation-provider-heading label {
+  display: block;
+  color: #3730a3;
+  font-size: 0.85rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.feature-card .moderation-provider-heading small,
+.feature-card .moderation-provider-note {
+  display: block;
+  color: #64748b;
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.feature-card .moderation-provider-badge {
+  flex: 0 0 auto;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 750;
+}
+
+.feature-card .moderation-provider-badge.primary {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.feature-card .moderation-provider-badge.experimental {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.feature-card .moderation-provider-select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.62rem 2rem 0.62rem 0.7rem;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  color: #312e81;
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.feature-card .moderation-provider-select:focus-visible {
+  outline: 3px solid rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+}
+
+.feature-card .moderation-provider-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.feature-card .moderation-provider-card.is-experimental .moderation-provider-note {
+  color: #92400e;
+}

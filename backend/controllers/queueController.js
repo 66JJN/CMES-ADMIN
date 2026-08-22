@@ -11,7 +11,7 @@ import Ranking from '../models/Ranking.js';
 import ShopSetting from '../models/ShopSetting.js';
 import { addRankingPoint } from '../services/rankingService.js';
 import { completeItem, emitNowPlaying, getQueueControl, recoverQueue, updateQueueControl } from '../services/queueService.js';
-import { moderateImage, isAIModerationEnabled } from '../utils/contentModeration.js';
+import { moderateImage, normalizeModerationProvider } from '../utils/contentModeration.js';
 import { createQueueSubmission, getSubmissionEligibility } from '../services/submissionService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -134,6 +134,7 @@ export const uploadItem = async (req, res) => {
     const settings = await ShopSetting.findOne({ shopId });
     const shopConfig = settings?.systemConfig || {};
     const isFreeMode = settings?.freeMode === true;
+    const moderationProvider = normalizeModerationProvider(shopConfig.moderationProvider);
 
     // Operational fallback: stop accepting new requests without changing or
     // deleting the queue that is already persisted in MongoDB.
@@ -216,11 +217,12 @@ export const uploadItem = async (req, res) => {
 
     // AI Content Moderation — เฉพาะรูปที่ผู้ใช้อัปโหลดเอง (image, birthday) ไม่รวม gift (แอดมินเลือกรูปให้)
     const imageUrlToCheck = itemData.filePath;
-    const shouldModerate = imageUrlToCheck && (uploadType === 'image' || uploadType === 'birthday') && isAIModerationEnabled();
+    const shouldModerate = imageUrlToCheck && (uploadType === 'image' || uploadType === 'birthday');
     if (shouldModerate) {
       try {
-        const moderationResult = await moderateImage(imageUrlToCheck);
+        const moderationResult = await moderateImage(imageUrlToCheck, { provider: moderationProvider });
         itemData.aiModeration = {
+          provider: moderationResult.provider,
           checked: moderationResult.aiChecked, safe: moderationResult.safe,
           autoApproved: moderationResult.safe && moderationResult.aiChecked,
           reasons: moderationResult.reasons, scores: moderationResult.scores,
@@ -394,6 +396,7 @@ export const rejectItem = async (req, res) => {
       paymentStatus: item.paymentStatus || (item.price > 0 ? 'pending' : 'free'),
       paidAt: item.paidAt || null, status: 'rejected',
       content: item.text || '', mediaUrl: item.filePath || null,
+      aiModeration: item.aiModeration || undefined,
       userId: item.userId || null,
       email: item.email || null,
       avatar: item.avatar || null,
@@ -564,6 +567,7 @@ export const restoreHistoryItem = async (req, res) => {
       socialType: historyItem.metadata?.social?.type || null,
       socialName: historyItem.metadata?.social?.name || null,
       qrCodePath: historyItem.metadata?.qrCodePath || null,
+      aiModeration: historyItem.aiModeration || undefined,
 
       // Restore user details
       userId: historyItem.userId || null,

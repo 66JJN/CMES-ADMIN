@@ -283,6 +283,7 @@ export async function completeItem(item, io, dependencies = {}) {
       status: 'completed',
       content: item.text || '',
       mediaUrl: item.filePath || null,
+      aiModeration: item.aiModeration || undefined,
       userId: item.userId || null,
       email: item.email || null,
       avatar: item.avatar || null,
