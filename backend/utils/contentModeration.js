@@ -210,7 +210,7 @@ const moderateWithObjexify = async (imageUrl, fetchImpl) => {
     const response = await fetchImpl(`${baseUrl}/analyze-image`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        'x-api-key': apiKey,
       },
       body: formData,
       signal: timeoutSignal(15000),

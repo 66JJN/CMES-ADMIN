@@ -203,7 +203,8 @@ test('Objexify passed response is normalized as a safe checked image', async () 
   assert.equal(result.safe, true);
   assert.equal(requests.length, 2);
   assert.equal(requests[1].url, 'https://objexify.example/analyze-image');
-  assert.equal(requests[1].options.headers.Authorization, 'Bearer friend-key');
+  assert.equal(requests[1].options.headers['x-api-key'], 'friend-key');
+  assert.equal(requests[1].options.headers.Authorization, undefined);
 });
 
 test('Objexify inappropriate response preserves labels and requires Admin review', async () => {
