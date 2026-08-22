@@ -108,6 +108,32 @@ test('OBS periodically reconciles missed playback and rejects delayed older even
   assert.match(overlayHtml, /setInterval\(requestCurrentPlaying,\s*\d+\)/);
 });
 
+test('OBS accepts the same item once when resume gives it a newer playingAt', () => {
+  assert.equal(typeof shouldRenderPlayback, 'function');
+  if (typeof shouldRenderPlayback !== 'function') return;
+  const beforePause = {
+    id: 'image-1', playingAt: '2026-08-22T12:00:00.000Z', time: 15,
+  };
+  const afterResume = {
+    id: 'image-1', playingAt: '2026-08-22T12:00:10.000Z', time: 15,
+  };
+  const now = Date.parse('2026-08-22T12:00:12.000Z');
+
+  assert.equal(shouldRenderPlayback(beforePause, afterResume, true, now), true);
+  assert.equal(shouldRenderPlayback(afterResume, afterResume, true, now), false);
+});
+
+test('OBS does not restore an expired item while waiting for MongoDB completion', () => {
+  assert.equal(typeof shouldRenderPlayback, 'function');
+  if (typeof shouldRenderPlayback !== 'function') return;
+  const expired = {
+    id: 'image-1', playingAt: '2026-08-22T12:00:00.000Z', time: 15,
+  };
+  const afterPlayback = Date.parse('2026-08-22T12:00:16.000Z');
+
+  assert.equal(shouldRenderPlayback(expired, expired, false, afterPlayback), false);
+});
+
 test('ของขวัญใหม่ต้องออกจากสถานะพักก่อนเริ่มแสดง', () => {
   assert.match(overlayHtml, /function showGift\(payload = \{\}\)[\s\S]*?isPaused = false/);
 });

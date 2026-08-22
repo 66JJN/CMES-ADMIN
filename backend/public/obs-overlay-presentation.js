@@ -43,15 +43,29 @@
    * duplicate of the currently visible item is ignored so its timer and media
    * are not restarted, while the same hidden item may be restored.
    */
-  function shouldRenderPlayback(current, incoming, isVisible) {
+  function shouldRenderPlayback(current, incoming, isVisible, nowMs = Date.now()) {
     if (!incoming?.id) return false;
+    const incomingStartedAt = Date.parse(incoming.playingAt || '');
+    const duration = Number(incoming.time ?? incoming.duration ?? incoming.seconds);
+    if (Number.isFinite(incomingStartedAt)
+      && Number.isFinite(duration)
+      && duration > 0
+      && incomingStartedAt + (duration * 1000) <= nowMs) {
+      return false;
+    }
     if (!current?.id) return true;
 
-    const sameItem = String(current.id) === String(incoming.id);
-    if (sameItem && isVisible) return false;
-
     const currentStartedAt = Date.parse(current.playingAt || '');
-    const incomingStartedAt = Date.parse(incoming.playingAt || '');
+    const sameItem = String(current.id) === String(incoming.id);
+    if (sameItem && isVisible) {
+      // Manual resume keeps the same item id but moves playingAt forward to
+      // preserve the paused duration. Accept that newer timestamp once; the
+      // following periodic replay has the same timestamp and is ignored.
+      return Number.isFinite(currentStartedAt)
+        && Number.isFinite(incomingStartedAt)
+        && incomingStartedAt > currentStartedAt;
+    }
+
     if (Number.isFinite(currentStartedAt)
       && Number.isFinite(incomingStartedAt)
       && incomingStartedAt < currentStartedAt) {
