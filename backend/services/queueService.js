@@ -196,9 +196,11 @@ export async function completeItem(item, io, dependencies = {}) {
       return;
     }
 
-    const deleteRealItem = dependencies.deleteRealItem || ((itemId) => ImageQueue.findByIdAndDelete(itemId));
+    const deleteRealItem = dependencies.deleteRealItem || ((shopId, itemId) => (
+      ImageQueue.findOneAndDelete({ _id: itemId, shopId })
+    ));
     const createHistory = dependencies.createHistory || ((data) => CheckHistory.create(data));
-    const deleted = await deleteRealItem(item._id);
+    const deleted = await deleteRealItem(item.shopId, item._id);
     if (!deleted) return; // Already processed
 
     const txId = (item.type === 'gift' && item.giftOrder?.orderId) ? item.giftOrder.orderId : item._id.toString();
@@ -354,7 +356,10 @@ export async function processAutoQueue(shopId, io) {
         }
       } else {
         console.log(`[QueueWorker][${shopId}] Item ${playingItem._id} has no playingAt. Setting now.`);
-        await ImageQueue.findByIdAndUpdate(playingItem._id, { playingAt: new Date() });
+        await ImageQueue.updateOne(
+          { _id: playingItem._id, shopId },
+          { $set: { playingAt: new Date() } },
+        );
       }
     } else {
       const nextApproved = await ImageQueue.findOne({ status: 'approved', shopId }).sort({ approvedAt: 1 });

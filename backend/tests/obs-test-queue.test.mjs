@@ -21,6 +21,26 @@ test('test completion bypasses customer history and delegates to test lifecycle'
   assert.deepEqual(calls, [['test', 'test-1']]);
 });
 
+test('real completion deletes the item through its shop boundary', async () => {
+  const deletedWith = [];
+  const history = [];
+  const item = {
+    _id: 'real-1', shopId: 'Mellow01', isTest: false, type: 'text',
+    sender: 'Guest', text: 'hello', time: 10, price: 0,
+  };
+
+  await completeItem(item, null, {
+    deleteRealItem: async (shopId, itemId) => {
+      deletedWith.push({ shopId, itemId: String(itemId) });
+      return item;
+    },
+    createHistory: async (record) => history.push(record),
+  });
+
+  assert.deepEqual(deletedWith, [{ shopId: 'Mellow01', itemId: 'real-1' }]);
+  assert.equal(history[0].shopId, 'Mellow01');
+});
+
 test('playback payload preserves test identity for image and gift', () => {
   const common = {
     _id: '1', shopId: 'JJ', sender: 'ระบบทดสอบ', time: 5, price: 0,

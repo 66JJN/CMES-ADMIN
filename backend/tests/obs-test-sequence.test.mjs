@@ -36,7 +36,8 @@ test('one run plays image, text, gift in order and leaves no customer data', asy
       }
     },
     findSessionItems: async (_shopId, sessionId) => queue.filter((item) => item.testSessionId === sessionId),
-    deleteItem: async (itemId) => {
+    deleteItem: async (shopId, itemId) => {
+      assert.equal(shopId, 'JJ');
       const index = queue.findIndex((item) => item._id === String(itemId));
       if (index >= 0) queue.splice(index, 1);
     },

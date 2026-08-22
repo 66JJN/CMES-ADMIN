@@ -39,7 +39,7 @@ const defaultDependencies = {
   findSessionItems: (shopId, sessionId) => ImageQueue.find({
     shopId, isTest: true, testSessionId: sessionId,
   }).sort({ approvedAt: 1 }).lean(),
-  deleteItem: (itemId) => ImageQueue.deleteOne({ _id: itemId, isTest: true }),
+  deleteItem: (shopId, itemId) => ImageQueue.deleteOne({ _id: itemId, shopId, isTest: true }),
   listActiveSettings: () => ShopSetting.find({ 'obsTest.active': true }).lean(),
   now: () => new Date(),
   createSessionId: (shopId) => `obs-test-${shopId}-${crypto.randomUUID()}`,
@@ -297,7 +297,7 @@ export const createObsTestService = (overrides = {}) => {
 
   const completeItem = async (item, io) => {
     if (!item?.isTest || !item?.testSessionId) return false;
-    await deps.deleteItem(item._id);
+    await deps.deleteItem(item.shopId, item._id);
     const remaining = await deps.findSessionItems(item.shopId, item.testSessionId);
     if (remaining.length === 0) {
       await stop({

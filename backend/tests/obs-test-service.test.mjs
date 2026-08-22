@@ -14,6 +14,7 @@ const makeFixture = ({
 } = {}) => {
   const inserted = [];
   const deletedQueries = [];
+  const deletedItems = [];
   const events = [];
   const settings = {
     shopId: 'JJ',
@@ -62,7 +63,8 @@ const makeFixture = ({
       return before - inserted.length;
     },
     findSessionItems: async (_shopId, sessionId) => inserted.filter((item) => item.testSessionId === sessionId),
-    deleteItem: async (itemId) => {
+    deleteItem: async (shopId, itemId) => {
+      deletedItems.push({ shopId, itemId: String(itemId) });
       const index = inserted.findIndex((item) => item._id === String(itemId));
       if (index >= 0) inserted.splice(index, 1);
     },
@@ -71,7 +73,7 @@ const makeFixture = ({
     createSessionId: () => 'obs-test-JJ-001',
   });
 
-  return { service, settings, inserted, deletedQueries, events, io };
+  return { service, settings, inserted, deletedQueries, deletedItems, events, io };
 };
 
 test('start creates image, text, gift in order and remembers queue accepting', async () => {
@@ -189,6 +191,7 @@ test('completing each item advances and final gift cleans the session', async ()
   }
 
   assert.equal(fixture.inserted.length, 0);
+  assert.deepEqual(fixture.deletedItems.map(({ shopId }) => shopId), ['JJ', 'JJ', 'JJ']);
   assert.equal(fixture.settings.obsTest.active, false);
   assert.equal(fixture.settings.systemConfig.queueAccepting, true);
   assert.equal(fixture.events.at(-1).name, 'obs-test-finished');

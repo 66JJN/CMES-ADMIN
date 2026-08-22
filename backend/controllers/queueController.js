@@ -365,7 +365,7 @@ export const approveItem = async (req, res) => {
     };
 
     if (item.status === 'pending') updateData.status = 'approved';
-    await ImageQueue.findByIdAndUpdate(id, updateData);
+    await ImageQueue.updateOne({ _id: id, shopId }, { $set: updateData });
 
     const io = req.app.get('socketio');
     if (io) io.to(shopId).emit("admin-update-queue");
@@ -415,7 +415,7 @@ export const rejectItem = async (req, res) => {
     });
 
     if (item.filePath) deleteImageFile(item.filePath);
-    await ImageQueue.findByIdAndDelete(id);
+    await ImageQueue.deleteOne({ _id: id, shopId });
 
     const io = req.app.get('socketio');
     if (io) io.to(shopId).emit("admin-update-queue");
@@ -586,7 +586,7 @@ export const restoreHistoryItem = async (req, res) => {
     }
 
     const newQueueItem = await ImageQueue.create(insertData);
-    await CheckHistory.findByIdAndDelete(id);
+    await CheckHistory.deleteOne({ _id: id, shopId });
 
     // Notify connected clients via Socket.IO
     const io = req.app.get('socketio');
@@ -780,7 +780,7 @@ export const getOrderStatus = async (req, res) => {
           }
         });
       }
-      return res.json({ success: false, status: 'not_found', statusText: 'ไม่พบคำสั่งซื้อ', message: 'ไม่พบข้อมูลคำสั่งซื้อในระบบ' });
+      return res.status(404).json({ success: false, status: 'not_found', statusText: 'ไม่พบคำสั่งซื้อ', message: 'ไม่พบข้อมูลคำสั่งซื้อในระบบ' });
     }
 
     const giftItems = await resolveCurrentGiftItems(shopId, queueItem.giftOrder?.items);
@@ -881,8 +881,9 @@ export const userDeleteOrder = async (req, res) => {
       query['giftOrder.orderId'] = orderId;
     }
     const item = await ImageQueue.findOne(query);
-    if (!item || item.status !== 'pending') return res.status(400).json({ success: false, message: 'Invalid or already processed' });
-    await ImageQueue.findByIdAndDelete(item._id);
+    if (!item) return res.status(404).json({ success: false, message: 'ไม่พบรายการในร้านนี้' });
+    if (item.status !== 'pending') return res.status(400).json({ success: false, message: 'รายการถูกดำเนินการไปแล้ว' });
+    await ImageQueue.deleteOne({ _id: item._id, shopId });
     const io = req.app.get('socketio');
     if (io) io.to(shopId).emit('admin-update-queue');
     res.json({ success: true });
@@ -899,7 +900,7 @@ export const adminDeleteQueueItem = async (req, res) => {
     const item = await ImageQueue.findOne({ _id: id, shopId });
     if (!item) return res.status(404).json({ success: false, message: 'Not found' });
     if (item.filePath) deleteImageFile(item.filePath);
-    await ImageQueue.findByIdAndDelete(id);
+    await ImageQueue.deleteOne({ _id: id, shopId });
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error' });

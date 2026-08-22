@@ -12,7 +12,6 @@ import {
   createTimeHistory,
   deleteTimeHistory,
   getSettingsHistory,
-  getAdminReport,
   getStatSlip,
   postStatSlip,
   changeShopId,
@@ -38,9 +37,6 @@ router.delete('/api/time-history/:id', requireAdminAuth, deleteTimeHistory);
 
 // SETTINGS HISTORY
 router.get('/api/settings-history', requireAdminAuth, getSettingsHistory);
-
-// ADMIN REPORT
-router.get('/api/admin/report', requireAdminAuth, getAdminReport);
 
 // STAT-SLIP
 router.get('/api/stat-slip', requireAdminAuth, getStatSlip);

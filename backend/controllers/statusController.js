@@ -2,17 +2,11 @@
  * Status Controller — Business Logic สำหรับ Login, Health, System Config และประวัติการตั้งค่า
  */
 import mongoose from 'mongoose';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import AdminUser from '../models/AdminUser.js';
 import ShopSetting from '../models/ShopSetting.js';
-import ImageQueue from '../models/ImageQueue.js';
 import TimeHistory from '../models/TimeHistory.js';
 import { verifyPassword } from '../utils/hashPasswords.js';
 import { signAdminToken } from '../middleware/authMiddleware.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Overlay settings are intentionally a small, validated design system rather
 // than arbitrary CSS supplied by the browser.  This keeps a shop from saving a
@@ -158,10 +152,9 @@ export const login = async (req, res) => {
 // GET /health
 export const healthCheck = async (req, res) => {
   try {
-    const queueLength = await ImageQueue.countDocuments({ status: { $in: ['pending', 'approved', 'playing'] } });
     res.json({
       status: "OK", timestamp: new Date().toISOString(),
-      queueLength, database: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+      database: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
     });
   } catch (error) {
     res.status(500).json({ status: "ERROR", timestamp: new Date().toISOString(), error: error.message });
@@ -294,7 +287,7 @@ export const deleteTimeHistory = async (req, res) => {
 // GET /api/settings-history
 export const getSettingsHistory = async (req, res) => {
   try {
-    const history = await TimeHistory.find({}).sort({ createdAt: -1 });
+    const history = await TimeHistory.find({ shopId: req.shopId }).sort({ createdAt: -1 });
     const formatted = history.map(h => ({
       id: h.id, mode: h.mode, date: h.date, duration: h.duration, time: h.time, price: h.price
     }));
@@ -302,21 +295,6 @@ export const getSettingsHistory = async (req, res) => {
   } catch (err) {
     console.error("เกิดข้อผิดพลาดในการดึงประวัติ:", err);
     res.status(500).json([]);
-  }
-};
-
-// GET /api/admin/report
-export const getAdminReport = async (req, res) => {
-  try {
-    const reportPath = path.join(__dirname, '..', 'report.json'); // Corrected: backend/report.json
-    if (!fs.existsSync(reportPath)) return res.json([]);
-
-    const data = await fs.promises.readFile(reportPath, 'utf8');
-    const reportsFromFile = JSON.parse(data);
-    res.json(reportsFromFile);
-  } catch (error) {
-    console.error('Error fetching reports:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
