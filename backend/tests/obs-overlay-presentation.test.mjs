@@ -13,7 +13,7 @@ const overlayHtml = fs.readFileSync(overlayPath, 'utf8');
 const context = { globalThis: {} };
 vm.runInNewContext(source, context, { filename: scriptPath });
 
-const { resolveOverlayPresentation, getPlaybackRecoveryDelay } = context.globalThis.CMESOverlayPresentation;
+const { resolveOverlayPresentation, getPlaybackRecoveryDelay, shouldRenderPlayback } = context.globalThis.CMESOverlayPresentation;
 const plain = (value) => JSON.parse(JSON.stringify(value));
 
 const style = {
@@ -80,9 +80,9 @@ test('ข้อความล้วนไม่ใช้ layout ที่มี
   assert.match(overlayHtml, /if \(filePath && normalizedTextLayout !== ['"]right['"]\)/);
 });
 
-test('OBS overlay readiness depends on its own backend connection, not Admin Web Control', () => {
-  assert.doesNotMatch(overlayHtml, /socket\.on\(['"]obs-operator-connection['"]/);
-  assert.doesNotMatch(overlayHtml, /operatorConnected/);
+test('OBS overlay shows reconnecting state after an explicit Web Control disconnect', () => {
+  assert.match(overlayHtml, /socket\.on\(['"]obs-operator-connection['"]/);
+  assert.match(overlayHtml, /operatorConnected/);
 });
 
 test('OBS ขอรายการปัจจุบันซ้ำหลังช่วงพักระหว่างคิวเพื่อกู้ event ที่พลาด', () => {
@@ -91,6 +91,21 @@ test('OBS ขอรายการปัจจุบันซ้ำหลัง�
   assert.equal(getPlaybackRecoveryDelay({ isCountingDown: true, remaining: 1 }), 1350);
   assert.equal(getPlaybackRecoveryDelay({ manual: true, remaining: 10 }), null);
   assert.match(overlayHtml, /request-current-playing/);
+});
+
+test('OBS periodically reconciles missed playback and rejects delayed older events', () => {
+  assert.equal(typeof shouldRenderPlayback, 'function');
+  if (typeof shouldRenderPlayback !== 'function') return;
+  const current = { id: 'new', playingAt: '2026-08-22T12:00:20.000Z' };
+  assert.equal(shouldRenderPlayback(current, {
+    id: 'old', playingAt: '2026-08-22T12:00:10.000Z',
+  }, false), false);
+  assert.equal(shouldRenderPlayback(current, { ...current }, true), false);
+  assert.equal(shouldRenderPlayback(current, { ...current }, false), true);
+  assert.equal(shouldRenderPlayback(current, {
+    id: 'next', playingAt: '2026-08-22T12:00:30.000Z',
+  }, false), true);
+  assert.match(overlayHtml, /setInterval\(requestCurrentPlaying,\s*\d+\)/);
 });
 
 test('ของขวัญใหม่ต้องออกจากสถานะพักก่อนเริ่มแสดง', () => {

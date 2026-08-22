@@ -11,6 +11,7 @@ import { completeObsTestItem } from './obsTestService.js';
 // serial per shop; persisted queue state remains the source of truth.
 const shopsStartingNextItem = new Set();
 const shopsProcessingQueue = new Set();
+const obsOperatorTransitions = new Map();
 
 // ==========================================
 // PER-SHOP STATE MANAGEMENT
@@ -103,7 +104,10 @@ export function emitNowPlaying(item, emitter) {
   if (!event) return;
   // Socket.IO server emits to the shop room; a single socket receives only its
   // own recovery event when a display reconnects.
-  const target = emitter.sockets ? emitter.to(item.shopId) : emitter;
+  const target = emitter.sockets
+    || (typeof emitter.to === 'function' && typeof emitter.emit !== 'function')
+    ? emitter.to(item.shopId)
+    : emitter;
   target.emit(event.eventName, event.payload);
 }
 
@@ -118,13 +122,99 @@ export async function replayCurrentPlaying(shopId, emitter, dependencies = {}) {
   return true;
 }
 
-/** OBS Web Control is an optional Admin tool, not the display connection. */
+const runObsOperatorTransition = (shopId, work) => {
+  const previous = obsOperatorTransitions.get(shopId) || Promise.resolve();
+  const next = previous.catch(() => {}).then(work);
+  obsOperatorTransitions.set(shopId, next);
+  return next.finally(() => {
+    if (obsOperatorTransitions.get(shopId) === next) obsOperatorTransitions.delete(shopId);
+  });
+};
+
+const findPlayingItem = (shopId) => ImageQueue.findOne({ shopId, status: 'playing' });
+const updatePlayingStart = (shopId, itemId, playingAt) => ImageQueue.findOneAndUpdate(
+  { _id: itemId, shopId, status: 'playing' },
+  { $set: { playingAt } },
+  { returnDocument: 'after' },
+);
+
+async function resumeObsOperatorPause(shopId, emitter, control, dependencies, emitPlayback) {
+  if (!control?.queuePaused || control.queuePauseReason !== 'obs_operator_disconnected') {
+    return control;
+  }
+  const displayConnected = dependencies.displayConnected || (() => true);
+  if (!displayConnected(shopId)) return control;
+
+  const findPlaying = dependencies.findPlaying || findPlayingItem;
+  const updatePlayingAt = dependencies.updatePlayingAt || updatePlayingStart;
+  const updateControl = dependencies.updateControl || updateQueueControl;
+  const now = dependencies.now ? dependencies.now() : new Date();
+  const remaining = Number(control.queuePausedRemainingSeconds);
+  const playing = (emitPlayback || Number.isFinite(remaining))
+    ? await findPlaying(shopId)
+    : null;
+  let resumedItem = playing;
+
+  if (playing && Number.isFinite(remaining)) {
+    const duration = Math.max(0, Number(playing.time) || 10);
+    const elapsed = Math.max(0, duration - Math.max(0, remaining));
+    const playingAt = new Date(new Date(now).getTime() - (elapsed * 1000));
+    resumedItem = await updatePlayingAt(shopId, playing._id, playingAt) || { ...playing, playingAt };
+  }
+
+  const resumedControl = await updateControl(shopId, {
+    queuePaused: false,
+    queuePauseReason: null,
+    queuePausedAt: null,
+    queuePausedRemainingSeconds: null,
+  });
+  const room = emitter.to(shopId);
+  room.emit('resume-display', { manual: true, reason: 'obs_operator_reconnected' });
+  room.emit('queue-control-updated', resumedControl);
+  if (emitPlayback && resumedItem) emitNowPlaying(resumedItem, emitter);
+  return resumedControl;
+}
+
+/** Explicit OBS Web Control state: pause/resume the same persisted item. */
 export async function syncObsOperatorConnection(shopId, connected, emitter, dependencies = {}) {
   if (!shopId || !emitter?.to) return null;
-  const getControl = dependencies.getControl || getQueueControl;
-  const control = await getControl(shopId);
-  emitter.to(shopId).emit('obs-operator-connection', { connected: connected === true });
-  return control;
+  return runObsOperatorTransition(shopId, async () => {
+    const room = emitter.to(shopId);
+    room.emit('obs-operator-connection', { connected: connected === true });
+    const getControl = dependencies.getControl || getQueueControl;
+    const control = await getControl(shopId);
+
+    if (connected === true) {
+      return resumeObsOperatorPause(shopId, emitter, control, dependencies, true);
+    }
+    // Never replace a manual/display-recovery pause with an operator pause.
+    if (control?.queuePaused) return control;
+
+    const findPlaying = dependencies.findPlaying || findPlayingItem;
+    const updateControl = dependencies.updateControl || updateQueueControl;
+    const now = dependencies.now ? dependencies.now() : new Date();
+    const playing = await findPlaying(shopId);
+    let remaining = null;
+    if (playing) {
+      const duration = Math.max(0, Number(playing.time) || 10);
+      const startedAt = new Date(playing.playingAt || now).getTime();
+      const elapsed = Math.max(0, (new Date(now).getTime() - startedAt) / 1000);
+      remaining = Math.max(0, duration - elapsed);
+    }
+    const pausedControl = await updateControl(shopId, {
+      queuePaused: true,
+      queuePauseReason: 'obs_operator_disconnected',
+      queuePausedAt: new Date(now),
+      queuePausedRemainingSeconds: remaining,
+    });
+    room.emit('pause-display', {
+      manual: true,
+      reason: 'obs_operator_disconnected',
+      remaining,
+    });
+    room.emit('queue-control-updated', pausedControl);
+    return pausedControl;
+  });
 }
 
 /**
@@ -134,23 +224,28 @@ export async function syncObsOperatorConnection(shopId, connected, emitter, depe
 export async function resumeLegacyObsOperatorPause(shopId, emitter, dependencies = {}) {
   if (!shopId || !emitter?.to) return null;
   const getControl = dependencies.getControl || getQueueControl;
-  const updateControl = dependencies.updateControl || updateQueueControl;
   const control = await getControl(shopId);
-  if (!control?.queuePaused || control.queuePauseReason !== 'obs_operator_disconnected') {
-    return control;
-  }
+  return resumeObsOperatorPause(shopId, emitter, control, dependencies, false);
+}
 
-  const resumedControl = await updateControl(shopId, {
-    queuePaused: false,
-    queuePauseReason: null,
-    queuePausedAt: null,
-    queuePausedRemainingSeconds: null,
-    queueNextPlayAt: null,
+export function sortApprovedQueueItems(items = [], control = {}) {
+  const persistedOrder = control.queueOrder || [];
+  const testOrder = { image: 0, text: 1, gift: 2 };
+  return [...items].sort((a, b) => {
+    if (a.isTest === true && b.isTest === true && a.testSessionId === b.testSessionId) {
+      const stepDifference = (testOrder[a.testStep] ?? 99) - (testOrder[b.testStep] ?? 99);
+      if (stepDifference !== 0) return stepDifference;
+    }
+
+    const idA = a._id.toString();
+    const idB = b._id.toString();
+    const indexA = persistedOrder.indexOf(idA);
+    const indexB = persistedOrder.indexOf(idB);
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
+    return new Date(a.approvedAt || a.receivedAt) - new Date(b.approvedAt || b.receivedAt);
   });
-  const room = emitter.to(shopId);
-  room.emit('resume-display', { manual: true, reason: 'display_reconnected' });
-  room.emit('queue-control-updated', resumedControl);
-  return resumedControl;
 }
 
 // ==========================================
@@ -251,22 +346,7 @@ export async function playNextItem(shopId, io) {
       return;
     }
 
-    // Sort based on customQueueOrder
-    approvedItems.sort((a, b) => {
-      const idA = a._id.toString();
-      const idB = b._id.toString();
-      const persistedOrder = control.queueOrder || [];
-      const indexA = persistedOrder.indexOf(idA);
-      const indexB = persistedOrder.indexOf(idB);
-
-      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-      if (indexA !== -1) return -1;
-      if (indexB !== -1) return 1;
-
-      return new Date(a.approvedAt || a.receivedAt) - new Date(b.approvedAt || b.receivedAt);
-    });
-
-    const nextItem = approvedItems[0];
+    const nextItem = sortApprovedQueueItems(approvedItems, control)[0];
     console.log(`[QueueWorker][${shopId}] Starting next item: ${nextItem._id}`);
 
     // The status condition prevents two worker ticks from claiming the same item.

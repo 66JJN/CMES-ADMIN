@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import adminFetch from '../config/authFetch';
 
 const EMPTY_STATUS = {
@@ -29,23 +29,35 @@ const parseResponse = async (response) => {
 export default function useOBSTest({ API_BASE_URL, socket }) {
   const [obsTest, setObsTest] = useState(EMPTY_STATUS);
   const [isObsTestBusy, setIsObsTestBusy] = useState(false);
+  // A Socket.IO update can arrive while an older HTTP status request is still
+  // in flight. Only the newest source is allowed to update the progress UI.
+  const statusRevisionRef = useRef(0);
 
   const mergeStatus = useCallback((status = {}) => {
+    statusRevisionRef.current += 1;
     setObsTest((previous) => ({ ...previous, ...status }));
   }, []);
 
   const refreshObsTest = useCallback(async () => {
+    const revision = statusRevisionRef.current + 1;
+    statusRevisionRef.current = revision;
     try {
       const response = await adminFetch(`${API_BASE_URL}/api/obs-test/status`);
-      mergeStatus(await parseResponse(response));
+      const status = await parseResponse(response);
+      if (statusRevisionRef.current === revision) {
+        setObsTest((previous) => ({ ...previous, ...status }));
+      }
     } catch (error) {
-      mergeStatus({
-        ready: false,
-        code: error.code || 'OBS_TEST_FAILED',
-        message: error.message || 'ไม่สามารถตรวจสอบความพร้อมของ OBS ได้',
-      });
+      if (statusRevisionRef.current === revision) {
+        setObsTest((previous) => ({
+          ...previous,
+          ready: false,
+          code: error.code || 'OBS_TEST_FAILED',
+          message: error.message || 'ไม่สามารถตรวจสอบความพร้อมของ OBS ได้',
+        }));
+      }
     }
-  }, [API_BASE_URL, mergeStatus]);
+  }, [API_BASE_URL]);
 
   useEffect(() => {
     refreshObsTest();
@@ -69,6 +81,8 @@ export default function useOBSTest({ API_BASE_URL, socket }) {
   }, [socket, mergeStatus, refreshObsTest]);
 
   const runAction = useCallback(async (path, body) => {
+    const revision = statusRevisionRef.current + 1;
+    statusRevisionRef.current = revision;
     setIsObsTestBusy(true);
     try {
       const response = await adminFetch(`${API_BASE_URL}/api/obs-test/${path}`, {
@@ -76,18 +90,23 @@ export default function useOBSTest({ API_BASE_URL, socket }) {
         ...(body ? { body: JSON.stringify(body) } : {}),
       });
       const status = await parseResponse(response);
-      mergeStatus(status);
+      if (statusRevisionRef.current === revision) {
+        setObsTest((previous) => ({ ...previous, ...status }));
+      }
       return status;
     } catch (error) {
-      mergeStatus({
-        code: error.code || 'OBS_TEST_FAILED',
-        message: error.message || 'ไม่สามารถทดสอบ OBS ได้',
-      });
+      if (statusRevisionRef.current === revision) {
+        setObsTest((previous) => ({
+          ...previous,
+          code: error.code || 'OBS_TEST_FAILED',
+          message: error.message || 'ไม่สามารถทดสอบ OBS ได้',
+        }));
+      }
       return null;
     } finally {
       setIsObsTestBusy(false);
     }
-  }, [API_BASE_URL, mergeStatus]);
+  }, [API_BASE_URL]);
 
   const startObsTest = useCallback(() => runAction('start'), [runAction]);
   const stopObsTest = useCallback(

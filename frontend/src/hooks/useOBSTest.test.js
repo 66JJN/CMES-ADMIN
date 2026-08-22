@@ -83,3 +83,71 @@ test('refreshes readiness when the customer queue changes', async () => {
   await waitFor(() => expect(result.current.obsTest.ready).toBe(true));
   expect(adminFetch).toHaveBeenCalledTimes(2);
 });
+
+test('a slow HTTP refresh cannot overwrite newer OBS test progress from Socket.IO', async () => {
+  const socket = createFakeSocket();
+  let resolveRefresh;
+  adminFetch
+    .mockReturnValueOnce(okJson({
+      success: true, active: true, sessionId: 'session-1', currentStep: 'image', stepNumber: 1,
+    }))
+    .mockReturnValueOnce(new Promise((resolve) => { resolveRefresh = resolve; }));
+
+  const { result } = renderHook(() => useOBSTest({
+    API_BASE_URL: 'http://localhost:5001', socket,
+  }));
+  await waitFor(() => expect(result.current.obsTest.currentStep).toBe('image'));
+
+  act(() => socket.emitLocal('admin-update-queue'));
+  await waitFor(() => expect(adminFetch).toHaveBeenCalledTimes(2));
+  act(() => socket.emitLocal('obs-test-status', {
+    active: true, sessionId: 'session-1', currentStep: 'gift', stepNumber: 3,
+  }));
+
+  await act(async () => {
+    resolveRefresh({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true, active: true, sessionId: 'session-1', currentStep: 'text', stepNumber: 2,
+      }),
+    });
+  });
+
+  expect(result.current.obsTest.currentStep).toBe('gift');
+  expect(result.current.obsTest.stepNumber).toBe(3);
+});
+
+test('a slow start response cannot move progress back after Socket.IO advances', async () => {
+  const socket = createFakeSocket();
+  let resolveStart;
+  adminFetch
+    .mockReturnValueOnce(okJson({ success: true, active: false, ready: true }))
+    .mockReturnValueOnce(new Promise((resolve) => { resolveStart = resolve; }));
+
+  const { result } = renderHook(() => useOBSTest({
+    API_BASE_URL: 'http://localhost:5001', socket,
+  }));
+  await waitFor(() => expect(result.current.obsTest.ready).toBe(true));
+
+  let startPromise;
+  act(() => { startPromise = result.current.startObsTest(); });
+  await waitFor(() => expect(adminFetch).toHaveBeenCalledTimes(2));
+  act(() => socket.emitLocal('obs-test-status', {
+    active: true, sessionId: 'session-1', currentStep: 'gift', stepNumber: 3,
+  }));
+
+  await act(async () => {
+    resolveStart({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true, active: true, sessionId: 'session-1', currentStep: 'image', stepNumber: 1,
+      }),
+    });
+    await startPromise;
+  });
+
+  expect(result.current.obsTest.currentStep).toBe('gift');
+  expect(result.current.obsTest.stepNumber).toBe(3);
+});

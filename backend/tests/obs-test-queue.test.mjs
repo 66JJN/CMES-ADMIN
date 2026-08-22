@@ -86,43 +86,72 @@ test('display can request the persisted playing gift again without changing queu
   assert.deepEqual(events, [['now-playing-gift', 'gift-1']]);
 });
 
-test('OBS Web Control state is informational and never mutates the persisted queue', async () => {
+test('explicit OBS Web Control disconnect pauses time without recovering the playing item', async () => {
   assert.equal(typeof queueService.syncObsOperatorConnection, 'function');
   if (typeof queueService.syncObsOperatorConnection !== 'function') return;
 
   const events = [];
+  let updatedControl = null;
+  const playing = {
+    _id: 'image-1', shopId: 'JJ', status: 'playing', type: 'image', time: 15,
+    playingAt: new Date('2026-08-22T12:00:05.000Z'),
+  };
   const emitter = { to: () => ({ emit: (name) => events.push(name) }) };
   const result = await queueService.syncObsOperatorConnection('JJ', false, emitter, {
     getControl: async () => ({ queuePaused: false, queuePauseReason: null }),
-    updateControl: async () => { throw new Error('operator state must not mutate queue control'); },
+    findPlaying: async () => playing,
+    now: () => new Date('2026-08-22T12:00:10.000Z'),
+    updateControl: async (_shopId, updates) => { updatedControl = updates; return updates; },
     recover: async () => { throw new Error('operator state must not recover playing content'); },
     playNext: async () => { throw new Error('operator state must not advance content'); },
   });
 
-  assert.equal(result.queuePaused, false);
-  assert.equal(result.queuePauseReason, null);
-  assert.deepEqual(events, ['obs-operator-connection']);
+  assert.equal(result.queuePaused, true);
+  assert.equal(result.queuePauseReason, 'obs_operator_disconnected');
+  assert.equal(Math.round(result.queuePausedRemainingSeconds), 10);
+  assert.equal(updatedControl.queueNextPlayAt, undefined);
+  assert.equal(playing.status, 'playing');
+  assert.deepEqual(events, ['obs-operator-connection', 'pause-display', 'queue-control-updated']);
 });
 
-test('OBS Web Control reconnect does not resume or advance a persisted queue', async () => {
+test('OBS Web Control reconnect resumes the same item only after Browser Source is ready', async () => {
   assert.equal(typeof queueService.syncObsOperatorConnection, 'function');
   if (typeof queueService.syncObsOperatorConnection !== 'function') return;
 
   const events = [];
+  let adjustedPlayingAt = null;
+  const playing = {
+    _id: 'image-1', shopId: 'JJ', status: 'playing', type: 'image', time: 15,
+    playingAt: new Date('2026-08-22T12:00:05.000Z'),
+  };
   const emitter = { to: () => ({ emit: (name) => events.push(name) }) };
   const baseDependencies = {
-    updateControl: async () => { throw new Error('operator state must not mutate queue control'); },
+    findPlaying: async () => playing,
+    displayConnected: () => true,
+    now: () => new Date('2026-08-22T12:01:00.000Z'),
+    updatePlayingAt: async (_shopId, _itemId, playingAt) => {
+      adjustedPlayingAt = playingAt;
+      return { ...playing, playingAt };
+    },
+    updateControl: async (_shopId, updates) => ({ ...updates }),
     recover: async () => { throw new Error('operator state must not recover content'); },
     playNext: async () => { throw new Error('operator state must not advance content'); },
   };
 
   const resumed = await queueService.syncObsOperatorConnection('JJ', true, emitter, {
     ...baseDependencies,
-    getControl: async () => ({ queuePaused: true, queuePauseReason: 'obs_operator_disconnected' }),
+    getControl: async () => ({
+      queuePaused: true,
+      queuePauseReason: 'obs_operator_disconnected',
+      queuePausedRemainingSeconds: 8,
+    }),
   });
-  assert.equal(resumed.queuePaused, true);
-  assert.equal(resumed.queuePauseReason, 'obs_operator_disconnected');
-  assert.deepEqual(events, ['obs-operator-connection']);
+  assert.equal(resumed.queuePaused, false);
+  assert.equal(resumed.queuePauseReason, null);
+  assert.equal(adjustedPlayingAt.toISOString(), '2026-08-22T12:00:53.000Z');
+  assert.deepEqual(events, [
+    'obs-operator-connection', 'resume-display', 'queue-control-updated', 'now-playing-image',
+  ]);
 
   events.length = 0;
   const manual = await queueService.syncObsOperatorConnection('JJ', true, emitter, {
@@ -138,7 +167,9 @@ test('a quick OBS Web Control reconnect cannot reorder queue transitions', async
   const emitter = { to: () => ({ emit: () => {} }) };
   const dependencies = {
     getControl: async () => ({ ...control }),
-    updateControl: async () => { throw new Error('operator state must not mutate queue control'); },
+    findPlaying: async () => null,
+    displayConnected: () => true,
+    updateControl: async (_shopId, updates) => Object.assign(control, updates),
     recover: async () => { throw new Error('operator state must not recover content'); },
     playNext: async () => { throw new Error('operator state must not advance content'); },
   };
@@ -149,6 +180,19 @@ test('a quick OBS Web Control reconnect cannot reorder queue transitions', async
 
   assert.equal(control.queuePaused, false);
   assert.equal(control.queuePauseReason, null);
+});
+
+test('OBS test items always sort image, text, gift even when timestamps tie', () => {
+  assert.equal(typeof queueService.sortApprovedQueueItems, 'function');
+  if (typeof queueService.sortApprovedQueueItems !== 'function') return;
+  const approvedAt = new Date('2026-08-22T12:00:00.000Z');
+  const items = [
+    { _id: 'gift', isTest: true, testSessionId: 's1', testStep: 'gift', approvedAt },
+    { _id: 'image', isTest: true, testSessionId: 's1', testStep: 'image', approvedAt },
+    { _id: 'text', isTest: true, testSessionId: 's1', testStep: 'text', approvedAt },
+  ];
+  const sorted = queueService.sortApprovedQueueItems(items, { queueOrder: [] });
+  assert.deepEqual(sorted.map((item) => item.testStep), ['image', 'text', 'gift']);
 });
 
 test('an actual Browser Source reconnect clears only the obsolete operator pause', async () => {

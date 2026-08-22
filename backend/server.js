@@ -231,6 +231,9 @@ app.use('/', statusRoutes);
 // SOCKET.IO CONNECTION HANDLER
 // ==========================================
 const publicRankingTypes = new Map();
+// Explicit state of the Admin Web Control connection. It is separate from the
+// authenticated Browser Source registry and survives modal/page changes.
+const obsOperatorConnections = new Map();
 const DISPLAY_DISCONNECT_GRACE_MS = 8000;
 
 const pauseQueueForDisconnectedDisplay = async (shopId) => {
@@ -322,6 +325,9 @@ io.on('connection', (socket) => {
   socket.join(shopId);
   if (kind === 'display') {
     displayDisconnectCoordinator.displayConnected(shopId);
+    socket.emit('obs-operator-connection', {
+      connected: obsOperatorConnections.get(shopId) !== false,
+    });
     getObsTestStatus(shopId)
       .then(status => io.to(shopId).emit('obs-test-status', status))
       .catch(error => console.error(`[OBSTest][${shopId}] Could not publish display readiness:`, error));
@@ -335,7 +341,7 @@ io.on('connection', (socket) => {
   // A browser source can reconnect after OBS/browser/backend restart. Restore
   // its persisted playback state directly from MongoDB instead of waiting for
   // a future queue event.
-  const prepareDisplayQueue = kind === 'display'
+  const prepareDisplayQueue = kind === 'display' && obsOperatorConnections.get(shopId) !== false
     ? resumeLegacyObsOperatorPause(shopId, io)
     : Promise.resolve();
   prepareDisplayQueue.then(() => Promise.all([
@@ -426,8 +432,11 @@ io.on('connection', (socket) => {
   socket.on('resume-display', adminOnly((data) => io.to(shopId).emit('resume-display', data)));
   socket.on('set-obs-operator-connected', adminOnly(async (data = {}) => {
     const connected = data.connected === true;
+    obsOperatorConnections.set(shopId, connected);
     try {
-      await syncObsOperatorConnection(shopId, connected, io);
+      await syncObsOperatorConnection(shopId, connected, io, {
+        displayConnected: (tenantShopId) => displayRegistry.isConnected(tenantShopId),
+      });
     } catch (error) {
       console.error(`[OBSOperator][${shopId}] Could not synchronize queue state:`, error);
     }

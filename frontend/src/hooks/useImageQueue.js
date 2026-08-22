@@ -75,9 +75,12 @@ export default function useImageQueue() {
 
         const playingOnServer = data.find(img => img.status === 'playing');
 
-        if (playingOnServer && (!currentPreviewRef.current || (currentPreviewRef.current._id || currentPreviewRef.current.id) === (playingOnServer._id || playingOnServer.id))) {
+        if (playingOnServer) {
           const duration = playingOnServer.time || 10;
           let remaining = duration;
+          const currentId = currentPreviewRef.current?._id || currentPreviewRef.current?.id;
+          const playingId = playingOnServer._id || playingOnServer.id;
+          const playingChanged = String(currentId || '') !== String(playingId || '');
 
           if (playingOnServer.playingAt) {
             const elapsed = (Date.now() - new Date(playingOnServer.playingAt).getTime()) / 1000;
@@ -91,7 +94,7 @@ export default function useImageQueue() {
             setIsPaused(true);
             setPauseTimeLeft(0);
             setTimeLeft(Math.max(0, Number(control.queuePausedRemainingSeconds ?? remaining)));
-          } else if (!isActive || !currentPreviewRef.current) {
+          } else if (playingChanged || !isActive || !currentPreviewRef.current) {
             setIsPaused(false);
             setPauseTimeLeft(0);
             setCurrentPreview(playingOnServer);

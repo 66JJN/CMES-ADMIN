@@ -861,8 +861,9 @@
     }
 
     let backendConnected = false;
+    let operatorConnected = true;
     function updateFallbackVisibility() {
-      if (backendConnected) {
+      if (backendConnected && operatorConnected) {
         hideFallback();
       } else {
         showFallback('ระบบกำลังเชื่อมต่อ', 'กรุณารอสักครู่');
@@ -1012,6 +1013,7 @@
     let remainingTime = 0; // เวลาที่เหลืออยู่เมื่อหยุด
     let currentId = null; // ID ของ item ที่กำลังเล่นอยู่
     let activeTestSessionId = null;
+    let activePlayback = null;
     let playbackRecoveryTimer = null;
 
     function clearPlaybackRecoveryTimer() {
@@ -1025,9 +1027,18 @@
       clearPlaybackRecoveryTimer();
       playbackRecoveryTimer = setTimeout(() => {
         playbackRecoveryTimer = null;
-        if (socket.connected) socket.emit('request-current-playing');
+        requestCurrentPlaying();
       }, delay);
     }
+
+    function requestCurrentPlaying() {
+      if (socket.connected && backendConnected) socket.emit('request-current-playing');
+    }
+
+    // Socket events are delivery notifications, while MongoDB is the source
+    // of truth. Reconcile periodically so a brief reconnect cannot leave OBS
+    // blank for the rest of an item.
+    setInterval(requestCurrentPlaying, 2000);
 
     const logoMap = {
       ig: `${API_BASE_URL}/data-icon/ig-logo.png`,
@@ -1037,6 +1048,9 @@
     };
 
     function show(payload = {}) {
+      const isVisible = container.classList.contains('show');
+      if (!window.CMESOverlayPresentation.shouldRenderPlayback(activePlayback, payload, isVisible)) return;
+      activePlayback = { id: String(payload.id), playingAt: payload.playingAt || null };
       console.log('[Combined Overlay] Received payload:', payload);
       clearPlaybackRecoveryTimer();
       updateFallbackVisibility();
@@ -1236,6 +1250,7 @@
       console.log('[Combined Overlay] Connected', socket.id);
       backendConnected = true;
       updateFallbackVisibility();
+      requestCurrentPlaying();
     });
     socket.on('connect_error', () => {
       backendConnected = false;
@@ -1243,6 +1258,10 @@
     });
     socket.on('disconnect', () => {
       backendConnected = false;
+      updateFallbackVisibility();
+    });
+    socket.on('obs-operator-connection', (data = {}) => {
+      operatorConnected = data.connected === true;
       updateFallbackVisibility();
     });
     socket.on('now-playing-image', show);
@@ -1296,6 +1315,7 @@
     socket.on('skip-current', () => {
       console.log('[OBS] Skip current received');
       activeGiftPlaybackId = null;
+      activePlayback = null;
       clearPlaybackRecoveryTimer();
       // ซ่อนการแสดงทันที
       clearTimeout(hideTimer);
@@ -1350,6 +1370,7 @@
       const timerEl = document.getElementById('countdown-timer');
       if (timerEl) timerEl.classList.remove('show');
       currentId = null;
+      activePlayback = null;
       isPaused = false;
       remainingTime = 0;
     }
@@ -1362,6 +1383,9 @@
     });
 
     function showGift(payload = {}) {
+      const isVisible = giftContainer.classList.contains('show');
+      if (!window.CMESOverlayPresentation.shouldRenderPlayback(activePlayback, payload, isVisible)) return;
+      activePlayback = { id: String(payload.id), playingAt: payload.playingAt || null };
       console.log('[Gift Overlay] Received:', payload);
       clearPlaybackRecoveryTimer();
       updateFallbackVisibility();
